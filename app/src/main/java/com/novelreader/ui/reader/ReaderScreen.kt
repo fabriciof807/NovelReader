@@ -1,0 +1,478 @@
+package com.novelreader.ui.reader
+
+import android.net.Uri
+import android.webkit.ValueCallback
+import android.webkit.WebView
+import org.json.JSONObject
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.ArrowBackIos
+import androidx.compose.material.icons.filled.ArrowForwardIos
+import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.BottomAppBar
+import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.novelreader.R
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ReaderScreen(
+    novelId: Long,
+    chapterId: Long,
+    onBack: () -> Unit,
+    onChapterChange: (Long, String?) -> Unit,
+    initialSearchQuery: String? = null,
+    viewModel: ReaderViewModel = hiltViewModel()
+) {
+    val state by viewModel.state.collectAsState()
+    var webView by remember { mutableStateOf<WebView?>(null) }
+    var isControlsVisible by remember { mutableStateOf(true) }
+    var scrollRatio by remember { mutableStateOf(0f) }
+    var showCreateCharacterDialog by remember { mutableStateOf(false) }
+    var pendingCharacterPhoto by remember { mutableStateOf<Uri?>(null) }
+    var lastInitialSearchQuery by remember { mutableStateOf(initialSearchQuery) }
+    val pendingSearchQueryState = remember { mutableStateOf(initialSearchQuery) }
+    var pendingSearchQuery by pendingSearchQueryState
+    var showAddBookmarkDialog by remember { mutableStateOf(false) }
+    var bookmarkToDelete by remember { mutableStateOf<Long?>(null) }
+
+    fun buildJs(code: String, params: Map<String, Any> = emptyMap()): String {
+        val json = JSONObject()
+        params.forEach { (k, v) -> json.put(k, v) }
+        val args = json.toString()
+        return """
+            (function(args) {
+                $code
+            })($args)
+        """.trimIndent()
+    }
+
+    if (initialSearchQuery != lastInitialSearchQuery) {
+        lastInitialSearchQuery = initialSearchQuery
+        pendingSearchQuery = initialSearchQuery
+    }
+
+    val photoPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri ->
+        if (uri != null) pendingCharacterPhoto = uri
+    }
+
+    fun saveScroll() {
+        webView?.evaluateJavascript(
+            buildJs("return (window.scrollY / document.body.scrollHeight).toString();"),
+            ValueCallback { value ->
+                val ratio = value?.trim('"')?.toFloatOrNull() ?: return@ValueCallback
+                viewModel.saveScrollPosition(ratio)
+            }
+        )
+    }
+
+    LaunchedEffect(state.chapter, state.reloadVersion, webView) {
+        state.chapter?.let { chapter ->
+            webView?.let { wv ->
+                val html = buildReaderHtml(
+                    content = chapter.content,
+                    config = state.config,
+                    bookmarksScrollPositions = state.bookmarks.map { it.scrollPosition }
+                )
+                val restoreRatio = if (pendingSearchQuery != null) 0f else viewModel.getScrollRatio()
+                wv.loadDataWithBaseURL(null, html, "text/html", "UTF-8", null)
+                if (restoreRatio > 0f) {
+                    wv.evaluateJavascript(
+                        buildJs(
+                            code = "document.addEventListener('DOMContentLoaded', function() { setTimeout(function() { window.scrollTo(0, document.body.scrollHeight * args.ratio); }, 200); });",
+                            params = mapOf("ratio" to restoreRatio)
+                        ),
+                        null
+                    )
+                }
+                val search = pendingSearchQuery
+                if (search != null) {
+                    pendingSearchQuery = null
+                    wv.evaluateJavascript(
+                        buildJs(
+                            code = """
+                                try {
+                                    setTimeout(function() {
+                                        (function(q) {
+                                            var c = document.getElementById('content');
+                                            if (!c) return;
+                                            var w = document.createTreeWalker(c, NodeFilter.SHOW_TEXT);
+                                            var n;
+                                            while (n = w.nextNode()) {
+                                                var i = n.nodeValue.toLowerCase().indexOf(q.toLowerCase());
+                                                if (i >= 0) {
+                                                    var r = document.createRange();
+                                                    r.setStart(n, i);
+                                                    r.setEnd(n, i + q.length);
+                                                    var m = document.createElement('mark');
+                                                    m.className = 'search-highlight';
+                                                    r.surroundContents(m);
+                                                    var top = m.getBoundingClientRect().top + window.scrollY - 80;
+                                                    window.scrollTo({ top: top, behavior: 'smooth' });
+                                                    return;
+                                                }
+                                            }
+                                        })(args.query);
+                                    }, 1000);
+                                } catch (e) {}
+                            """.trimIndent(),
+                            params = mapOf("query" to search)
+                        ),
+                        null
+                    )
+                }
+            }
+        }
+    }
+
+    bookmarkToDelete?.let {
+        DeleteBookmarkDialog(
+            onConfirm = {
+                viewModel.deleteBookmark(it)
+                bookmarkToDelete = null
+            },
+            onDismiss = { bookmarkToDelete = null }
+        )
+    }
+
+    if (state.showBookmarkDialog) {
+        BookmarkManagerDialog(
+            bookmarks = state.bookmarks,
+            onDismiss = { viewModel.hideBookmarkDialog() },
+            onAddNew = { showAddBookmarkDialog = true },
+            onDelete = { id -> bookmarkToDelete = id },
+            onBookmarkClick = { bookmark ->
+                viewModel.hideBookmarkDialog()
+                val ratio = bookmark.scrollPosition / 1000f
+                webView?.evaluateJavascript(
+                    buildJs(
+                        code = "window.scrollTo(0, document.body.scrollHeight * args.ratio);",
+                        params = mapOf("ratio" to ratio)
+                    ),
+                    null
+                )
+                viewModel.saveScrollPosition(ratio)
+            }
+        )
+    }
+
+    if (showAddBookmarkDialog) {
+        AddBookmarkDialog(
+            defaultTitle = viewModel.getDefaultBookmarkTitle(),
+            onDismiss = { showAddBookmarkDialog = false },
+            onSave = { title, note ->
+                viewModel.addBookmark(title, note)
+                showAddBookmarkDialog = false
+            }
+        )
+    }
+
+    if (state.showSettings) {
+        SettingsSheet(
+            config = state.config,
+            onThemeChange = { viewModel.updateTheme(it) },
+            onFontSizeChange = { viewModel.updateFontSize(it) },
+            onLineHeightChange = { viewModel.updateLineHeight(it) },
+            onDismiss = { viewModel.hideSettings() }
+        )
+    }
+
+    if (showCreateCharacterDialog) {
+        CreateCharacterDialog(
+            selectedName = state.selectedText,
+            photoUri = pendingCharacterPhoto,
+            onPhotoPick = { photoPickerLauncher.launch("image/*") },
+            onDismiss = {
+                showCreateCharacterDialog = false
+                pendingCharacterPhoto = null
+            },
+            onCreate = { name ->
+                viewModel.createCharacter(name, pendingCharacterPhoto?.toString())
+                showCreateCharacterDialog = false
+                pendingCharacterPhoto = null
+            }
+        )
+    }
+
+    Scaffold(
+        topBar = {
+            if (isControlsVisible) {
+                TopAppBar(
+                    title = {
+                        if (state.isSearchActive) {
+                            OutlinedTextField(
+                                value = state.searchQuery,
+                                onValueChange = { viewModel.onSearchQueryChange(it) },
+                                placeholder = {
+                                    Text(stringResource(R.string.search_chapters_hint))
+                                },
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth(),
+                                textStyle = MaterialTheme.typography.bodyMedium
+                            )
+                        } else {
+                            Text(
+                                state.chapter?.title ?: "",
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    },
+                    navigationIcon = {
+                        if (state.isSearchActive) {
+                            IconButton(onClick = { viewModel.deactivateSearch() }) {
+                                Icon(Icons.Default.Close, contentDescription = stringResource(R.string.close))
+                            }
+                        } else {
+                            IconButton(onClick = {
+                                saveScroll()
+                                onBack()
+                            }) {
+                                Icon(Icons.Default.ArrowBack, contentDescription = stringResource(R.string.back))
+                            }
+                        }
+                    },
+                    actions = {
+                        if (!state.isSearchActive) {
+                            IconButton(onClick = { viewModel.activateSearch() }) {
+                                Icon(
+                                    Icons.Default.Search,
+                                    contentDescription = stringResource(R.string.search)
+                                )
+                            }
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.surface
+                    )
+                )
+            }
+        },
+        bottomBar = {
+            if (isControlsVisible) {
+                Column {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(MaterialTheme.colorScheme.surface)
+                            .padding(horizontal = 16.dp, vertical = 2.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        LinearProgressIndicator(
+                            progress = scrollRatio,
+                            modifier = Modifier.weight(1f).height(4.dp)
+                        )
+                        Text(
+                            text = "${(scrollRatio * 100).toInt()}%",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                        )
+                    }
+                    BottomAppBar(
+                        containerColor = MaterialTheme.colorScheme.surface
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            IconButton(
+                                onClick = {
+                                    saveScroll()
+                                    state.prevChapterId?.let { viewModel.loadChapter(it) }
+                                },
+                                enabled = state.prevChapterId != null
+                            ) {
+                                Icon(
+                                    Icons.Default.ArrowBackIos,
+                                    contentDescription = stringResource(R.string.previous)
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.weight(1f))
+
+                            IconButton(onClick = {
+                                webView?.evaluateJavascript(
+                                    buildJs("return (window.scrollY / document.body.scrollHeight).toString();"),
+                                    ValueCallback { value ->
+                                        val ratio = value?.trim('"')?.toFloatOrNull() ?: 0f
+                                        viewModel.saveScrollPosition(ratio)
+                                        viewModel.showBookmarkDialog()
+                                    }
+                                ) ?: viewModel.showBookmarkDialog()
+                            }) {
+                                Box {
+                                    Icon(
+                                        Icons.Default.Bookmark,
+                                        contentDescription = stringResource(R.string.bookmarks),
+                                        tint = if (state.bookmarks.isNotEmpty())
+                                            MaterialTheme.colorScheme.secondary
+                                        else MaterialTheme.colorScheme.onSurface
+                                    )
+                                    if (state.bookmarks.isNotEmpty()) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(16.dp)
+                                                .align(Alignment.TopEnd)
+                                                .background(
+                                                    MaterialTheme.colorScheme.secondary,
+                                                    shape = RoundedCornerShape(8.dp)
+                                                ),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Text(
+                                                text = "${state.bookmarks.size}",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = MaterialTheme.colorScheme.onSecondary
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+
+                            IconButton(onClick = { viewModel.showSettings() }) {
+                                Icon(
+                                    Icons.Default.Settings,
+                                    contentDescription = stringResource(R.string.settings)
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.weight(1f))
+
+                            IconButton(
+                                onClick = {
+                                    saveScroll()
+                                    state.nextChapterId?.let { viewModel.loadChapter(it) }
+                                },
+                                enabled = state.nextChapterId != null
+                            ) {
+                                Icon(
+                                    Icons.Default.ArrowForwardIos,
+                                    contentDescription = stringResource(R.string.next)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    ) { padding ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+        ) {
+            if (state.isLoading) {
+                CircularProgressIndicator(
+                    modifier = Modifier.align(Alignment.Center)
+                )
+            } else if (state.error != null) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = state.error ?: "",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Button(onClick = { saveScroll(); onBack() }) {
+                            Text(stringResource(R.string.back))
+                        }
+                    }
+                }
+            } else {
+                ReaderWebView(
+                    onTextSelected = { viewModel.onTextSelected(it) },
+                    onScrollChanged = { scrollRatio = it },
+                    onPageFinished = { _, _ -> },
+                    onWebViewReady = { webView = it },
+                    onSearchHighlight = { _, _ -> },
+                    modifier = Modifier.fillMaxSize()
+                )
+
+                if (state.isSearchActive) {
+                    SearchResultsPanel(
+                        query = state.searchQuery,
+                        results = state.searchResults,
+                        onResultClick = { chapter, query ->
+                            viewModel.deactivateSearch()
+                            onChapterChange(chapter.id, query)
+                        },
+                        onClose = { viewModel.deactivateSearch() }
+                    )
+                }
+
+                if (state.selectedText.isNotBlank() && !state.isSearchActive) {
+                    FloatingActionButton(
+                        onClick = { showCreateCharacterDialog = true },
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .padding(16.dp),
+                        containerColor = MaterialTheme.colorScheme.primary
+                    ) {
+                        Icon(
+                            Icons.Default.Person,
+                            contentDescription = stringResource(R.string.create_character)
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            webView?.destroy()
+        }
+    }
+}

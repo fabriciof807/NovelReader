@@ -1,0 +1,162 @@
+package com.novelreader.ui.reader
+
+import com.novelreader.data.local.preferences.ReaderConfig
+import org.jsoup.Jsoup
+import org.jsoup.safety.Safelist
+
+private val READER_SAFELIST = Safelist.none()
+    .addTags("p", "h1", "h2", "h3", "h4", "h5", "h6", "br", "strong", "em", "b", "i", "u", "sub", "sup")
+
+fun buildReaderHtml(
+    content: String,
+    config: ReaderConfig,
+    bookmarksScrollPositions: List<Int> = emptyList()
+): String {
+    val themeVars = when (config.theme) {
+        "dark" -> """
+            --bg-color: #1a1a2e;
+            --text-color: #e0e0e0;
+            --accent-color: #90caf9;
+            --link-color: #64b5f6;
+        """.trimIndent()
+        "sepia" -> """
+            --bg-color: #f4e4c1;
+            --text-color: #5b4636;
+            --accent-color: #8d6e63;
+            --link-color: #6d4c41;
+        """.trimIndent()
+        else -> """
+            --bg-color: #f5f0e8;
+            --text-color: #333333;
+            --accent-color: #1a237e;
+            --link-color: #1565c0;
+        """.trimIndent()
+    }
+
+    val sanitized = Jsoup.clean(content, READER_SAFELIST)
+
+    val finalContent = if (bookmarksScrollPositions.any { it > 0 }) {
+        insertBookmarkInContent(sanitized, bookmarksScrollPositions.filter { it > 0 })
+    } else {
+        sanitized
+    }
+
+    val css = """
+        :root {
+            $themeVars
+            --font-family: '${config.fontFamily}', Georgia, serif;
+            --font-size: ${config.fontSize}px;
+            --line-height: ${config.lineHeight};
+            --padding: 20px;
+            --max-width: 800px;
+        }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            background-color: transparent !important;
+        }
+        html {
+            background-color: var(--bg-color) !important;
+        }
+        body {
+            background-color: var(--bg-color) !important;
+            color: var(--text-color) !important;
+            font-family: var(--font-family);
+            font-size: var(--font-size);
+            line-height: var(--line-height);
+            padding: var(--padding);
+            -webkit-font-smoothing: antialiased;
+            word-wrap: break-word;
+        }
+        #content {
+            max-width: var(--max-width);
+            margin: 0 auto;
+            background-color: transparent !important;
+        }
+        p {
+            margin: 0 0 1.2em 0;
+            text-indent: 2em;
+            color: var(--text-color) !important;
+        }
+        p:first-of-type { text-indent: 0; }
+        .bookmarked {
+            border-left: 3px solid var(--accent-color);
+            padding-left: 12px;
+            text-indent: 0;
+        }
+        .bookmark-indicator {
+            display: inline-flex;
+            align-items: center;
+            margin-right: 6px;
+            color: var(--accent-color);
+        }
+        h1, h2, h3, h4 {
+            margin: 1.5em 0 0.8em 0;
+            font-weight: bold;
+            text-indent: 0;
+            color: var(--text-color) !important;
+        }
+        img {
+            max-width: 100%;
+            height: auto;
+            display: block;
+            margin: 1em auto;
+        }
+        .search-highlight {
+            background-color: rgba(255, 235, 59, 0.4);
+            border-radius: 2px;
+            padding: 1px 0;
+            animation: pulse 0.6s ease-in-out 3;
+        }
+        @keyframes pulse {
+            0%   { background-color: rgba(255, 235, 59, 0.3); }
+            50%  { background-color: rgba(255, 235, 59, 1.0); }
+            100% { background-color: rgba(255, 235, 59, 0.3); }
+        }
+    """.trimIndent()
+
+    return """
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <style>$css</style>
+            <script>
+            var _lastSel = '';
+            document.addEventListener('selectionchange', function() {
+                var sel = window.getSelection().toString().trim();
+                if (sel !== _lastSel) {
+                    _lastSel = sel;
+                    Android.onTextSelected(sel);
+                }
+            });
+            </script>
+        </head>
+        <body>
+            <div id="content">$finalContent</div>
+        </body>
+        </html>
+    """.trimIndent()
+}
+
+private fun insertBookmarkInContent(content: String, scrollPositions: List<Int>): String {
+    val doc = Jsoup.parseBodyFragment(content)
+    val paragraphs = doc.select("p")
+    if (paragraphs.isEmpty()) return content
+
+    val usedIndices = mutableSetOf<Int>()
+    for (scrollPos in scrollPositions.sorted()) {
+        val index = ((scrollPos / 1000f) * paragraphs.size).toInt()
+            .coerceIn(0, paragraphs.size - 1)
+        if (usedIndices.add(index)) {
+            val targetP = paragraphs[index]
+            targetP.before(
+                """<span class="bookmark-indicator"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17 3H7c-1.1 0-2 .9-2 2v16l7-3 7 3V5c0-1.1-.9-2-2-2z"/></svg></span>"""
+            )
+            targetP.addClass("bookmarked")
+        }
+    }
+
+    return doc.body().html()
+}

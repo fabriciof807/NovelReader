@@ -1,0 +1,204 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">NovelReader</string>
+
+    <!-- General -->
+    <string name="back">Back</string>
+    <string name="cancel">Cancel</string>
+    <string name="delete">Delete</string>
+    <string name="settings">Settings</string>
+    <string name="favorites">Bookmarks</string>
+
+    <!-- Library -->
+    <string name="library">Library</string>
+    <string name="chapters">Chapters</string>
+    <string name="no_novels">No novels imported</string>
+    <string name="tap_to_import">Tap + to import HTML files</string>
+    <string name="no_chapters">No chapters found</string>
+    <string name="change_cover">Change cover</string>
+    <string name="cover_by_url">Cover via URL</string>
+    <string name="cover_url_title">Cover URL</string>
+    <string name="cover_url_hint">https://…</string>
+    <string name="save">Save</string>
+    <string name="delete_novel">Delete novel</string>
+    <string name="delete_confirm">Are you sure you want to delete \"%s\" and all its chapters?</string>
+    <string name="chapters_count">%d ch.</string>
+    <string name="reading">Continue</string>
+    <string name="sort">Sort</string>
+    <string name="sort_title">Title</string>
+    <string name="sort_date">Date added</string>
+    <string name="sort_last_read">Last read</string>
+    <string name="novels">Novels</string>
+    <string name="view_mode_grid">Grid</string>
+    <string name="view_mode_list">List</string>
+
+    <!-- Settings -->
+    <string name="app_theme">App Theme</string>
+    <string name="system">System</string>
+    <string name="system_desc">Follows system setting</string>
+    <string name="light">Light</string>
+    <string name="light_desc">Light background</string>
+    <string name="dark">Dark</string>
+    <string name="dark_desc">Dark background</string>
+    <string name="language">Language</string>
+    <string name="portuguese">Portuguese</string>
+    <string name="english">English</string>
+
+    <!-- Import -->
+    <string name="import_action">Import</string>
+    <string name="import_title">Import</string>
+    <string name="select_files">Select HTML / MHT files</string>
+    <string name="files_selected">%d file(s) selected</string>
+    <string name="importing">Importing…</string>
+
+    <!-- Favorites -->
+    <string name="no_favorites">No bookmarks yet</string>
+    <string name="add_favorites_hint">Add bookmarks while reading</string>
+
+    <!-- Reader -->
+    <string name="previous">Previous</string>
+    <string name="next">Next</string>
+    <string name="bookmarks">Bookmarks</string>
+    <string name="theme">Theme</string>
+    <string name="sepia">Sepia</string>
+    <string name="font_size">Font size: %dpx</string>
+    <string name="line_spacing">Spacing: %.1f</string>
+    <string name="bookmarks_count">Bookmarks (%d)</string>
+    <string name="no_bookmarks_chapter">No bookmarks in this chapter</string>
+    <string name="add">Add</string>
+    <string name="close">Close</string>
+    <string name="add_bookmark">Add bookmark</string>
+    <string name="title_label">Title</string>
+    <string name="note_optional">Note (optional)</string>
+    <string name="bookmark_save">Save</string>
+    <string name="remove">Remove</string>
+    <string name="create_character">Create Character</string>
+    <string name="character_name">Character name</string>
+    <string name="add_photo">Add photo</string>
+    <string name="characters">Characters</string>
+    <string name="no_characters">No characters yet</string>
+    <string name="delete_character_confirm">Remove this character?</string>
+
+    <!-- Web Import -->
+    <string name="web_import">Web Import</string>
+    <string name="web_import_url_hint">Paste novel URL…</string>
+    <string name="web_import_fetch">Fetch chapters</string>
+    <string name="web_import_fetching">Fetching chapters…</string>
+    <string name="web_import_select_all">Select all</string>
+    <string name="web_import_deselect_all">Deselect all</string>
+    <string name="web_import_import_selected">Import (%d)</string>
+    <string name="web_import_no_chapters">No chapters found</string>
+    <string name="web_import_error_fetch">Error fetching chapters</string>
+    <string name="web_import_importing">Importing chapters…</string>
+    <string name="web_import_complete">Import complete!</string>
+    <string name="web_import_error_count">%d error(s)</string>
+    <string name="web_import_novel_title_label">Novel:</string>
+    <string name="web_import_background">Import in background</string>
+    <string name="web_import_background_running">Importing %s… %d/%d</string>
+    <string name="web_import_unknown_novel">Novel</string>
+    <string name="web_import_unknown_error">Unknown error</string>
+    <string name="web_import_chapter_prefix">chapter %d</string>
+    <string name="web_import_import_error">Import error</string>
+    <string name="web_import_complete_with_errors">Import complete with %d error(s)</string>
+    <string name="web_import_leave_background">Leave in background</string>
+
+    <!-- Bookmark delete confirmation -->
+    <string name="delete_bookmark_confirm">Are you sure you want to remove this bookmark?</string>
+
+    <!-- Search -->
+    <string name="search">Search</string>
+    <string name="search_chapters_hint">Search chapters…</string>
+    <string name="search_no_results">No results for \"%s\"</string>
+
+    <!-- About -->
+    <string name="about">About</string>
+    <string name="about_version">Version</string>
+    <string name="about_build">Build</string>
+    <string name="about_subtitle">Offline web novel reader</string>
+    <string name="about_description">Imports HTML and MHT files downloaded from your browser and organizes them into a web novel style library with a customizable reader.</string>
+
+    <!-- Import errors -->
+    <string name="import_no_valid_chapters">No valid chapters found. Make sure the files are HTML or MHT.</string>
+    <string name="import_no_valid_chapters_with_errors">No valid chapters were imported.</string>
+    <string name="import_generic_error">Error importing</string>
+    <string name="import_file_error">Failed to process file</string>
+    <string name="import_unknown_error">Unknown error</string>
+    <string name="import_unknown">Unknown</string>
+
+    <!-- Characters -->
+    <string name="edit_character">Edit Character</string>
+    <string name="change_photo">Change photo</string>
+    <string name="remove_photo">Remove photo</string>
+    <string name="add_photo_hint">Add photo</string>
+    <string name="character_notes">Notes</string>
+    <string name="add_note_hint">Add a note…</string>
+    <string name="favorite">Favorite</string>
+    <string name="unfavorite">Unfavorite</string>
+    <string name="search_characters_hint">Search characters…</string>
+    <string name="delete_photo_confirm">Remove this photo?</string>
+    <string name="photo_count">%d photo(s)</string>
+    <string name="confirm">Confirm</string>
+    <string name="search_matches_count">%d match(es)</string>
+
+    <!-- Import Tabs -->
+    <string name="import_tab_local">Local Files</string>
+    <string name="import_tab_web">Web</string>
+
+    <!-- Character Import -->
+    <string name="import_characters">Import Characters</string>
+    <string name="import_characters_hint">Paste the MVLEMPYR novel URL</string>
+    <string name="importing_characters">Importing characters…</string>
+    <string name="import_characters_success">%d character(s) imported</string>
+    <string name="import_characters_error">Error importing characters</string>
+
+    <!-- Cover errors -->
+    <string name="cover_url_https_required">URL must start with https://</string>
+    <string name="cover_download_error">Error downloading cover</string>
+    <string name="cover_save_error">Error saving cover</string>
+    <string name="cover_too_large">Image too large (max 10MB)</string>
+    <string name="character_import_https_required">URL must use HTTPS</string>
+    <string name="character_import_no_novel_selected">No novel selected</string>
+
+    <!-- Background import -->
+    <string name="background_import_complete">Background import complete</string>
+    <string name="import_banner_title">Importing %1$s</string>
+    <string name="import_banner_progress">%1$d of %2$d</string>
+    <string name="import_banner_cancel">Cancel</string>
+
+    <!-- Mvlempyr importer -->
+    <string name="mvlempyr_book_id_not_found">BookId not found</string>
+    <string name="mvlempyr_no_characters_found">No characters found for this novel</string>
+
+    <!-- Web import errors -->
+    <string name="web_import_no_chapters_found">No chapters found</string>
+
+    <!-- Reader errors -->
+    <string name="reader_chapter_not_found">Chapter not found</string>
+
+    <!-- Import background work -->
+    <string name="import_notification_channel_name">Novel imports</string>
+    <string name="import_notification_channel_desc">Background import notifications</string>
+    <string name="import_notification_title">Importing %s</string>
+    <string name="import_notification_text">Chapter %1$d of %2$d</string>
+    <string name="import_notification_pending">Queued: %d</string>
+    <string name="import_notification_cancel">Cancel</string>
+    <string name="import_queue_mode">Queue mode</string>
+    <string name="import_queue_sequential">Sequential</string>
+    <string name="import_queue_parallel">Parallel</string>
+    <string name="import_queue_sequential_desc">Import one novel at a time</string>
+    <string name="import_queue_parallel_desc">Import multiple novels simultaneously</string>
+    <string name="import_notification_complete">%s import complete</string>
+    <string name="import_notification_complete_text">%1$d chapters imported</string>
+    <string name="import_notification_complete_with_errors">%1$d chapters, %2$d error(s)</string>
+    <string name="import_notification_failed">Failed to import %s</string>
+
+    <!-- Chapter update notifications -->
+    <string name="update_notification_channel_name">New chapters</string>
+    <string name="update_notification_channel_desc">Notifications for new chapters</string>
+    <string name="update_notification_title">%s has new chapters!</string>
+    <string name="update_notification_text">%1$d new chapter(s) available</string>
+
+    <!-- Auto-update toggle -->
+    <string name="auto_update_enable">Enable update checks</string>
+    <string name="auto_update_disable">Disable update checks</string>
+</resources>
