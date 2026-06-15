@@ -53,6 +53,7 @@ class LibraryViewModelTest {
         every { novelRepo.getAllNovels() } returns flowOf(emptyList())
         every { bookmarkRepo.getAll() } returns flowOf(emptyList())
         every { prefs.sortOrder } returns flowOf("LAST_READ")
+        every { prefs.viewMode } returns flowOf("GRID")
         every { bgManager.state } returns MutableStateFlow(BackgroundImportState())
         viewModel = LibraryViewModel(
             context = context,
