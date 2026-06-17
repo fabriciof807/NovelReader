@@ -7,6 +7,16 @@ import org.jsoup.safety.Safelist
 private val READER_SAFELIST = Safelist.none()
     .addTags("p", "h1", "h2", "h3", "h4", "h5", "h6", "br", "strong", "em", "b", "i", "u", "sub", "sup")
 
+private val NAV_PATTERNS = listOf(
+    Regex("apert[ea]\\s*.{1,4}\\s*para\\s*(ir ao\\s*)?pr[oó]ximo\\s*cap.tul", RegexOption.IGNORE_CASE),
+    Regex("pressione\\s*.{1,4}\\s*para\\s*(ir ao\\s*)?pr[oó]ximo\\s*cap.tul", RegexOption.IGNORE_CASE),
+    Regex("use as setas para navegar", RegexOption.IGNORE_CASE),
+    Regex("navegu[ea]\\s*(pelos|entre)\\s*cap.tulos", RegexOption.IGNORE_CASE),
+    Regex("^(next|previous)\\s+chapter\\.?\$", RegexOption.IGNORE_CASE),
+    Regex("press\\s*.{1,4}\\s*(key|to\\s+go)\\s*(to\\s+)?(the\\s+)?(next|previous)\\s+chapter", RegexOption.IGNORE_CASE),
+    Regex("nav(e|i)gat(e|ing).{0,20}(chapter|cap.tulo)", RegexOption.IGNORE_CASE),
+)
+
 fun buildReaderHtml(
     content: String,
     config: ReaderConfig,
@@ -40,11 +50,12 @@ fun buildReaderHtml(
     }
 
     val sanitized = Jsoup.clean(content, READER_SAFELIST)
+    val cleaned = stripJunkContent(sanitized)
 
     val finalContent = if (bookmarksScrollPositions.any { it > 0 }) {
-        insertBookmarkInContent(sanitized, bookmarksScrollPositions.filter { it > 0 })
+        insertBookmarkInContent(cleaned, bookmarksScrollPositions.filter { it > 0 })
     } else {
-        sanitized
+        cleaned
     }
 
     val css = """
@@ -196,6 +207,49 @@ private fun insertBookmarkInContent(content: String, scrollPositions: List<Int>)
                 """<span class="bookmark-indicator"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17 3H7c-1.1 0-2 .9-2 2v16l7-3 7 3V5c0-1.1-.9-2-2-2z"/></svg></span>"""
             )
             targetP.addClass("bookmarked")
+        }
+    }
+
+    return doc.body().html()
+}
+
+private fun stripJunkContent(html: String): String {
+    val doc = Jsoup.parseBodyFragment(html)
+
+    for (p in doc.select("p").toList()) {
+        val text = p.text().trim()
+        if (text.isBlank()) {
+            p.remove()
+            continue
+        }
+        if (text.length < 120) {
+            val lower = text.lowercase()
+            for (pattern in NAV_PATTERNS) {
+                if (pattern.containsMatchIn(lower)) {
+                    val withoutNav = pattern.replace(lower, "").trim()
+                    if (withoutNav.length < 30) {
+                        p.remove()
+                        break
+                    }
+                }
+            }
+        }
+    }
+
+    for (child in doc.body().children().toList()) {
+        if (child.text().trim().isEmpty() && child.tagName() == "p") {
+            child.remove()
+        } else {
+            break
+        }
+    }
+
+    for (i in doc.body().children().size - 1 downTo 0) {
+        val child = doc.body().children()[i]
+        if (child.text().trim().isEmpty() && child.tagName() == "p") {
+            child.remove()
+        } else {
+            break
         }
     }
 
