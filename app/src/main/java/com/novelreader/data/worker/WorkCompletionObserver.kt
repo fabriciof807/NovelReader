@@ -15,8 +15,8 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 interface ObserverCallbacks {
-    fun onProgress(id: UUID, processed: Int, total: Int)
-    fun onJobTerminal(id: UUID, success: Boolean)
+    fun onProgress(id: UUID, processed: Int, total: Int, currentChapter: Int = 0)
+    suspend fun onJobTerminal(id: UUID, success: Boolean)
     fun onAllIdle()
 }
 
@@ -53,7 +53,8 @@ class WorkCompletionObserver @Inject constructor(
                             if (total > 0) {
                                 progressCache[info.id] = Pair(processed, total)
                             }
-                            callbacks?.onProgress(jobId, processed, total)
+                            val currentChapter = info.progress.getInt(ChapterImportWorker.KEY_CURRENT_CHAPTER, 0)
+                            callbacks?.onProgress(jobId, processed, total, currentChapter)
                         } else if (isTerminal) {
                             if (processedWorkIds.add(info.id)) {
                                 hasTerminal = true

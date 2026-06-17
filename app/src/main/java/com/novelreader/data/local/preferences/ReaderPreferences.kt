@@ -19,7 +19,8 @@ data class ReaderConfig(
     val fontSize: Int = 20,
     val fontFamily: String = "serif",
     val lineHeight: Float = 1.8f,
-    val theme: String = "light"
+    val theme: String = "light",
+    val autoScrollSpeed: Float = 0f
 )
 
 @Singleton
@@ -31,6 +32,7 @@ class ReaderPreferences @Inject constructor(
         val FONT_FAMILY = stringPreferencesKey("font_family")
         val LINE_HEIGHT = stringPreferencesKey("line_height")
         val THEME = stringPreferencesKey("theme")
+        val AUTO_SCROLL_SPEED = stringPreferencesKey("auto_scroll_speed")
     }
 
     val config: Flow<ReaderConfig> = context.dataStore.data.map { prefs ->
@@ -38,8 +40,13 @@ class ReaderPreferences @Inject constructor(
             fontSize = prefs[Keys.FONT_SIZE] ?: 20,
             fontFamily = prefs[Keys.FONT_FAMILY] ?: "serif",
             lineHeight = prefs[Keys.LINE_HEIGHT]?.toFloatOrNull() ?: 1.8f,
-            theme = prefs[Keys.THEME] ?: "light"
+            theme = prefs[Keys.THEME] ?: "light",
+            autoScrollSpeed = prefs[Keys.AUTO_SCROLL_SPEED]?.toFloatOrNull() ?: 0f
         )
+    }
+
+    suspend fun updateAutoScrollSpeed(speed: Float) {
+        context.dataStore.edit { it[Keys.AUTO_SCROLL_SPEED] = speed.toString() }
     }
 
     suspend fun updateFontSize(size: Int) {

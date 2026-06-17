@@ -29,6 +29,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -36,6 +37,7 @@ import javax.inject.Inject
 enum class SortOrder { TITLE, CREATED_AT, LAST_READ }
 enum class ChapterSortOrder { ASCENDING, DESCENDING }
 enum class ViewMode { GRID, LIST }
+enum class NovelFilter { ALL, READING, COMPLETED }
 
 data class LibraryStats(
     val totalNovels: Int = 0,
@@ -132,6 +134,15 @@ class LibraryViewModel @Inject constructor(
     val errorEvents: SharedFlow<String> = _errorEvents.asSharedFlow()
 
     val backgroundImportState: StateFlow<BackgroundImportState> = backgroundImportManager.state
+
+    val readProgress: StateFlow<Map<Long, Float>> = novelRepository.getAllNovels().map { novels ->
+        val counts = chapterRepository.getReadCountPerNovel().associate { it.novelId to it.readCount }
+        novels.associate { novel ->
+            val read = counts[novel.id] ?: 0
+            val progress = if (novel.totalChapters > 0) read.toFloat() / novel.totalChapters else 0f
+            novel.id to progress
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
 
     init {
         viewModelScope.launch {

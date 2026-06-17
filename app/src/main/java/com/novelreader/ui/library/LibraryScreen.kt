@@ -5,14 +5,18 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ViewList
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.GridView
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Sort
 import androidx.compose.material.icons.filled.SortByAlpha
@@ -23,6 +27,7 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -74,11 +79,15 @@ fun LibraryScreen(
     val stats by viewModel.stats.collectAsState()
     val coverError by viewModel.coverError.collectAsState()
     val backgroundImportState by viewModel.backgroundImportState.collectAsState()
+    val readProgress by viewModel.readProgress.collectAsState()
     val isImportingCharacters by viewModel.isImportingCharacters.collectAsState()
     val characterImportResult by viewModel.characterImportResult.collectAsState()
     val viewMode by viewModel.viewMode.collectAsState()
     val context = LocalContext.current
     var showSortMenu by remember { mutableStateOf(false) }
+    var isSearchActive by remember { mutableStateOf(false) }
+    var searchQuery by remember { mutableStateOf("") }
+    var filterChip by remember { mutableStateOf(NovelFilter.ALL) }
     val snackbarHostState = remember { SnackbarHostState() }
     val previousBgRunning = remember { mutableStateOf(false) }
 
@@ -143,17 +152,32 @@ fun LibraryScreen(
             Column {
                 TopAppBar(
                     title = {
-                        Text(
-                            if (selectedTab == 0) stringResource(R.string.library)
-                            else selectedNovel?.title ?: stringResource(R.string.chapters),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
+                        if (isSearchActive && selectedTab == 0) {
+                            OutlinedTextField(
+                                value = searchQuery,
+                                onValueChange = { searchQuery = it },
+                                placeholder = { Text(stringResource(R.string.search_hint)) },
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth(),
+                                textStyle = MaterialTheme.typography.bodyMedium
+                            )
+                        } else {
+                            Text(
+                                if (selectedTab == 0) stringResource(R.string.library)
+                                else selectedNovel?.title ?: stringResource(R.string.chapters),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
                     },
                     navigationIcon = {
                         if (selectedTab == 1 || selectedTab == 2) {
                             IconButton(onClick = { viewModel.selectTab(0) }) {
                                 Icon(Icons.Default.ArrowBack, contentDescription = stringResource(R.string.back))
+                            }
+                        } else if (isSearchActive) {
+                            IconButton(onClick = { isSearchActive = false; searchQuery = "" }) {
+                                Icon(Icons.Default.Close, contentDescription = stringResource(R.string.close))
                             }
                         }
                     },
@@ -163,6 +187,15 @@ fun LibraryScreen(
                     ),
                     actions = {
                         if (selectedTab == 0) {
+                            if (isSearchActive) {
+                                IconButton(onClick = { isSearchActive = false; searchQuery = "" }) {
+                                    Icon(Icons.Default.Close, contentDescription = stringResource(R.string.close))
+                                }
+                            } else {
+                                IconButton(onClick = { isSearchActive = true }) {
+                                    Icon(Icons.Default.Search, contentDescription = stringResource(R.string.search))
+                                }
+                            }
                             Box {
                                 IconButton(onClick = { showSortMenu = true }) {
                                     Icon(Icons.Default.Sort, contentDescription = stringResource(R.string.sort))
@@ -246,6 +279,10 @@ fun LibraryScreen(
                     stats = stats,
                     backgroundImportState = backgroundImportState,
                     viewMode = viewMode,
+                    readProgress = readProgress,
+                    searchQuery = searchQuery,
+                    filterChip = filterChip,
+                    onFilterChipChange = { filterChip = it },
                     onNovelClick = { viewModel.selectNovel(it) },
                     onLongClick = { viewModel.requestDelete(it) },
                     onToggleAutoUpdate = { viewModel.toggleAutoUpdate(it.id) },

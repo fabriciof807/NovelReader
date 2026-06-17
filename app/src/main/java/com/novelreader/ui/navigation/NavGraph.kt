@@ -80,9 +80,7 @@ fun NovelReaderNavGraph(navController: NavHostController) {
                 initialSearchQuery = searchQuery,
                 onBack = { navController.popBackStack() },
                 onChapterChange = { newChapterId, query ->
-                    navController.navigate(Routes.reader(novelId, newChapterId, query)) {
-                        popUpTo(Routes.reader(novelId, chapterId)) { inclusive = true }
-                    }
+                    navController.navigate(Routes.reader(novelId, newChapterId, query))
                 }
             )
         }

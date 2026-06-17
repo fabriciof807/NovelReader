@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.novelreader.data.local.preferences.AppPreferences
 import com.novelreader.domain.usecase.ExportDataUseCase
 import com.novelreader.domain.usecase.ImportDataUseCase
+import com.novelreader.domain.usecase.ImportPreview
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -41,6 +42,11 @@ class SettingsViewModel @Inject constructor(
     private val _importError = MutableSharedFlow<String>(extraBufferCapacity = 1)
     val importError: SharedFlow<String> = _importError
 
+    private val _importPreview = MutableSharedFlow<ImportPreview>(extraBufferCapacity = 1)
+    val importPreview: SharedFlow<ImportPreview> = _importPreview
+
+    private var pendingImportUri: Uri? = null
+
     fun updateAppTheme(theme: String) {
         viewModelScope.launch {
             appPreferences.updateAppTheme(theme)
@@ -65,10 +71,24 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    fun importData(uri: Uri) {
+    fun previewImport(uri: Uri) {
         viewModelScope.launch {
             try {
-                val result = importDataUseCase.execute(uri)
+                val preview = importDataUseCase.previewImport(uri)
+                pendingImportUri = uri
+                _importPreview.emit(preview)
+            } catch (e: Exception) {
+                _importError.emit(e.message ?: "Erro ao ler arquivo")
+            }
+        }
+    }
+
+    fun importSelected(selectedTitles: Set<String>) {
+        val uri = pendingImportUri ?: return
+        pendingImportUri = null
+        viewModelScope.launch {
+            try {
+                val result = importDataUseCase.execute(uri, selectedTitles)
                 val sb = StringBuilder()
                 if (result.novelsQueued.isNotEmpty()) {
                     sb.append("${result.novelsQueued.size} novel(is) na fila. ")

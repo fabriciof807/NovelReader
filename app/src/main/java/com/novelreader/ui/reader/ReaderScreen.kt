@@ -6,7 +6,13 @@ import android.webkit.WebView
 import org.json.JSONObject
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,6 +23,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
@@ -24,6 +32,7 @@ import androidx.compose.material.icons.filled.ArrowBackIos
 import androidx.compose.material.icons.filled.ArrowForwardIos
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
@@ -32,15 +41,18 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -51,7 +63,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -78,6 +92,7 @@ fun ReaderScreen(
     var pendingSearchQuery by pendingSearchQueryState
     var showAddBookmarkDialog by remember { mutableStateOf(false) }
     var bookmarkToDelete by remember { mutableStateOf<Long?>(null) }
+    var showChapterList by remember { mutableStateOf(false) }
 
     fun buildJs(code: String, params: Map<String, Any> = emptyMap()): String {
         val json = JSONObject()
@@ -218,6 +233,7 @@ fun ReaderScreen(
             onThemeChange = { viewModel.updateTheme(it) },
             onFontSizeChange = { viewModel.updateFontSize(it) },
             onLineHeightChange = { viewModel.updateLineHeight(it) },
+            onAutoScrollSpeedChange = { viewModel.updateAutoScrollSpeed(it) },
             onDismiss = { viewModel.hideSettings() }
         )
     }
@@ -239,9 +255,64 @@ fun ReaderScreen(
         )
     }
 
+    if (showChapterList && state.allChapters.isNotEmpty()) {
+        val chapterListSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        ModalBottomSheet(
+            onDismissRequest = { showChapterList = false },
+            sheetState = chapterListSheetState
+        ) {
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    text = stringResource(R.string.chapters_count, state.allChapters.size),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+                )
+                LazyColumn(modifier = Modifier.fillMaxWidth()) {
+                    items(state.allChapters, key = { it.id }) { chapter ->
+                        val isCurrent = chapter.id == state.chapter?.id
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    saveScroll()
+                                    viewModel.loadChapter(chapter.id)
+                                    showChapterList = false
+                                }
+                                .background(
+                                    if (isCurrent) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+                                    else Color.Transparent
+                                )
+                                .padding(horizontal = 16.dp, vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = chapter.title,
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = if (isCurrent || !chapter.isRead) FontWeight.SemiBold else FontWeight.Normal,
+                                color = if (chapter.isRead && !isCurrent)
+                                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                                else MaterialTheme.colorScheme.onSurface,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                        HorizontalDivider()
+                    }
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+        }
+    }
+
     Scaffold(
         topBar = {
-            if (isControlsVisible) {
+            AnimatedVisibility(
+                visible = isControlsVisible,
+                enter = fadeIn() + slideInVertically { -it },
+                exit = fadeOut() + slideOutVertically { -it }
+            ) {
                 TopAppBar(
                     title = {
                         if (state.isSearchActive) {
@@ -294,7 +365,11 @@ fun ReaderScreen(
             }
         },
         bottomBar = {
-            if (isControlsVisible) {
+            AnimatedVisibility(
+                visible = isControlsVisible,
+                enter = fadeIn() + slideInVertically { it },
+                exit = fadeOut() + slideOutVertically { it }
+            ) {
                 Column {
                     Row(
                         modifier = Modifier
@@ -384,6 +459,13 @@ fun ReaderScreen(
                                 )
                             }
 
+                            IconButton(onClick = { showChapterList = true }) {
+                                Icon(
+                                    Icons.Default.List,
+                                    contentDescription = stringResource(R.string.chapter_list)
+                                )
+                            }
+
                             Spacer(modifier = Modifier.weight(1f))
 
                             IconButton(
@@ -437,6 +519,15 @@ fun ReaderScreen(
                     onPageFinished = { _, _ -> },
                     onWebViewReady = { webView = it },
                     onSearchHighlight = { _, _ -> },
+                    onTap = { isControlsVisible = !isControlsVisible },
+                    onSwipe = { direction ->
+                        saveScroll()
+                        if (direction == "prev") {
+                            state.prevChapterId?.let { viewModel.loadChapter(it) }
+                        } else {
+                            state.nextChapterId?.let { viewModel.loadChapter(it) }
+                        }
+                    },
                     modifier = Modifier.fillMaxSize()
                 )
 

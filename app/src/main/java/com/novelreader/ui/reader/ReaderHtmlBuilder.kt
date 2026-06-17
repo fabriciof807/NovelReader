@@ -25,6 +25,12 @@ fun buildReaderHtml(
             --accent-color: #8d6e63;
             --link-color: #6d4c41;
         """.trimIndent()
+        "gray" -> """
+            --bg-color: #2d2d2d;
+            --text-color: #d0d0d0;
+            --accent-color: #90a4ae;
+            --link-color: #81d4fa;
+        """.trimIndent()
         else -> """
             --bg-color: #f5f0e8;
             --text-color: #333333;
@@ -116,6 +122,25 @@ fun buildReaderHtml(
         }
     """.trimIndent()
 
+    val autoScrollJs = if (config.autoScrollSpeed > 0f) {
+        """
+        var _asSpeed = ${config.autoScrollSpeed};
+        var _asRunning = false, _asPaused = false, _asTimer = null;
+        function _asStep() {
+            if (!_asRunning) return;
+            if (!_asPaused) window.scrollBy(0, _asSpeed * 2);
+            var atEnd = (window.scrollY + window.innerHeight >= document.body.scrollHeight - 20);
+            if (atEnd) { _asRunning = false; try{Android.onAutoScrollReachedEnd();}catch(e){} return; }
+            requestAnimationFrame(_asStep);
+        }
+        function startAutoScroll() { if (_asSpeed <= 0 || _asRunning) return; _asRunning = true; _asPaused = false; _asStep(); }
+        function stopAutoScroll() { _asRunning = false; _asPaused = false; clearTimeout(_asTimer); }
+        document.addEventListener('touchstart', function() { if (_asRunning && !_asPaused) { _asPaused = true; clearTimeout(_asTimer); } });
+        document.addEventListener('touchend', function() { if (_asRunning && _asPaused) { clearTimeout(_asTimer); _asTimer = setTimeout(function(){ _asPaused = false; }, 2000); } });
+        setTimeout(startAutoScroll, 500);
+        """.trimIndent()
+    } else ""
+
     return """
         <!DOCTYPE html>
         <html>
@@ -126,11 +151,27 @@ fun buildReaderHtml(
             var _lastSel = '';
             document.addEventListener('selectionchange', function() {
                 var sel = window.getSelection().toString().trim();
-                if (sel !== _lastSel) {
-                    _lastSel = sel;
-                    Android.onTextSelected(sel);
-                }
+                if (sel !== _lastSel) { _lastSel = sel; Android.onTextSelected(sel); }
             });
+
+            (function() {
+                var _ts = {x:0, y:0, t:0};
+                document.addEventListener('touchstart', function(e) {
+                    var t = e.touches[0]; _ts = {x: t.clientX, y: t.clientY, t: Date.now()};
+                });
+                document.addEventListener('touchend', function(e) {
+                    var dx = e.changedTouches[0].clientX - _ts.x;
+                    var dy = e.changedTouches[0].clientY - _ts.y;
+                    var dt = Date.now() - _ts.t;
+                    if (Math.abs(dx) < 15 && Math.abs(dy) < 15 && dt < 300) {
+                        try { Android.onTap(); } catch(e) {}
+                    } else if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+                        try { Android.onSwipe(dx > 0 ? 'prev' : 'next'); } catch(e) {}
+                    }
+                });
+            })();
+
+            $autoScrollJs
             </script>
         </head>
         <body>

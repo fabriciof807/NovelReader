@@ -1,6 +1,7 @@
 package com.novelreader.domain.usecase
 
 import com.google.common.truth.Truth.assertThat
+import com.novelreader.data.local.preferences.ImportPreferences
 import com.novelreader.data.worker.ImportWorkScheduler
 import com.novelreader.data.worker.WorkCompletionObserver
 import io.mockk.coVerify
@@ -13,8 +14,9 @@ class BackgroundImportManagerTest {
 
     private val scheduler: ImportWorkScheduler = mockk(relaxed = true)
     private val completionObserver: WorkCompletionObserver = mockk(relaxed = true)
+    private val importPrefs: ImportPreferences = mockk(relaxed = true)
 
-    private val manager = BackgroundImportManager(scheduler, completionObserver)
+    private val manager = BackgroundImportManager(scheduler, completionObserver, importPrefs)
 
     @Test
     fun `startImport delegates to scheduler with spec`() = runTest {

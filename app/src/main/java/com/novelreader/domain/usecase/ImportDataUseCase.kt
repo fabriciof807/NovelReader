@@ -14,6 +14,17 @@ import java.io.InputStreamReader
 import javax.inject.Inject
 import javax.inject.Singleton
 
+data class ImportPreviewEntry(
+    val title: String,
+    val sourceUrl: String
+)
+
+data class ImportPreview(
+    val novels: List<ImportPreviewEntry>,
+    val bookmarksCount: Int,
+    val charactersCount: Int
+)
+
 data class ImportResult(
     val novelsQueued: List<String>,
     val novelsFailed: List<String>,
@@ -29,7 +40,28 @@ class ImportDataUseCase @Inject constructor(
     private val pendingImportPreferences: PendingImportPreferences,
     @IoDispatcher private val ioDispatcher: CoroutineDispatcher
 ) {
-    suspend fun execute(uri: Uri): ImportResult = withContext(ioDispatcher) {
+    suspend fun previewImport(uri: Uri): ImportPreview = withContext(ioDispatcher) {
+        val json = readJson(uri)
+        val root = JSONObject(json)
+        val novelsArr = root.optJSONArray("novels") ?: JSONArray()
+        val novels = (0 until novelsArr.length()).map { i ->
+            val obj = novelsArr.getJSONObject(i)
+            ImportPreviewEntry(
+                title = obj.optString("title"),
+                sourceUrl = obj.optString("sourceUrl")
+            )
+        }
+        ImportPreview(
+            novels = novels,
+            bookmarksCount = (root.optJSONArray("bookmarks") ?: JSONArray()).length(),
+            charactersCount = (root.optJSONArray("characters") ?: JSONArray()).length()
+        )
+    }
+
+    suspend fun execute(
+        uri: Uri,
+        selectedTitles: Set<String>? = null
+    ): ImportResult = withContext(ioDispatcher) {
         val json = readJson(uri)
         val root = JSONObject(json)
 
@@ -45,6 +77,7 @@ class ImportDataUseCase @Inject constructor(
             val title = novel.optString("title")
             val sourceUrl = novel.optString("sourceUrl")
             if (sourceUrl.isBlank()) continue
+            if (selectedTitles != null && title !in selectedTitles) continue
             try {
                 val result = webImportUseCase.fetchChapterList(sourceUrl)
                 result.onSuccess { fetchResult ->

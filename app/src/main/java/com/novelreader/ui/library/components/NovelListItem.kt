@@ -33,6 +33,7 @@ import com.novelreader.domain.usecase.BackgroundImportState
 @Composable
 fun NovelListItem(
     novel: NovelEntity,
+    readProgress: Float = 0f,
     bgState: BackgroundImportState,
     onClick: () -> Unit,
     onLongClick: () -> Unit
@@ -66,6 +67,20 @@ fun NovelListItem(
                         fontWeight = FontWeight.SemiBold
                     )
                     Spacer(modifier = Modifier.height(4.dp))
+                    if (readProgress > 0f) {
+                        LinearProgressIndicator(
+                            progress = { readProgress },
+                            modifier = Modifier.fillMaxWidth().height(2.dp),
+                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
+                            trackColor = MaterialTheme.colorScheme.surfaceVariant
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = "${(readProgress * 100).toInt()}%",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                        )
+                    }
                     Text(
                         text = stringResource(R.string.chapters_count, novel.totalChapters),
                         style = MaterialTheme.typography.labelSmall,

@@ -10,7 +10,7 @@ import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalView
-import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsControllerCompat
 
 private val DarkColorScheme = darkColorScheme(
     primary = DarkPrimary,
@@ -56,8 +56,8 @@ fun NovelReaderTheme(
             val activity = view.context as? Activity
             val window = activity?.window
             if (window != null) {
-                window.statusBarColor = colorScheme.background.toArgb()
-                WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
+                window.statusBarColor = android.graphics.Color.TRANSPARENT
+                WindowInsetsControllerCompat(window, view).isAppearanceLightStatusBars = !darkTheme
             }
         }
     }

@@ -7,14 +7,14 @@ plugins {
 
 android {
     namespace = "com.novelreader"
-    compileSdk = 35
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "com.novelreader"
         minSdk = 26
         targetSdk = 34
-        versionCode = 5
-        versionName = "1.3.5"
+        versionCode = 6
+        versionName = "1.3.7"
 
         buildConfigField("String", "MVLEMPYR_API_URL", "\"https://chap.heliosarchive.online/wp-json/wp/v2/mvl-characters?per_page=15000\"")
     }

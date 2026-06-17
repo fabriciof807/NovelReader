@@ -14,6 +14,11 @@
     <string name="chapters">Capítulos</string>
     <string name="no_novels">Nenhuma novel importada</string>
     <string name="tap_to_import">Toque em + para importar arquivos HTML</string>
+    <string name="search_hint">Buscar novels…</string>
+    <string name="no_results">Nenhum resultado</string>
+    <string name="filter_all">Todos</string>
+    <string name="filter_reading">Lendo</string>
+    <string name="filter_completed">Concluídos</string>
     <string name="no_chapters">Nenhum capítulo encontrado</string>
     <string name="change_cover">Alterar capa</string>
     <string name="cover_by_url">Capa via URL</string>
@@ -61,8 +66,11 @@
     <string name="bookmarks">Favoritos</string>
     <string name="theme">Tema</string>
     <string name="sepia">Sépia</string>
+    <string name="reader_theme_gray">Cinza</string>
     <string name="font_size">Tamanho da fonte: %dpx</string>
     <string name="line_spacing">Espaçamento: %.1f</string>
+    <string name="reader_auto_scroll">Rolagem automática</string>
+    <string name="reader_auto_scroll_hint">Toque na tela para pausar.</string>
     <string name="bookmarks_count">Favoritos (%d)</string>
     <string name="no_bookmarks_chapter">Nenhum favorito neste capítulo</string>
     <string name="add">Adicionar</string>
@@ -164,6 +172,7 @@
     <string name="import_banner_title">Importando %1$s</string>
     <string name="import_banner_progress">%1$d de %2$d</string>
     <string name="import_banner_cancel">Cancelar</string>
+    <string name="import_banner_queued">+%d na fila</string>
 
     <!-- Mvlempyr importer -->
     <string name="mvlempyr_book_id_not_found">BookId não encontrado</string>
@@ -206,4 +215,14 @@
     <!-- Import -->
     <string name="import_data">Importar dados</string>
     <string name="import_data_desc">Importar novels de um arquivo JSON</string>
+    <string name="export_confirm_title">Exportar dados?</string>
+    <string name="export_confirm_msg">Será gerado um arquivo JSON com as novels, personagens e bookmarks.</string>
+    <string name="import_confirm_title">Importar dados?</string>
+    <string name="import_confirm_msg">As novels com URL serão baixadas. Bookmarks e personagens pendentes serão armazenados.</string>
+    <string name="chapter_list">Capítulos</string>
+    <string name="import_banner_queued_title">Na fila (%d)</string>
+    <string name="import_banner_chapter">Capítulo %d</string>
+    <string name="import_preview_title">Preview de importação</string>
+    <string name="import_preview_count">%1$d novels · %2$d bookmarks · %3$d personagens</string>
+    <string name="import_preview_import">Importar %d selecionados</string>
 </resources>

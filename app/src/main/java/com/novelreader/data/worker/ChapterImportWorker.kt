@@ -49,7 +49,12 @@ class ChapterImportWorker @AssistedInject constructor(
             orderIndexOffset = orderIndexOffset,
             sourceUrl = spec.sourceUrl,
             onProgress = { processed, _ ->
-                setProgressAsync(workDataOf(KEY_PROGRESS to processed, KEY_TOTAL to total))
+                val chapterNum = spec.chapterNumbers.getOrElse(processed.coerceAtMost(spec.chapterNumbers.lastIndex)) { 0 }
+                setProgressAsync(workDataOf(
+                    KEY_PROGRESS to processed,
+                    KEY_TOTAL to total,
+                    KEY_CURRENT_CHAPTER to chapterNum
+                ))
                 setForegroundAsync(notificationHelper.createForegroundInfo(spec, processed, total))
             },
             onError = { url, msg ->
@@ -68,7 +73,13 @@ class ChapterImportWorker @AssistedInject constructor(
             Result.success()
         } else {
             notificationHelper.postFailureNotification(spec)
-            Result.failure()
+            val errorType = if (errors.any { it.message.contains("timeout", ignoreCase = true) || it.message.contains("network", ignoreCase = true) || it.message.contains("connect", ignoreCase = true) })
+                "network" else "parse"
+            val outputData = workDataOf(
+                KEY_ERROR_TYPE to errorType,
+                KEY_ERROR_MSG to (errors.firstOrNull()?.message ?: "Unknown error")
+            )
+            Result.failure(outputData)
         }
     }
 
@@ -113,6 +124,9 @@ class ChapterImportWorker @AssistedInject constructor(
         const val KEY_SPLIT_INDEX = "split_index"
         const val KEY_PROGRESS = "progress"
         const val KEY_TOTAL = "total"
+        const val KEY_CURRENT_CHAPTER = "current_chapter"
+        const val KEY_ERROR_TYPE = "error_type"
+        const val KEY_ERROR_MSG = "error_message"
         const val KEY_SOURCE_URL = "source_url"
         const val UNIQUE_ACTIVE = "chapter_import_active"
         const val TAG_IMPORT = "chapter_import"

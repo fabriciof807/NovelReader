@@ -29,3 +29,8 @@ data class ChapterEntity(
     val isRead: Boolean = false,
     val lastScrollPosition: Int = 0
 )
+
+data class NovelReadCount(
+    val novelId: Long,
+    val readCount: Int
+)

@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -11,14 +12,17 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.TouchApp
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Slider
@@ -43,6 +47,7 @@ fun SettingsSheet(
     onThemeChange: (String) -> Unit,
     onFontSizeChange: (Int) -> Unit,
     onLineHeightChange: (Float) -> Unit,
+    onAutoScrollSpeedChange: (Float) -> Unit,
     onDismiss: () -> Unit
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -94,6 +99,13 @@ fun SettingsSheet(
                     onClick = { onThemeChange("sepia") },
                     modifier = Modifier.weight(1f)
                 )
+                ThemeOption(
+                    icon = Icons.Default.DarkMode,
+                    label = stringResource(R.string.reader_theme_gray),
+                    selected = config.theme == "gray",
+                    onClick = { onThemeChange("gray") },
+                    modifier = Modifier.weight(1f)
+                )
             }
 
             Spacer(modifier = Modifier.height(20.dp))
@@ -129,6 +141,45 @@ fun SettingsSheet(
                 steps = 12,
                 modifier = Modifier.fillMaxWidth()
             )
+
+            Spacer(modifier = Modifier.height(16.dp))
+            HorizontalDivider()
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(Icons.Default.TouchApp, contentDescription = null, modifier = Modifier.size(20.dp))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    stringResource(R.string.reader_auto_scroll),
+                    style = MaterialTheme.typography.titleSmall,
+                    modifier = Modifier.weight(1f)
+                )
+                if (config.autoScrollSpeed > 0f) {
+                    Text(
+                        text = "%.1f".format(config.autoScrollSpeed),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.height(4.dp))
+            Slider(
+                value = config.autoScrollSpeed,
+                onValueChange = { onAutoScrollSpeedChange(it) },
+                valueRange = 0f..3f,
+                steps = 11,
+                modifier = Modifier.fillMaxWidth()
+            )
+            if (config.autoScrollSpeed > 0f) {
+                Text(
+                    stringResource(R.string.reader_auto_scroll_hint),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
     }
 }

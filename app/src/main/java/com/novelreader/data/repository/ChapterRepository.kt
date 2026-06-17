@@ -2,6 +2,7 @@ package com.novelreader.data.repository
 
 import com.novelreader.data.local.db.dao.ChapterDao
 import com.novelreader.data.local.db.entity.ChapterEntity
+import com.novelreader.data.local.db.entity.NovelReadCount
 import com.novelreader.data.parser.ChapterNumberExtractor
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -50,4 +51,7 @@ class ChapterRepository @Inject constructor(
         if (ftsQuery.isBlank()) return emptyList()
         return chapterDao.searchInNovel(novelId, ftsQuery)
     }
+
+    suspend fun getReadCountPerNovel(): List<NovelReadCount> =
+        chapterDao.getReadCountPerNovel()
 }

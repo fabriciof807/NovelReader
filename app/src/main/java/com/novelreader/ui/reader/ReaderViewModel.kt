@@ -33,6 +33,7 @@ data class ReaderState(
     val chapter: ChapterEntity? = null,
     val prevChapterId: Long? = null,
     val nextChapterId: Long? = null,
+    val allChapters: List<ChapterEntity> = emptyList(),
     val bookmarks: List<BookmarkEntity> = emptyList(),
     val isLoading: Boolean = true,
     val error: String? = null,
@@ -111,7 +112,8 @@ class ReaderViewModel @Inject constructor(
                 chapter = chapter,
                 prevChapterId = prevId,
                 nextChapterId = nextId,
-                isLoading = false
+                isLoading = false,
+                allChapters = allChapters
             )
 
             collectBookmarks(chapterId)
@@ -251,6 +253,15 @@ class ReaderViewModel @Inject constructor(
     fun updateLineHeight(height: Float) {
         viewModelScope.launch {
             readerPreferences.updateLineHeight(height)
+            _state.value = _state.value.copy(
+                reloadVersion = _state.value.reloadVersion + 1
+            )
+        }
+    }
+
+    fun updateAutoScrollSpeed(speed: Float) {
+        viewModelScope.launch {
+            readerPreferences.updateAutoScrollSpeed(speed)
             _state.value = _state.value.copy(
                 reloadVersion = _state.value.reloadVersion + 1
             )

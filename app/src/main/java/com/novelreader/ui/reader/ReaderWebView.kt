@@ -13,22 +13,31 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.viewinterop.AndroidView
 
 private class ReaderJsInterface(
-    private val onTextSelected: (String) -> Unit
+    private val onTextSelected: (String) -> Unit,
+    private val onTap: () -> Unit,
+    private val onSwipe: (String) -> Unit,
+    private val onAutoScrollReachedEnd: () -> Unit
 ) {
     @JavascriptInterface
     fun onTextSelected(text: String) {
         onTextSelected(text)
     }
-}
 
-/**
- * Segurança do addJavascriptInterface:
- * - Conteúdo HTML carregado via loadDataWithBaseURL(null, ...) → origem opaca, sem acesso a file://
- * - HTML sanitizado por HtmlSanitizer.sanitizeHtml() + Jsoup.clean(SAFELIST.none()) → remove <script>, on*, javascript:, data:
- * - ReaderHtmlBuilder usa Safelist restritiva (apenas p, h1-h6, br, strong, em, b, i, u, sub, sup)
- * - @JavascriptInterface expõe apenas onTextSelected(String) → superfície de ataque mínima
- * - targetSdk 34 exige anotação @JavascriptInterface (presente)
- */
+    @JavascriptInterface
+    fun onTap() {
+        onTap()
+    }
+
+    @JavascriptInterface
+    fun onSwipe(direction: String) {
+        onSwipe(direction)
+    }
+
+    @JavascriptInterface
+    fun onAutoScrollReachedEnd() {
+        onAutoScrollReachedEnd()
+    }
+}
 
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
@@ -38,6 +47,9 @@ fun ReaderWebView(
     onPageFinished: (WebView, Float) -> Unit,
     onWebViewReady: (WebView) -> Unit,
     onSearchHighlight: (WebView, String) -> Unit,
+    onTap: () -> Unit = {},
+    onSwipe: (String) -> Unit = {},
+    onAutoScrollReachedEnd: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     AndroidView(
@@ -86,7 +98,7 @@ fun ReaderWebView(
                     }
                 }
                 addJavascriptInterface(
-                    ReaderJsInterface(onTextSelected),
+                    ReaderJsInterface(onTextSelected, onTap, onSwipe, onAutoScrollReachedEnd),
                     "Android"
                 )
                 onWebViewReady(this)

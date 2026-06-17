@@ -26,6 +26,7 @@ import androidx.compose.material.icons.filled.Sort
 import androidx.compose.material.icons.filled.SortByAlpha
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -44,6 +45,7 @@ import com.novelreader.R
 import com.novelreader.data.local.db.entity.NovelEntity
 import com.novelreader.domain.usecase.BackgroundImportState
 import com.novelreader.ui.library.LibraryStats
+import com.novelreader.ui.library.NovelFilter
 import com.novelreader.ui.library.ViewMode
 import com.novelreader.ui.library.components.ImportProgressBanner
 import com.novelreader.ui.library.components.NovelCard
@@ -56,6 +58,10 @@ fun LibraryTab(
     stats: LibraryStats,
     backgroundImportState: BackgroundImportState,
     viewMode: ViewMode = ViewMode.GRID,
+    readProgress: Map<Long, Float> = emptyMap(),
+    searchQuery: String = "",
+    filterChip: NovelFilter = NovelFilter.ALL,
+    onFilterChipChange: (NovelFilter) -> Unit = {},
     onNovelClick: (NovelEntity) -> Unit,
     onLongClick: (NovelEntity) -> Unit,
     onToggleAutoUpdate: (NovelEntity) -> Unit,
@@ -65,28 +71,68 @@ fun LibraryTab(
     onCancelImport: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val searchFiltered = if (searchQuery.isBlank()) novels
+    else novels.filter { it.title.contains(searchQuery, ignoreCase = true) }
+
+    val chipFiltered = when (filterChip) {
+        NovelFilter.ALL -> searchFiltered
+        NovelFilter.READING -> searchFiltered.filter {
+            val progress = readProgress[it.id] ?: 0f
+            progress > 0f && progress < 1f
+        }
+        NovelFilter.COMPLETED -> searchFiltered.filter {
+            val progress = readProgress[it.id] ?: 0f
+            progress >= 1f && it.totalChapters > 0
+        }
+    }
+
     Column(modifier = modifier.fillMaxSize()) {
         ImportProgressBanner(
             state = backgroundImportState,
             onCancel = onCancelImport
         )
-        if (novels.isEmpty()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            FilterChip(
+                selected = filterChip == NovelFilter.ALL,
+                onClick = { onFilterChipChange(NovelFilter.ALL) },
+                label = { Text(stringResource(R.string.filter_all)) }
+            )
+            FilterChip(
+                selected = filterChip == NovelFilter.READING,
+                onClick = { onFilterChipChange(NovelFilter.READING) },
+                label = { Text(stringResource(R.string.filter_reading)) }
+            )
+            FilterChip(
+                selected = filterChip == NovelFilter.COMPLETED,
+                onClick = { onFilterChipChange(NovelFilter.COMPLETED) },
+                label = { Text(stringResource(R.string.filter_completed)) }
+            )
+        }
+        if (chipFiltered.isEmpty()) {
             Box(
                 modifier = Modifier.weight(1f).fillMaxWidth(),
                 contentAlignment = Alignment.Center
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
-                        stringResource(R.string.no_novels),
+                        text = if (searchQuery.isNotBlank()) stringResource(R.string.no_results)
+                               else stringResource(R.string.no_novels),
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                     )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        stringResource(R.string.tap_to_import),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
-                    )
+                    if (searchQuery.isBlank()) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            stringResource(R.string.tap_to_import),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+                        )
+                    }
                 }
             }
         } else if (viewMode == ViewMode.GRID) {
@@ -97,10 +143,11 @@ fun LibraryTab(
                 verticalArrangement = Arrangement.spacedBy(12.dp),
                 modifier = Modifier.weight(1f).fillMaxWidth()
             ) {
-                items(novels, key = { it.id }) { novel ->
+                items(chipFiltered, key = { it.id }) { novel ->
                     var showMenu by remember { mutableStateOf(false) }
                     NovelCard(
                         novel = novel,
+                        readProgress = readProgress[novel.id] ?: 0f,
                         bgState = backgroundImportState,
                         onClick = { onNovelClick(novel) },
                         onLongClick = { showMenu = true },
@@ -123,10 +170,11 @@ fun LibraryTab(
                 verticalArrangement = Arrangement.spacedBy(4.dp),
                 modifier = Modifier.weight(1f).fillMaxWidth()
             ) {
-                items(novels, key = { it.id }) { novel ->
+                items(chipFiltered, key = { it.id }) { novel ->
                     var showMenu by remember { mutableStateOf(false) }
                     NovelListItem(
                         novel = novel,
+                        readProgress = readProgress[novel.id] ?: 0f,
                         bgState = backgroundImportState,
                         onClick = { onNovelClick(novel) },
                         onLongClick = { showMenu = true }
