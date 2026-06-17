@@ -92,7 +92,7 @@ fun NovelListItem(
                 Box(
                     modifier = Modifier
                         .matchParentSize()
-                        .background(Color.Black.copy(alpha = 0.45f)),
+                        .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.45f)),
                     contentAlignment = Alignment.Center
                 ) {
                     Column(

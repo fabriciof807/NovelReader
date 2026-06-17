@@ -23,7 +23,9 @@ private val DarkColorScheme = darkColorScheme(
     surfaceVariant = DarkSurface,
     onBackground = DarkText,
     onSurface = DarkText,
-    onSurfaceVariant = DarkText.copy(alpha = 0.7f)
+    onSurfaceVariant = DarkText.copy(alpha = 0.7f),
+    error = Color(0xFFFFB4AB),
+    errorContainer = Color(0xFF93000A)
 )
 
 private val LightColorScheme = lightColorScheme(
@@ -34,7 +36,9 @@ private val LightColorScheme = lightColorScheme(
     surfaceVariant = Color(0xFFE8E0D0),
     onBackground = LightText,
     onSurface = LightText,
-    onSurfaceVariant = LightText.copy(alpha = 0.7f)
+    onSurfaceVariant = LightText.copy(alpha = 0.7f),
+    error = Color(0xFFBA1A1A),
+    errorContainer = Color(0xFFFFDAD6)
 )
 
 @Composable
@@ -53,10 +57,8 @@ fun NovelReaderTheme(
     val view = LocalView.current
     if (!view.isInEditMode) {
         SideEffect {
-            val activity = view.context as? Activity
-            val window = activity?.window
+            val window = (view.context as? Activity)?.window
             if (window != null) {
-                window.statusBarColor = android.graphics.Color.TRANSPARENT
                 WindowInsetsControllerCompat(window, view).isAppearanceLightStatusBars = !darkTheme
             }
         }

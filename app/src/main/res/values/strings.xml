@@ -28,6 +28,8 @@
     <string name="delete_novel">Deletar novel</string>
     <string name="delete_confirm">Tem certeza que deseja deletar \"%s\" e todos os seus capítulos?</string>
     <string name="chapters_count">%d cap.</string>
+    <string name="chapters_range_asc">1 → %d</string>
+    <string name="chapters_range_desc">%d → 1</string>
     <string name="reading">Continuar</string>
     <string name="sort">Ordenar</string>
     <string name="sort_title">Título</string>

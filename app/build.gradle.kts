@@ -13,8 +13,8 @@ android {
         applicationId = "com.novelreader"
         minSdk = 26
         targetSdk = 34
-        versionCode = 6
-        versionName = "1.3.7"
+        versionCode = 7
+        versionName = "1.3.8"
 
         buildConfigField("String", "MVLEMPYR_API_URL", "\"https://chap.heliosarchive.online/wp-json/wp/v2/mvl-characters?per_page=15000\"")
     }

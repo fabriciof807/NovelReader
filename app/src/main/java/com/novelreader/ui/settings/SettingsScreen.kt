@@ -1,6 +1,5 @@
 package com.novelreader.ui.settings
 
-import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
@@ -24,7 +23,7 @@ import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.BrightnessHigh
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.ExpandLess
@@ -47,6 +46,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -92,6 +93,7 @@ fun SettingsScreen(
     var showImportConfirm by remember { mutableStateOf(false) }
     var importPreview by remember { mutableStateOf<ImportPreview?>(null) }
     var selectedImportTitles by remember { mutableStateOf<Set<String>>(emptySet()) }
+    val snackbarHostState = remember { SnackbarHostState() }
 
     val exportLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("application/json")
@@ -103,9 +105,9 @@ fun SettingsScreen(
                         context.contentResolver.openOutputStream(uri)?.use { os ->
                             os.write(json.toByteArray())
                         }
-                        Toast.makeText(context, R.string.export_success, Toast.LENGTH_SHORT).show()
+                        snackbarHostState.showSnackbar(context.getString(R.string.export_success))
                     } catch (e: Exception) {
-                        Toast.makeText(context, R.string.export_error, Toast.LENGTH_SHORT).show()
+                        snackbarHostState.showSnackbar(context.getString(R.string.export_error))
                     }
                 }
             }
@@ -129,19 +131,19 @@ fun SettingsScreen(
 
     LaunchedEffect(Unit) {
         viewModel.exportError.collect { msg ->
-            Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+            snackbarHostState.showSnackbar(msg)
         }
     }
 
     LaunchedEffect(Unit) {
         viewModel.importResult.collect { msg ->
-            Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+            snackbarHostState.showSnackbar(msg)
         }
     }
 
     LaunchedEffect(Unit) {
         viewModel.importError.collect { msg ->
-            Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+            snackbarHostState.showSnackbar(msg)
         }
     }
 
@@ -283,12 +285,13 @@ fun SettingsScreen(
     }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.settings)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = stringResource(R.string.back))
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 }
             )

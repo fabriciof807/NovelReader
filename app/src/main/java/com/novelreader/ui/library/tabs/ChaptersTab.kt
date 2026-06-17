@@ -14,8 +14,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.Bookmark
-import androidx.compose.material.icons.filled.Sort
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -66,16 +66,16 @@ fun ChaptersTab(
                 ) {
                     Text(
                         text = if (sortOrder == ChapterSortOrder.ASCENDING)
-                            "1 → ${chapters.size}"
+                            stringResource(R.string.chapters_range_asc, chapters.size)
                         else
-                            "${chapters.size} → 1",
+                            stringResource(R.string.chapters_range_desc, chapters.size),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                     )
                     Spacer(Modifier.size(4.dp))
                     IconButton(onClick = onToggleSort) {
-                        Icon(
-                            Icons.Default.Sort,
+                            Icon(
+                                Icons.AutoMirrored.Filled.Sort,
                             contentDescription = stringResource(R.string.sort),
                             tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                         )

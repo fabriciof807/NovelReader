@@ -27,9 +27,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.ArrowBackIos
-import androidx.compose.material.icons.filled.ArrowForwardIos
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBackIos
+import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.List
@@ -344,7 +344,7 @@ fun ReaderScreen(
                                 saveScroll()
                                 onBack()
                             }) {
-                                Icon(Icons.Default.ArrowBack, contentDescription = stringResource(R.string.back))
+                                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                             }
                         }
                     },
@@ -406,7 +406,7 @@ fun ReaderScreen(
                                 enabled = state.prevChapterId != null
                             ) {
                                 Icon(
-                                    Icons.Default.ArrowBackIos,
+                                    Icons.AutoMirrored.Filled.ArrowBackIos,
                                     contentDescription = stringResource(R.string.previous)
                                 )
                             }
@@ -476,7 +476,7 @@ fun ReaderScreen(
                                 enabled = state.nextChapterId != null
                             ) {
                                 Icon(
-                                    Icons.Default.ArrowForwardIos,
+                                    Icons.AutoMirrored.Filled.ArrowForwardIos,
                                     contentDescription = stringResource(R.string.next)
                                 )
                             }
@@ -518,7 +518,6 @@ fun ReaderScreen(
                     onScrollChanged = { scrollRatio = it },
                     onPageFinished = { _, _ -> },
                     onWebViewReady = { webView = it },
-                    onSearchHighlight = { _, _ -> },
                     onTap = { isControlsVisible = !isControlsVisible },
                     onSwipe = { direction ->
                         saveScroll()

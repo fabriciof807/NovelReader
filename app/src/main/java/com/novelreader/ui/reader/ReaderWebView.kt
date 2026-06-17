@@ -46,7 +46,6 @@ fun ReaderWebView(
     onScrollChanged: (Float) -> Unit,
     onPageFinished: (WebView, Float) -> Unit,
     onWebViewReady: (WebView) -> Unit,
-    onSearchHighlight: (WebView, String) -> Unit,
     onTap: () -> Unit = {},
     onSwipe: (String) -> Unit = {},
     onAutoScrollReachedEnd: () -> Unit = {},
@@ -62,18 +61,6 @@ fun ReaderWebView(
                 settings.javaScriptEnabled = true
                 settings.loadWithOverviewMode = true
                 settings.useWideViewPort = true
-                settings.allowContentAccess = false
-                settings.allowFileAccess = false
-                @Suppress("DEPRECATION")
-                settings.allowUniversalAccessFromFileURLs = false
-                @Suppress("DEPRECATION")
-                settings.allowFileAccessFromFileURLs = false
-                settings.databaseEnabled = false
-                settings.domStorageEnabled = false
-                @Suppress("DEPRECATION")
-                settings.savePassword = false
-                @Suppress("DEPRECATION")
-                settings.saveFormData = false
                 setBackgroundColor(Color.TRANSPARENT)
                 setOnScrollChangeListener { _, _, _, _, _ ->
                     val totalH = (contentHeight * scale).toInt()

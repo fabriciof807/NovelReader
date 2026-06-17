@@ -10,15 +10,15 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.automirrored.filled.ViewList
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Sort
 import androidx.compose.material.icons.filled.SortByAlpha
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -173,7 +173,7 @@ fun LibraryScreen(
                     navigationIcon = {
                         if (selectedTab == 1 || selectedTab == 2) {
                             IconButton(onClick = { viewModel.selectTab(0) }) {
-                                Icon(Icons.Default.ArrowBack, contentDescription = stringResource(R.string.back))
+                                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                             }
                         } else if (isSearchActive) {
                             IconButton(onClick = { isSearchActive = false; searchQuery = "" }) {
@@ -198,7 +198,7 @@ fun LibraryScreen(
                             }
                             Box {
                                 IconButton(onClick = { showSortMenu = true }) {
-                                    Icon(Icons.Default.Sort, contentDescription = stringResource(R.string.sort))
+                                    Icon(Icons.AutoMirrored.Filled.Sort, contentDescription = stringResource(R.string.sort))
                                 }
                                 DropdownMenu(
                                     expanded = showSortMenu,
@@ -207,7 +207,7 @@ fun LibraryScreen(
                                     DropdownMenuItem(
                                         text = { Text(stringResource(R.string.sort_title)) },
                                         onClick = { viewModel.setSortOrder(SortOrder.TITLE); showSortMenu = false },
-                                        leadingIcon = { Icon(Icons.Default.SortByAlpha, contentDescription = null) }
+                                        leadingIcon = { Icon(Icons.Filled.SortByAlpha, contentDescription = null) }
                                     )
                                     DropdownMenuItem(
                                         text = { Text(stringResource(R.string.sort_date)) },
@@ -217,7 +217,7 @@ fun LibraryScreen(
                                     DropdownMenuItem(
                                         text = { Text(stringResource(R.string.sort_last_read)) },
                                         onClick = { viewModel.setSortOrder(SortOrder.LAST_READ); showSortMenu = false },
-                                        leadingIcon = { Icon(Icons.Default.Sort, contentDescription = null) }
+                                        leadingIcon = { Icon(Icons.AutoMirrored.Filled.Sort, contentDescription = null) }
                                     )
                                 }
                             }
