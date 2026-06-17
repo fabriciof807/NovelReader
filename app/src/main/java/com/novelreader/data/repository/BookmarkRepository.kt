@@ -16,6 +16,9 @@ class BookmarkRepository @Inject constructor(
     fun getAll(): Flow<List<BookmarkEntity>> =
         bookmarkDao.getAll()
 
+    suspend fun getAllSync(): List<BookmarkEntity> =
+        bookmarkDao.getAllSync()
+
     suspend fun insert(bookmark: BookmarkEntity): Long =
         bookmarkDao.insert(bookmark)
 

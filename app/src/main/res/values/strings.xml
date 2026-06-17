@@ -201,4 +201,10 @@
     <!-- Auto-update toggle -->
     <string name="auto_update_enable">Ativar verificação de atualizações</string>
     <string name="auto_update_disable">Desativar verificação de atualizações</string>
+
+    <!-- Export -->
+    <string name="export_data">Exportar dados</string>
+    <string name="export_data_desc">Salvar novels, personagens e favoritos em JSON</string>
+    <string name="export_success">Dados exportados com sucesso</string>
+    <string name="export_error">Erro ao exportar dados</string>
 </resources>

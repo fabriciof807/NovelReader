@@ -19,6 +19,9 @@ interface CharacterPhotoDao {
     @Query("SELECT * FROM character_photos WHERE characterId IN (:characterIds) ORDER BY characterId, orderIndex ASC")
     suspend fun getByCharacterIds(characterIds: List<Long>): List<CharacterPhotoEntity>
 
+    @Query("SELECT * FROM character_photos")
+    suspend fun getAllPhotosSync(): List<CharacterPhotoEntity>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(photo: CharacterPhotoEntity): Long
 

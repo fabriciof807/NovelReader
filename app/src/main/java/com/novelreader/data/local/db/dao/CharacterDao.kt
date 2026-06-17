@@ -16,6 +16,9 @@ interface CharacterDao {
     @Query("SELECT * FROM characters WHERE novelId = :novelId ORDER BY isFavorite DESC, createdAt ASC")
     suspend fun getByNovelSync(novelId: Long): List<CharacterEntity>
 
+    @Query("SELECT * FROM characters")
+    suspend fun getAllCharactersSync(): List<CharacterEntity>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(character: CharacterEntity): Long
 

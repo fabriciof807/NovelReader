@@ -201,4 +201,10 @@
     <!-- Auto-update toggle -->
     <string name="auto_update_enable">Enable update checks</string>
     <string name="auto_update_disable">Disable update checks</string>
+
+    <!-- Export -->
+    <string name="export_data">Export data</string>
+    <string name="export_data_desc">Save novels, characters and bookmarks as JSON</string>
+    <string name="export_success">Data exported successfully</string>
+    <string name="export_error">Error exporting data</string>
 </resources>

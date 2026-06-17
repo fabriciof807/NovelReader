@@ -3,6 +3,7 @@ package com.novelreader.data.repository
 import com.novelreader.data.local.db.dao.NovelDao
 import com.novelreader.data.local.db.entity.NovelEntity
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -43,4 +44,7 @@ class NovelRepository @Inject constructor(
 
     suspend fun updateAutoUpdate(novelId: Long, enabled: Boolean) =
         novelDao.updateAutoUpdate(novelId, enabled)
+
+    suspend fun getAllNovelsSync(): List<NovelEntity> =
+        novelDao.getAllNovels().first()
 }

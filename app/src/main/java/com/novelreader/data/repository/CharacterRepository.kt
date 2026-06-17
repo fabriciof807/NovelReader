@@ -25,4 +25,7 @@ class CharacterRepository @Inject constructor(
     suspend fun updateNotes(id: Long, notes: String?) = characterDao.updateNotes(id, notes)
 
     suspend fun toggleFavorite(id: Long, isFavorite: Boolean) = characterDao.toggleFavorite(id, isFavorite)
+
+    suspend fun getAllCharactersSync(): List<CharacterEntity> =
+        characterDao.getAllCharactersSync()
 }

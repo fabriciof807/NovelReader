@@ -24,4 +24,7 @@ class CharacterPhotoRepository @Inject constructor(
 
     suspend fun deleteById(id: Long) =
         characterPhotoDao.deleteById(id)
+
+    suspend fun getAllPhotosSync(): List<CharacterPhotoEntity> =
+        characterPhotoDao.getAllPhotosSync()
 }
