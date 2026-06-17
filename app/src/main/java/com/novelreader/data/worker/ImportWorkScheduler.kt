@@ -4,9 +4,7 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.workDataOf
 import com.novelreader.data.local.preferences.ImportPreferences
-import com.novelreader.data.local.preferences.QueueMode
 import com.novelreader.domain.usecase.ImportJobSpec
-import kotlinx.coroutines.flow.first
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -18,18 +16,8 @@ class ImportWorkScheduler @Inject constructor(
     private val completionObserver: WorkCompletionObserver
 ) {
     suspend fun schedule(spec: ImportJobSpec): UUID {
-        val mode = importPrefs.queueMode.first()
-        
-        when (mode) {
-            QueueMode.SEQUENTIAL -> {
-                importPrefs.enqueueJob(spec)
-                completionObserver.tryScheduleNext()
-            }
-            QueueMode.PARALLEL -> {
-                val request = ImportWorkRequestFactory.build(spec)
-                workManager.enqueue(request)
-            }
-        }
+        importPrefs.enqueueJob(spec)
+        completionObserver.tryScheduleNext()
         return spec.id
     }
 

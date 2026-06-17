@@ -3,7 +3,6 @@ package com.novelreader.data.worker
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import com.novelreader.data.local.preferences.ImportPreferences
-import com.novelreader.data.local.preferences.QueueMode
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -90,9 +89,7 @@ class WorkCompletionObserver @Inject constructor(
         state == WorkInfo.State.CANCELLED
 
     suspend fun onJobCompleted(id: UUID, success: Boolean, errorCount: Int) {
-        if (importPrefs.queueMode.first() == QueueMode.SEQUENTIAL) {
-            tryScheduleNext()
-        }
+        tryScheduleNext()
     }
 
     fun tryScheduleNext() {

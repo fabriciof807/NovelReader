@@ -182,11 +182,6 @@
     <string name="import_notification_text">Capítulo %1$d de %2$d</string>
     <string name="import_notification_pending">Na fila: %d</string>
     <string name="import_notification_cancel">Cancelar</string>
-    <string name="import_queue_mode">Modo de fila</string>
-    <string name="import_queue_sequential">Sequencial</string>
-    <string name="import_queue_parallel">Paralelo</string>
-    <string name="import_queue_sequential_desc">Importa uma novel por vez</string>
-    <string name="import_queue_parallel_desc">Importa múltiplas novels simultaneamente</string>
     <string name="import_notification_complete">Importação de %s concluída</string>
     <string name="import_notification_complete_text">%1$d capítulos importados</string>
     <string name="import_notification_complete_with_errors">%1$d capítulos, %2$d erro(s)</string>
@@ -207,4 +202,8 @@
     <string name="export_data_desc">Salvar novels, personagens e favoritos em JSON</string>
     <string name="export_success">Dados exportados com sucesso</string>
     <string name="export_error">Erro ao exportar dados</string>
+
+    <!-- Import -->
+    <string name="import_data">Importar dados</string>
+    <string name="import_data_desc">Importar novels de um arquivo JSON</string>
 </resources>

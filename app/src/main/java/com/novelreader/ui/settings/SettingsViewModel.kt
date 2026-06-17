@@ -1,12 +1,12 @@
 package com.novelreader.ui.settings
 
 import android.app.Activity
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.novelreader.data.local.preferences.AppPreferences
-import com.novelreader.data.local.preferences.ImportPreferences
-import com.novelreader.data.local.preferences.QueueMode
 import com.novelreader.domain.usecase.ExportDataUseCase
+import com.novelreader.domain.usecase.ImportDataUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -19,8 +19,8 @@ import javax.inject.Inject
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     private val appPreferences: AppPreferences,
-    private val importPreferences: ImportPreferences,
-    private val exportDataUseCase: ExportDataUseCase
+    private val exportDataUseCase: ExportDataUseCase,
+    private val importDataUseCase: ImportDataUseCase
 ) : ViewModel() {
 
     val appTheme: StateFlow<String> = appPreferences.appTheme
@@ -29,14 +29,17 @@ class SettingsViewModel @Inject constructor(
     val locale: StateFlow<String> = appPreferences.locale
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "pt")
 
-    val queueMode: StateFlow<QueueMode> = importPreferences.queueMode
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), QueueMode.SEQUENTIAL)
-
     private val _exportedJson = MutableSharedFlow<String>(extraBufferCapacity = 1)
     val exportedJson: SharedFlow<String> = _exportedJson
 
     private val _exportError = MutableSharedFlow<String>(extraBufferCapacity = 1)
     val exportError: SharedFlow<String> = _exportError
+
+    private val _importResult = MutableSharedFlow<String>(extraBufferCapacity = 1)
+    val importResult: SharedFlow<String> = _importResult
+
+    private val _importError = MutableSharedFlow<String>(extraBufferCapacity = 1)
+    val importError: SharedFlow<String> = _importError
 
     fun updateAppTheme(theme: String) {
         viewModelScope.launch {
@@ -51,12 +54,6 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    fun updateQueueMode(mode: QueueMode) {
-        viewModelScope.launch {
-            importPreferences.setQueueMode(mode)
-        }
-    }
-
     fun exportData() {
         viewModelScope.launch {
             try {
@@ -64,6 +61,30 @@ class SettingsViewModel @Inject constructor(
                 _exportedJson.emit(json)
             } catch (e: Exception) {
                 _exportError.emit(e.message ?: "Erro ao exportar dados")
+            }
+        }
+    }
+
+    fun importData(uri: Uri) {
+        viewModelScope.launch {
+            try {
+                val result = importDataUseCase.execute(uri)
+                val sb = StringBuilder()
+                if (result.novelsQueued.isNotEmpty()) {
+                    sb.append("${result.novelsQueued.size} novel(is) na fila. ")
+                }
+                if (result.novelsFailed.isNotEmpty()) {
+                    sb.append("${result.novelsFailed.size} falha(s). ")
+                }
+                if (result.bookmarksPending > 0) {
+                    sb.append("${result.bookmarksPending} bookmark(s) pendente(s). ")
+                }
+                if (result.charactersPending > 0) {
+                    sb.append("${result.charactersPending} personagen(s) pendente(s).")
+                }
+                _importResult.emit(sb.toString().trimEnd())
+            } catch (e: Exception) {
+                _importError.emit(e.message ?: "Erro ao importar dados")
             }
         }
     }

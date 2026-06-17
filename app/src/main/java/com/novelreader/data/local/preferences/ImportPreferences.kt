@@ -4,7 +4,6 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
-import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.novelreader.domain.usecase.ImportJobSpec
@@ -20,31 +19,12 @@ import javax.inject.Singleton
 
 private val Context.importDataStore: DataStore<Preferences> by preferencesDataStore(name = "import_prefs")
 
-enum class QueueMode {
-    SEQUENTIAL,
-    PARALLEL;
-
-    companion object {
-        fun fromString(value: String?): QueueMode =
-            entries.firstOrNull { it.name.equals(value, ignoreCase = true) } ?: SEQUENTIAL
-    }
-}
-
 @Singleton
 class ImportPreferences @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
     private object Keys {
-        val QUEUE_MODE = stringPreferencesKey("queue_mode")
         val PENDING_QUEUE = stringSetPreferencesKey("pending_queue")
-    }
-
-    val queueMode: Flow<QueueMode> = context.importDataStore.data.map { prefs ->
-        QueueMode.fromString(prefs[Keys.QUEUE_MODE])
-    }
-
-    suspend fun setQueueMode(mode: QueueMode) {
-        context.importDataStore.edit { it[Keys.QUEUE_MODE] = mode.name }
     }
 
     val pendingQueue: Flow<List<ImportJobSpec>> = context.importDataStore.data.map { prefs ->

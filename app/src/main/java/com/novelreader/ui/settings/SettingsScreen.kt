@@ -28,6 +28,7 @@ import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.FileDownload
+import androidx.compose.material.icons.filled.FileUpload
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.PhoneAndroid
@@ -69,14 +70,12 @@ fun SettingsScreen(
 ) {
     val appTheme by viewModel.appTheme.collectAsState()
     val locale by viewModel.locale.collectAsState()
-    val queueMode by viewModel.queueMode.collectAsState()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val jsonRef = remember { mutableStateOf<String?>(null) }
 
     val themeExpanded = remember { mutableStateOf(true) }
     val langExpanded = remember { mutableStateOf(false) }
-    val queueExpanded = remember { mutableStateOf(false) }
 
     val exportLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("application/json")
@@ -97,6 +96,14 @@ fun SettingsScreen(
         }
     }
 
+    val importLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri != null) {
+            viewModel.importData(uri)
+        }
+    }
+
     LaunchedEffect(Unit) {
         viewModel.exportedJson.collect { json ->
             jsonRef.value = json
@@ -106,6 +113,18 @@ fun SettingsScreen(
 
     LaunchedEffect(Unit) {
         viewModel.exportError.collect { msg ->
+            Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        viewModel.importResult.collect { msg ->
+            Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        viewModel.importError.collect { msg ->
             Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
         }
     }
@@ -191,28 +210,6 @@ fun SettingsScreen(
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
-            SettingsSection(
-                title = stringResource(R.string.import_queue_mode),
-                expanded = queueExpanded.value,
-                onToggle = { queueExpanded.value = !queueExpanded.value }
-            ) {
-                QueueOption(
-                    label = stringResource(R.string.import_queue_sequential),
-                    description = stringResource(R.string.import_queue_sequential_desc),
-                    selected = queueMode == com.novelreader.data.local.preferences.QueueMode.SEQUENTIAL,
-                    onClick = { viewModel.updateQueueMode(com.novelreader.data.local.preferences.QueueMode.SEQUENTIAL) }
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                QueueOption(
-                    label = stringResource(R.string.import_queue_parallel),
-                    description = stringResource(R.string.import_queue_parallel_desc),
-                    selected = queueMode == com.novelreader.data.local.preferences.QueueMode.PARALLEL,
-                    onClick = { viewModel.updateQueueMode(com.novelreader.data.local.preferences.QueueMode.PARALLEL) }
-                )
-            }
-
-            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -237,6 +234,37 @@ fun SettingsScreen(
                             stringResource(R.string.export_data_desc),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f)
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { importLauncher.launch(arrayOf("application/json")) },
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                )
+            ) {
+                Row(
+                    modifier = Modifier.padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(Icons.Default.FileUpload, contentDescription = null, modifier = Modifier.size(24.dp))
+                    Spacer(modifier = Modifier.width(16.dp))
+                    Column {
+                        Text(
+                            stringResource(R.string.import_data),
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.Medium
+                        )
+                        Text(
+                            stringResource(R.string.import_data_desc),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -388,55 +416,6 @@ private fun ThemeOption(
         ) {
             icon()
             Spacer(modifier = Modifier.width(16.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    label,
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Medium
-                )
-                Text(
-                    description,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            RadioButton(
-                selected = selected,
-                onClick = null
-            )
-        }
-    }
-}
-
-@Composable
-private fun QueueOption(
-    label: String,
-    description: String,
-    selected: Boolean,
-    onClick: () -> Unit
-) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .selectable(
-                selected = selected,
-                onClick = onClick,
-                role = Role.RadioButton
-            ),
-        shape = RoundedCornerShape(12.dp),
-        border = if (selected) BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
-                 else BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-        colors = CardDefaults.cardColors(
-            containerColor = if (selected) MaterialTheme.colorScheme.primaryContainer
-                            else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-        )
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     label,
