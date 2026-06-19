@@ -18,6 +18,8 @@ import com.novelreader.data.repository.NovelRepository
 import com.novelreader.data.storage.CoverStorage
 import com.novelreader.domain.usecase.BackgroundImportManager
 import com.novelreader.domain.usecase.BackgroundImportState
+import com.novelreader.ui.library.mvi.LibraryIntent
+import com.novelreader.ui.library.mvi.LibraryState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.channels.BufferOverflow
@@ -59,6 +61,16 @@ class LibraryViewModel @Inject constructor(
     private val coverStorage: CoverStorage
 ) : ViewModel() {
 
+    private val _state = MutableStateFlow(LibraryState())
+    val state: StateFlow<LibraryState> = _state
+
+    private val _errorEvents = MutableSharedFlow<String>(
+        replay = 0,
+        extraBufferCapacity = 4,
+        onBufferOverflow = BufferOverflow.DROP_OLDEST
+    )
+    val errorEvents: SharedFlow<String> = _errorEvents.asSharedFlow()
+
     private val _sortOrder = MutableStateFlow(SortOrder.LAST_READ)
     val sortOrder: StateFlow<SortOrder> = _sortOrder
 
@@ -87,23 +99,17 @@ class LibraryViewModel @Inject constructor(
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), LibraryStats())
 
-    private val _showDeleteDialog = MutableStateFlow<NovelEntity?>(null)
-    val showDeleteDialog: StateFlow<NovelEntity?> = _showDeleteDialog
-
-    private val _showUrlDialog = MutableStateFlow<NovelEntity?>(null)
-    val showUrlDialog: StateFlow<NovelEntity?> = _showUrlDialog
-
-    private val _coverTargetNovel = MutableStateFlow<NovelEntity?>(null)
-    val coverTargetNovel: StateFlow<NovelEntity?> = _coverTargetNovel
-
     private val _selectedNovel = MutableStateFlow<NovelEntity?>(null)
     val selectedNovel: StateFlow<NovelEntity?> = _selectedNovel
 
-    private val _chapterSortOrder = MutableStateFlow(ChapterSortOrder.ASCENDING)
-    val chapterSortOrder: StateFlow<ChapterSortOrder> = _chapterSortOrder
+    private val _selectedTab = MutableStateFlow(0)
+    val selectedTab: StateFlow<Int> = _selectedTab
 
     private val _chapters = MutableStateFlow<List<ChapterEntity>>(emptyList())
     val chapters: StateFlow<List<ChapterEntity>> = _chapters
+
+    private val _chapterSortOrder = MutableStateFlow(ChapterSortOrder.ASCENDING)
+    val chapterSortOrder: StateFlow<ChapterSortOrder> = _chapterSortOrder
 
     private val _bookmarkCounts = MutableStateFlow<Map<Long, Int>>(emptyMap())
     val bookmarkCounts: StateFlow<Map<Long, Int>> = _bookmarkCounts
@@ -114,8 +120,14 @@ class LibraryViewModel @Inject constructor(
     private val _characterPhotos = MutableStateFlow<Map<Long, List<CharacterPhotoEntity>>>(emptyMap())
     val characterPhotos: StateFlow<Map<Long, List<CharacterPhotoEntity>>> = _characterPhotos
 
-    private val _selectedTab = MutableStateFlow(0)
-    val selectedTab: StateFlow<Int> = _selectedTab
+    private val _showDeleteDialog = MutableStateFlow<NovelEntity?>(null)
+    val showDeleteDialog: StateFlow<NovelEntity?> = _showDeleteDialog
+
+    private val _showUrlDialog = MutableStateFlow<NovelEntity?>(null)
+    val showUrlDialog: StateFlow<NovelEntity?> = _showUrlDialog
+
+    private val _coverTargetNovel = MutableStateFlow<NovelEntity?>(null)
+    val coverTargetNovel: StateFlow<NovelEntity?> = _coverTargetNovel
 
     private val _coverError = MutableStateFlow<String?>(null)
     val coverError: StateFlow<String?> = _coverError
@@ -125,13 +137,6 @@ class LibraryViewModel @Inject constructor(
 
     private val _characterImportResult = MutableStateFlow<String?>(null)
     val characterImportResult: StateFlow<String?> = _characterImportResult
-
-    private val _errorEvents = MutableSharedFlow<String>(
-        replay = 0,
-        extraBufferCapacity = 4,
-        onBufferOverflow = BufferOverflow.DROP_OLDEST
-    )
-    val errorEvents: SharedFlow<String> = _errorEvents.asSharedFlow()
 
     val backgroundImportState: StateFlow<BackgroundImportState> = backgroundImportManager.state
 
@@ -147,32 +152,63 @@ class LibraryViewModel @Inject constructor(
     init {
         viewModelScope.launch {
             val saved = libraryPreferences.sortOrder.first()
-            _sortOrder.value = try { SortOrder.valueOf(saved) } catch (_: Exception) { SortOrder.LAST_READ }
+            val order = try { SortOrder.valueOf(saved) } catch (_: Exception) { SortOrder.LAST_READ }
+            _sortOrder.value = order
+            _state.value = _state.value.copy(sortOrder = order)
         }
         viewModelScope.launch {
             val saved = libraryPreferences.viewMode.first()
-            _viewMode.value = try { ViewMode.valueOf(saved) } catch (_: Exception) { ViewMode.GRID }
+            val mode = try { ViewMode.valueOf(saved) } catch (_: Exception) { ViewMode.GRID }
+            _viewMode.value = mode
+            _state.value = _state.value.copy(viewMode = mode)
         }
         viewModelScope.launch {
             bookmarkRepository.getAll().collect { bookmarks ->
-                _bookmarkCounts.value = bookmarks.groupBy { it.chapterId }
-                    .mapValues { it.value.size }
+                val counts = bookmarks.groupBy { it.chapterId }.mapValues { it.value.size }
+                _bookmarkCounts.value = counts
             }
         }
     }
 
-    fun setSortOrder(order: SortOrder) {
-        _sortOrder.value = order
-        viewModelScope.launch {
-            libraryPreferences.updateSortOrder(order.name)
+    fun onIntent(intent: LibraryIntent) {
+        when (intent) {
+            is LibraryIntent.Init -> {}
+            is LibraryIntent.LoadNovels -> {}
+            is LibraryIntent.SortNovels -> setSortOrder(try { SortOrder.valueOf(intent.sortType) } catch (_: Exception) { SortOrder.LAST_READ })
+            is LibraryIntent.SetViewMode -> setViewMode(try { ViewMode.valueOf(intent.viewMode) } catch (_: Exception) { ViewMode.GRID })
+            is LibraryIntent.DeleteNovel -> confirmDeleteById(intent.novelId)
+            is LibraryIntent.RequestDelete -> requestDeleteById(intent.novelId)
+            is LibraryIntent.CancelDelete -> cancelDelete()
+            is LibraryIntent.ChangeCover -> saveCover(intent.novelId, intent.uri)
+            is LibraryIntent.RequestChangeCover -> requestChangeCoverById(intent.novelId)
+            is LibraryIntent.RequestCoverByUrl -> requestCoverByUrlById(intent.novelId)
+            is LibraryIntent.SaveCoverFromUrl -> saveCoverFromUrl(intent.novelId, intent.url)
+            is LibraryIntent.CancelUrlDialog -> cancelUrlDialog()
+            is LibraryIntent.ClearCoverError -> clearCoverError()
+            is LibraryIntent.ToggleAutoUpdate -> toggleAutoUpdate(intent.novelId)
+            is LibraryIntent.CancelBackgroundImport -> cancelBackgroundImport()
+            is LibraryIntent.SelectNovel -> selectNovel(intent.novel)
+            is LibraryIntent.DeselectNovel -> deselectNovel()
+            is LibraryIntent.LoadChapters -> loadChapters(intent.novelId)
+            is LibraryIntent.ToggleChapterSortOrder -> toggleChapterSortOrder()
+            is LibraryIntent.LoadCharacters -> loadCharacters(intent.novelId)
+            is LibraryIntent.AddCharacter -> addCharacter(intent.novelId, intent.name, intent.photoPath)
+            is LibraryIntent.DeleteCharacter -> deleteCharacter(intent.id)
+            is LibraryIntent.UpdateCharacterPhoto -> updateCharacterPhoto(intent.id, intent.path)
+            is LibraryIntent.BatchAddCharacterPhotos -> batchAddCharacterPhotos(intent.characterId, intent.photoPaths)
+            is LibraryIntent.AddCharacterPhoto -> addCharacterPhoto(intent.characterId, intent.photoPath)
+            is LibraryIntent.DeleteCharacterPhoto -> deleteCharacterPhoto(intent.photoId, intent.characterId)
+            is LibraryIntent.UpdateCharacterName -> updateCharacterName(intent.characterId, intent.name)
+            is LibraryIntent.UpdateCharacterNotes -> updateCharacterNotes(intent.characterId, intent.notes)
+            is LibraryIntent.ToggleCharacterFavorite -> toggleCharacterFavorite(intent.characterId, intent.isFavorite)
+            is LibraryIntent.ImportCharactersFromUrl -> importCharactersFromUrl(intent.url)
+            is LibraryIntent.ClearCharacterImportResult -> clearCharacterImportResult()
+            is LibraryIntent.SelectTab -> selectTab(intent.index)
         }
     }
 
-    fun setViewMode(mode: ViewMode) {
-        _viewMode.value = mode
-        viewModelScope.launch {
-            libraryPreferences.updateViewMode(mode.name)
-        }
+    fun selectTab(index: Int) {
+        _selectedTab.value = index
     }
 
     fun selectNovel(novel: NovelEntity) {
@@ -181,12 +217,9 @@ class LibraryViewModel @Inject constructor(
         loadChapters(novel.id)
     }
 
-    fun toggleChapterSortOrder() {
-        _chapterSortOrder.value = when (_chapterSortOrder.value) {
-            ChapterSortOrder.ASCENDING -> ChapterSortOrder.DESCENDING
-            ChapterSortOrder.DESCENDING -> ChapterSortOrder.ASCENDING
-        }
-        _selectedNovel.value?.let { loadChapters(it.id) }
+    private fun deselectNovel() {
+        _selectedNovel.value = null
+        _selectedTab.value = 0
     }
 
     private fun loadChapters(novelId: Long) {
@@ -203,11 +236,39 @@ class LibraryViewModel @Inject constructor(
         }
     }
 
-    fun selectTab(index: Int) {
-        _selectedTab.value = index
+    private fun loadCharacters(novelId: Long) {
+        viewModelScope.launch {
+            val chars = characterRepository.getByNovelSync(novelId)
+            _characters.value = chars
+            val allPhotos = characterPhotoRepository.getByCharacterIds(chars.map { it.id })
+            _characterPhotos.value = allPhotos.groupBy { it.characterId }
+        }
+    }
+
+    fun toggleChapterSortOrder() {
+        _chapterSortOrder.value = when (_chapterSortOrder.value) {
+            ChapterSortOrder.ASCENDING -> ChapterSortOrder.DESCENDING
+            ChapterSortOrder.DESCENDING -> ChapterSortOrder.ASCENDING
+        }
+        _selectedNovel.value?.let { loadChapters(it.id) }
+    }
+
+    fun setSortOrder(order: SortOrder) {
+        _sortOrder.value = order
+        viewModelScope.launch { libraryPreferences.updateSortOrder(order.name) }
+    }
+
+    fun setViewMode(mode: ViewMode) {
+        _viewMode.value = mode
+        viewModelScope.launch { libraryPreferences.updateViewMode(mode.name) }
     }
 
     fun requestDelete(novel: NovelEntity) {
+        _showDeleteDialog.value = novel
+    }
+
+    private fun requestDeleteById(novelId: Long) {
+        val novel = _state.value.novels.find { it.id == novelId } ?: return
         _showDeleteDialog.value = novel
     }
 
@@ -234,11 +295,27 @@ class LibraryViewModel @Inject constructor(
         }
     }
 
+    private fun confirmDeleteById(novelId: Long) {
+        val novel = _showDeleteDialog.value ?: return
+        if (novel.id != novelId) return
+        confirmDelete()
+    }
+
     fun requestChangeCover(novel: NovelEntity) {
         _coverTargetNovel.value = novel
     }
 
+    private fun requestChangeCoverById(novelId: Long) {
+        val novel = _state.value.novels.find { it.id == novelId } ?: return
+        _coverTargetNovel.value = novel
+    }
+
     fun requestCoverByUrl(novel: NovelEntity) {
+        _showUrlDialog.value = novel
+    }
+
+    private fun requestCoverByUrlById(novelId: Long) {
+        val novel = _state.value.novels.find { it.id == novelId } ?: return
         _showUrlDialog.value = novel
     }
 
@@ -291,19 +368,11 @@ class LibraryViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 val id = characterRepository.insert(
-                    CharacterEntity(
-                        novelId = novelId,
-                        name = name,
-                        photoPath = photoPath
-                    )
+                    CharacterEntity(novelId = novelId, name = name, photoPath = photoPath)
                 )
                 if (photoPath != null) {
                     characterPhotoRepository.insert(
-                        CharacterPhotoEntity(
-                            characterId = id,
-                            photoPath = photoPath,
-                            orderIndex = 0
-                        )
+                        CharacterPhotoEntity(characterId = id, photoPath = photoPath, orderIndex = 0)
                     )
                 }
                 refreshCharacters(novelId)
@@ -344,11 +413,7 @@ class LibraryViewModel @Inject constructor(
                 var order = existing.size
                 for (path in photoPaths) {
                     characterPhotoRepository.insert(
-                        CharacterPhotoEntity(
-                            characterId = characterId,
-                            photoPath = path,
-                            orderIndex = order
-                        )
+                        CharacterPhotoEntity(characterId = characterId, photoPath = path, orderIndex = order)
                     )
                     order++
                 }
@@ -368,11 +433,7 @@ class LibraryViewModel @Inject constructor(
             try {
                 val existing = characterPhotoRepository.getByCharacterSync(characterId)
                 characterPhotoRepository.insert(
-                    CharacterPhotoEntity(
-                        characterId = characterId,
-                        photoPath = photoPath,
-                        orderIndex = existing.size
-                    )
+                    CharacterPhotoEntity(characterId = characterId, photoPath = photoPath, orderIndex = existing.size)
                 )
                 if (existing.isEmpty()) {
                     characterRepository.updatePhoto(characterId, photoPath)

@@ -19,7 +19,7 @@ import com.novelreader.data.local.db.entity.NovelEntity
 @Database(
     entities = [NovelEntity::class, ChapterEntity::class, BookmarkEntity::class, CharacterEntity::class, CharacterPhotoEntity::class, ChapterFts::class],
     version = 7,
-    exportSchema = false
+    exportSchema = true
 )
 abstract class NovelDatabase : RoomDatabase() {
     abstract fun novelDao(): NovelDao
@@ -57,6 +57,7 @@ abstract class NovelDatabase : RoomDatabase() {
                         FOREIGN KEY (`novelId`) REFERENCES `novels`(`id`) ON DELETE CASCADE
                     )
                 """)
+                database.execSQL("CREATE INDEX IF NOT EXISTS `index_chapters_novelId` ON `chapters` (`novelId`)")
                 database.execSQL("""
                     CREATE TABLE IF NOT EXISTS `bookmarks` (
                         `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
@@ -69,6 +70,7 @@ abstract class NovelDatabase : RoomDatabase() {
                         FOREIGN KEY (`chapterId`) REFERENCES `chapters`(`id`) ON DELETE CASCADE
                     )
                 """)
+                database.execSQL("CREATE INDEX IF NOT EXISTS `index_bookmarks_chapterId` ON `bookmarks` (`chapterId`)")
             }
         }
 

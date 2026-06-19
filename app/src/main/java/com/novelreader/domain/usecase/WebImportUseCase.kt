@@ -10,6 +10,7 @@ import com.novelreader.data.parser.ParserRegistry
 import com.novelreader.data.parser.ChapterNumberExtractor
 import com.novelreader.data.repository.ChapterRepository
 import com.novelreader.data.repository.NovelRepository
+import com.novelreader.util.StringUtils
 import com.novelreader.di.qualifiers.IoDispatcher
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineDispatcher
@@ -292,14 +293,7 @@ class WebImportUseCase @Inject constructor(
     }
 
     private fun fileNameFromUrl(url: String, chapterNumber: Int): String {
-        val segments = Uri.parse(url).pathSegments
-        val last = segments.lastOrNull() ?: return "chapter_$chapterNumber"
-        return last.removeSuffix(".html").removeSuffix(".htm").removeSuffix(".php")
-            .replace(Regex("[\\\\/:*?\"<>|\\x00-\\x1f]"), "_")
-            .replace(Regex("\\."), "_")
-            .trim('_', ' ')
-            .take(200)
-            .ifBlank { "chapter_$chapterNumber" }
+        return StringUtils.fileNameFromUrl(url, "chapter_$chapterNumber")
     }
 
     private suspend fun fetchWithRetry(url: String, maxRetries: Int = 3): Document {

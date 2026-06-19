@@ -1,5 +1,6 @@
 package com.novelreader.data.parser
 
+import com.novelreader.util.StringUtils
 import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
 
@@ -42,10 +43,6 @@ abstract class AbstractNovelParser : NovelParser {
     }
 
     protected fun fromFileName(fileName: String, fallback: String = "Unknown"): String {
-        return fileName.substringBeforeLast(".")
-            .replace("-", " ")
-            .replace("_", " ")
-            .trim()
-            .ifEmpty { fallback }
+        return StringUtils.fromFileName(fileName, fallback)
     }
 }

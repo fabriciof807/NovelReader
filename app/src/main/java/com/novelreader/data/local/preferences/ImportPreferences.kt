@@ -4,7 +4,7 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
-import androidx.datastore.preferences.core.stringSetPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.novelreader.domain.usecase.ImportJobSpec
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -24,31 +24,43 @@ class ImportPreferences @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
     private object Keys {
-        val PENDING_QUEUE = stringSetPreferencesKey("pending_queue")
+        val PENDING_QUEUE = stringPreferencesKey("pending_queue")
     }
 
     val pendingQueue: Flow<List<ImportJobSpec>> = context.importDataStore.data.map { prefs ->
-        prefs[Keys.PENDING_QUEUE]
-            ?.mapNotNull { decode(it) }
-            ?: emptyList()
+        val json = prefs[Keys.PENDING_QUEUE] ?: "[]"
+        try {
+            val array = JSONArray(json)
+            (0 until array.length()).mapNotNull { decode(array.getString(it)) }
+        } catch (_: Exception) {
+            emptyList()
+        }
     }
 
     suspend fun enqueueJob(spec: ImportJobSpec) {
         context.importDataStore.edit { prefs ->
-            val current = prefs[Keys.PENDING_QUEUE] ?: emptySet()
-            prefs[Keys.PENDING_QUEUE] = current + encode(spec)
+            val current = prefs[Keys.PENDING_QUEUE] ?: "[]"
+            val array = try { JSONArray(current) } catch (_: Exception) { JSONArray() }
+            array.put(encode(spec))
+            prefs[Keys.PENDING_QUEUE] = array.toString()
         }
     }
 
     suspend fun dequeueJob(): ImportJobSpec? {
         var dequeued: ImportJobSpec? = null
         context.importDataStore.edit { prefs ->
-            val current = prefs[Keys.PENDING_QUEUE] ?: emptySet()
-            val firstJson = current.firstOrNull() ?: return@edit
+            val current = prefs[Keys.PENDING_QUEUE] ?: "[]"
+            val array = try { JSONArray(current) } catch (_: Exception) { JSONArray() }
+            if (array.length() == 0) return@edit
+            val firstJson = array.getString(0)
             val spec = decode(firstJson)
             if (spec != null) {
                 dequeued = spec
-                prefs[Keys.PENDING_QUEUE] = current - firstJson
+                val newArray = JSONArray()
+                for (i in 1 until array.length()) {
+                    newArray.put(array.get(i))
+                }
+                prefs[Keys.PENDING_QUEUE] = newArray.toString()
             }
         }
         return dequeued
@@ -56,15 +68,22 @@ class ImportPreferences @Inject constructor(
 
     suspend fun removeJob(id: UUID) {
         context.importDataStore.edit { prefs ->
-            val current = prefs[Keys.PENDING_QUEUE] ?: emptySet()
-            val filtered = current.filter { decode(it)?.id != id }.toSet()
-            prefs[Keys.PENDING_QUEUE] = filtered
+            val current = prefs[Keys.PENDING_QUEUE] ?: "[]"
+            val array = try { JSONArray(current) } catch (_: Exception) { JSONArray() }
+            val newArray = JSONArray()
+            for (i in 0 until array.length()) {
+                val spec = decode(array.getString(i))
+                if (spec?.id != id) {
+                    newArray.put(array.get(i))
+                }
+            }
+            prefs[Keys.PENDING_QUEUE] = newArray.toString()
         }
     }
 
     suspend fun clearQueue() {
         context.importDataStore.edit { prefs ->
-            prefs[Keys.PENDING_QUEUE] = emptySet()
+            prefs[Keys.PENDING_QUEUE] = "[]"
         }
     }
 

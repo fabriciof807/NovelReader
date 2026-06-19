@@ -5,6 +5,7 @@ import com.novelreader.BuildConfig
 import com.novelreader.R
 import com.novelreader.data.local.db.entity.CharacterEntity
 import com.novelreader.data.local.db.entity.CharacterPhotoEntity
+import com.novelreader.util.StringUtils
 import com.novelreader.data.repository.CharacterPhotoRepository
 import com.novelreader.data.repository.CharacterRepository
 import com.novelreader.di.qualifiers.IoDispatcher
@@ -115,11 +116,6 @@ class MvlempyrCharacterImporter @Inject constructor(
     }
 
     private fun sanitizeFileName(name: String): String {
-        return name
-            .replace(Regex("[\\\\/:*?\"<>|\\x00-\\x1f]"), "_")
-            .replace(Regex("\\."), "_")
-            .trim('_', ' ')
-            .take(200)
-            .ifBlank { "unnamed" }
+        return StringUtils.sanitizeFileName(name)
     }
 }

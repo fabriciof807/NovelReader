@@ -40,7 +40,9 @@ android {
         buildConfig = true
     }
 
-
+    ksp {
+        arg("room.schemaLocation", "$projectDir/schemas")
+    }
 
     packaging {
         resources {
@@ -56,6 +58,16 @@ android {
             isIncludeAndroidResources = true
             isReturnDefaultValues = true
         }
+    }
+}
+
+configurations.all {
+    resolutionStrategy {
+        force("org.jetbrains.kotlinx:kotlinx-serialization-core:1.8.1")
+        force("org.jetbrains.kotlinx:kotlinx-serialization-core-jvm:1.8.1")
+        force("org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.1")
+        force("org.jetbrains.kotlinx:kotlinx-serialization-json-jvm:1.8.1")
+        force("org.jetbrains.kotlinx:kotlinx-serialization-bom:1.8.1")
     }
 }
 
@@ -125,5 +137,6 @@ dependencies {
     androidTestImplementation(libs.hilt.android.testing)
     androidTestImplementation(libs.room.testing)
     androidTestImplementation(libs.androidx.work.testing)
+    androidTestImplementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.1")
     kspAndroidTest(libs.hilt.compiler)
 }

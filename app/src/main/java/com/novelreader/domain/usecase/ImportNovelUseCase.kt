@@ -14,6 +14,7 @@ import com.novelreader.data.repository.ChapterRepository
 import com.novelreader.data.repository.NovelRepository
 import com.novelreader.R
 import com.novelreader.di.qualifiers.IoDispatcher
+import com.novelreader.util.StringUtils
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.withContext
 import org.jsoup.Jsoup
@@ -177,11 +178,7 @@ class ImportNovelUseCase @Inject constructor(
     }
 
     private fun fromFileName(fileName: String): String {
-        return fileName.substringBeforeLast(".")
-            .replace("-", " ")
-            .replace("_", " ")
-            .trim()
-            .ifEmpty { "Unknown" }
+        return StringUtils.fromFileName(fileName)
     }
 
     private fun readContent(uri: Uri, context: Context): String? {

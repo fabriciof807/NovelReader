@@ -6,6 +6,7 @@ import android.view.ViewGroup
 import android.webkit.JavascriptInterface
 import android.webkit.WebResourceRequest
 import android.webkit.WebView
+import android.webkit.WebChromeClient
 import android.webkit.WebViewClient
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -61,6 +62,20 @@ fun ReaderWebView(
                 settings.javaScriptEnabled = true
                 settings.loadWithOverviewMode = true
                 settings.useWideViewPort = true
+                settings.allowFileAccess = false
+                settings.allowContentAccess = false
+                settings.domStorageEnabled = false
+                settings.databaseEnabled = false
+                settings.saveFormData = false
+                settings.setGeolocationEnabled(false)
+                settings.mixedContentMode = android.webkit.WebSettings.MIXED_CONTENT_NEVER_ALLOW
+                settings.setSupportMultipleWindows(false)
+                settings.setSupportZoom(false)
+                settings.setAllowFileAccessFromFileURLs(false)
+                settings.setAllowUniversalAccessFromFileURLs(false)
+                settings.cacheMode = android.webkit.WebSettings.LOAD_NO_CACHE
+                settings.blockNetworkLoads = true
+                settings.safeBrowsingEnabled = true
                 setBackgroundColor(Color.TRANSPARENT)
                 setOnScrollChangeListener { _, _, _, _, _ ->
                     val totalH = (contentHeight * scale).toInt()
@@ -82,6 +97,38 @@ fun ReaderWebView(
                         view?.let { wv ->
                             onPageFinished(wv, 0f)
                         }
+                    }
+                }
+                webChromeClient = object : WebChromeClient() {
+                    override fun onJsAlert(
+                        view: WebView?,
+                        url: String?,
+                        message: String?,
+                        result: android.webkit.JsResult?
+                    ): Boolean {
+                        result?.cancel()
+                        return true
+                    }
+
+                    override fun onJsConfirm(
+                        view: WebView?,
+                        url: String?,
+                        message: String?,
+                        result: android.webkit.JsResult?
+                    ): Boolean {
+                        result?.cancel()
+                        return true
+                    }
+
+                    override fun onJsPrompt(
+                        view: WebView?,
+                        url: String?,
+                        message: String?,
+                        defaultValue: String?,
+                        result: android.webkit.JsPromptResult?
+                    ): Boolean {
+                        result?.cancel()
+                        return true
                     }
                 }
                 addJavascriptInterface(

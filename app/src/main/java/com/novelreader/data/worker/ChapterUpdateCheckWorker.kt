@@ -8,6 +8,7 @@ import androidx.work.ListenableWorker.Result
 import androidx.work.WorkerParameters
 import com.novelreader.data.repository.ChapterRepository
 import com.novelreader.data.repository.NovelRepository
+import com.novelreader.util.StringUtils
 import com.novelreader.di.qualifiers.IoDispatcher
 import com.novelreader.domain.usecase.WebImportUseCase
 import dagger.assisted.Assisted
@@ -65,14 +66,7 @@ class ChapterUpdateCheckWorker @AssistedInject constructor(
     }
 
     private fun fileNameFromUrl(url: String): String {
-        val segments = Uri.parse(url).pathSegments
-        val last = segments.lastOrNull() ?: return "chapter"
-        return last.removeSuffix(".html").removeSuffix(".htm").removeSuffix(".php")
-            .replace(Regex("[\\\\/:*?\"<>|\\x00-\\x1f]"), "_")
-            .replace(Regex("\\."), "_")
-            .trim('_', ' ')
-            .take(200)
-            .ifBlank { "chapter" }
+        return StringUtils.fileNameFromUrl(url)
     }
 
     companion object {
