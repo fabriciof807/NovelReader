@@ -15,9 +15,10 @@ import com.novelreader.data.repository.CharacterPhotoRepository
 import com.novelreader.data.repository.CharacterRepository
 import com.novelreader.data.repository.ChapterRepository
 import com.novelreader.data.repository.NovelRepository
-import com.novelreader.data.storage.CoverStorage
 import com.novelreader.domain.usecase.BackgroundImportManager
 import com.novelreader.domain.usecase.BackgroundImportState
+import com.novelreader.domain.usecase.CharacterManagementUseCase
+import com.novelreader.domain.usecase.CoverManagementUseCase
 import com.novelreader.ui.library.mvi.LibraryIntent
 import com.novelreader.ui.library.mvi.LibraryState
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -55,10 +56,10 @@ class LibraryViewModel @Inject constructor(
     private val bookmarkRepository: BookmarkRepository,
     private val backgroundImportManager: BackgroundImportManager,
     private val libraryPreferences: LibraryPreferences,
-    private val characterRepository: CharacterRepository,
+    private val characterManagementUseCase: CharacterManagementUseCase,
+    private val coverManagementUseCase: CoverManagementUseCase,
     private val characterPhotoRepository: CharacterPhotoRepository,
-    private val mvlempyrCharacterImporter: MvlempyrCharacterImporter,
-    private val coverStorage: CoverStorage
+    private val mvlempyrCharacterImporter: MvlempyrCharacterImporter
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(LibraryState())
@@ -207,9 +208,7 @@ class LibraryViewModel @Inject constructor(
         }
     }
 
-    fun selectTab(index: Int) {
-        _selectedTab.value = index
-    }
+    fun selectTab(index: Int) { _selectedTab.value = index }
 
     fun selectNovel(novel: NovelEntity) {
         _selectedNovel.value = novel
@@ -229,20 +228,12 @@ class LibraryViewModel @Inject constructor(
                 ChapterSortOrder.ASCENDING -> raw.sortedBy { it.orderIndex }
                 ChapterSortOrder.DESCENDING -> raw.sortedByDescending { it.orderIndex }
             }
-            val chars = characterRepository.getByNovelSync(novelId)
-            _characters.value = chars
-            val allPhotos = characterPhotoRepository.getByCharacterIds(chars.map { it.id })
-            _characterPhotos.value = allPhotos.groupBy { it.characterId }
+            refreshCharacters(novelId)
         }
     }
 
     private fun loadCharacters(novelId: Long) {
-        viewModelScope.launch {
-            val chars = characterRepository.getByNovelSync(novelId)
-            _characters.value = chars
-            val allPhotos = characterPhotoRepository.getByCharacterIds(chars.map { it.id })
-            _characterPhotos.value = allPhotos.groupBy { it.characterId }
-        }
+        viewModelScope.launch { refreshCharacters(novelId) }
     }
 
     fun toggleChapterSortOrder() {
@@ -263,35 +254,26 @@ class LibraryViewModel @Inject constructor(
         viewModelScope.launch { libraryPreferences.updateViewMode(mode.name) }
     }
 
-    fun requestDelete(novel: NovelEntity) {
-        _showDeleteDialog.value = novel
-    }
+    fun requestDelete(novel: NovelEntity) { _showDeleteDialog.value = novel }
 
     private fun requestDeleteById(novelId: Long) {
         val novel = _state.value.novels.find { it.id == novelId } ?: return
         _showDeleteDialog.value = novel
     }
 
-    fun cancelDelete() {
-        _showDeleteDialog.value = null
-    }
+    fun cancelDelete() { _showDeleteDialog.value = null }
 
     fun confirmDelete() {
         val novel = _showDeleteDialog.value ?: return
         viewModelScope.launch {
-            try {
-                coverStorage.deleteCoverIfOwnedByApp(novel.id, novel.coverPath)
-                coverStorage.deleteCharacterFolder(novel.id)
-                novelRepository.deleteById(novel.id)
-                if (_selectedNovel.value?.id == novel.id) {
-                    _selectedNovel.value = null
-                    _selectedTab.value = 0
-                }
-            } catch (e: Exception) {
-                _errorEvents.emit(e.message ?: e.toString())
-            } finally {
-                _showDeleteDialog.value = null
+            val result = coverManagementUseCase.deleteNovelCovers(novel.id, novel.coverPath)
+            if (result.isFailure) {
+                _errorEvents.emit(result.exceptionOrNull()?.message ?: "Erro ao deletar")
+            } else if (_selectedNovel.value?.id == novel.id) {
+                _selectedNovel.value = null
+                _selectedTab.value = 0
             }
+            _showDeleteDialog.value = null
         }
     }
 
@@ -301,18 +283,14 @@ class LibraryViewModel @Inject constructor(
         confirmDelete()
     }
 
-    fun requestChangeCover(novel: NovelEntity) {
-        _coverTargetNovel.value = novel
-    }
+    fun requestChangeCover(novel: NovelEntity) { _coverTargetNovel.value = novel }
 
     private fun requestChangeCoverById(novelId: Long) {
         val novel = _state.value.novels.find { it.id == novelId } ?: return
         _coverTargetNovel.value = novel
     }
 
-    fun requestCoverByUrl(novel: NovelEntity) {
-        _showUrlDialog.value = novel
-    }
+    fun requestCoverByUrl(novel: NovelEntity) { _showUrlDialog.value = novel }
 
     private fun requestCoverByUrlById(novelId: Long) {
         val novel = _state.value.novels.find { it.id == novelId } ?: return
@@ -332,9 +310,8 @@ class LibraryViewModel @Inject constructor(
                 _showUrlDialog.value = null
                 return@launch
             }
-            val path = coverStorage.saveFromUrl(novelId, url)
-            if (path != null) {
-                novelRepository.updateCoverPath(novelId, path)
+            val result = coverManagementUseCase.saveFromUrl(novelId, url)
+            if (result.isSuccess) {
                 _coverError.value = null
             } else {
                 _coverError.value = context.getString(R.string.cover_download_error)
@@ -343,19 +320,13 @@ class LibraryViewModel @Inject constructor(
         }
     }
 
-    fun clearCoverRequest() {
-        _coverTargetNovel.value = null
-    }
-
-    fun clearCoverError() {
-        _coverError.value = null
-    }
+    fun clearCoverRequest() { _coverTargetNovel.value = null }
+    fun clearCoverError() { _coverError.value = null }
 
     fun saveCover(novelId: Long, uri: android.net.Uri) {
         viewModelScope.launch {
-            val path = coverStorage.saveFromUri(novelId, uri)
-            if (path != null) {
-                novelRepository.updateCoverPath(novelId, path)
+            val result = coverManagementUseCase.saveFromUri(novelId, uri)
+            if (result.isSuccess) {
                 _coverError.value = null
             } else {
                 _coverError.value = context.getString(R.string.cover_save_error)
@@ -366,143 +337,85 @@ class LibraryViewModel @Inject constructor(
 
     fun addCharacter(novelId: Long, name: String, photoPath: String?) {
         viewModelScope.launch {
-            try {
-                val id = characterRepository.insert(
-                    CharacterEntity(novelId = novelId, name = name, photoPath = photoPath)
-                )
-                if (photoPath != null) {
-                    characterPhotoRepository.insert(
-                        CharacterPhotoEntity(characterId = id, photoPath = photoPath, orderIndex = 0)
-                    )
-                }
-                refreshCharacters(novelId)
-            } catch (e: Exception) {
-                _errorEvents.emit(e.message ?: e.toString())
-            }
+            val result = characterManagementUseCase.addCharacter(novelId, name, photoPath)
+            if (result.isSuccess) refreshCharacters(novelId)
+            else _errorEvents.emit(result.exceptionOrNull()?.message ?: "Erro")
         }
     }
 
     fun deleteCharacter(id: Long) {
         val novelId = _selectedNovel.value?.id ?: return
         viewModelScope.launch {
-            try {
-                characterRepository.deleteById(id)
-                refreshCharacters(novelId)
-            } catch (e: Exception) {
-                _errorEvents.emit(e.message ?: e.toString())
-            }
+            val result = characterManagementUseCase.deleteCharacter(id, novelId)
+            if (result.isSuccess) refreshCharacters(novelId)
+            else _errorEvents.emit(result.exceptionOrNull()?.message ?: "Erro")
         }
     }
 
     fun updateCharacterPhoto(id: Long, path: String) {
         viewModelScope.launch {
-            try {
-                characterRepository.updatePhoto(id, path)
-                val novelId = _selectedNovel.value?.id ?: return@launch
-                refreshCharacters(novelId)
-            } catch (e: Exception) {
-                _errorEvents.emit(e.message ?: e.toString())
-            }
+            val result = characterManagementUseCase.updatePhoto(id, path)
+            val novelId = _selectedNovel.value?.id ?: return@launch
+            if (result.isSuccess) refreshCharacters(novelId)
+            else _errorEvents.emit(result.exceptionOrNull()?.message ?: "Erro")
         }
     }
 
     fun batchAddCharacterPhotos(characterId: Long, photoPaths: List<String>) {
         viewModelScope.launch {
-            try {
-                val existing = characterPhotoRepository.getByCharacterSync(characterId)
-                var order = existing.size
-                for (path in photoPaths) {
-                    characterPhotoRepository.insert(
-                        CharacterPhotoEntity(characterId = characterId, photoPath = path, orderIndex = order)
-                    )
-                    order++
-                }
-                if (existing.isEmpty() && photoPaths.isNotEmpty()) {
-                    characterRepository.updatePhoto(characterId, photoPaths.first())
-                }
-                val novelId = _selectedNovel.value?.id ?: return@launch
-                refreshCharacters(novelId)
-            } catch (e: Exception) {
-                _errorEvents.emit(e.message ?: e.toString())
-            }
+            val result = characterManagementUseCase.batchAddPhotos(characterId, photoPaths)
+            val novelId = _selectedNovel.value?.id ?: return@launch
+            if (result.isSuccess) refreshCharacters(novelId)
+            else _errorEvents.emit(result.exceptionOrNull()?.message ?: "Erro")
         }
     }
 
     fun addCharacterPhoto(characterId: Long, photoPath: String) {
         viewModelScope.launch {
-            try {
-                val existing = characterPhotoRepository.getByCharacterSync(characterId)
-                characterPhotoRepository.insert(
-                    CharacterPhotoEntity(characterId = characterId, photoPath = photoPath, orderIndex = existing.size)
-                )
-                if (existing.isEmpty()) {
-                    characterRepository.updatePhoto(characterId, photoPath)
-                }
-                val novelId = _selectedNovel.value?.id ?: return@launch
-                refreshCharacters(novelId)
-            } catch (e: Exception) {
-                _errorEvents.emit(e.message ?: e.toString())
-            }
+            val result = characterManagementUseCase.addPhoto(characterId, photoPath)
+            val novelId = _selectedNovel.value?.id ?: return@launch
+            if (result.isSuccess) refreshCharacters(novelId)
+            else _errorEvents.emit(result.exceptionOrNull()?.message ?: "Erro")
         }
     }
 
     fun deleteCharacterPhoto(photoId: Long, characterId: Long) {
         viewModelScope.launch {
-            try {
-                characterPhotoRepository.deleteById(photoId)
-                val novelId = _selectedNovel.value?.id ?: return@launch
-                val remaining = characterPhotoRepository.getByCharacterSync(characterId)
-                if (remaining.isNotEmpty()) {
-                    characterRepository.updatePhoto(characterId, remaining.first().photoPath)
-                } else {
-                    characterRepository.updatePhoto(characterId, "")
-                }
-                refreshCharacters(novelId)
-            } catch (e: Exception) {
-                _errorEvents.emit(e.message ?: e.toString())
-            }
+            val result = characterManagementUseCase.deletePhoto(photoId, characterId)
+            val novelId = _selectedNovel.value?.id ?: return@launch
+            if (result.isSuccess) refreshCharacters(novelId)
+            else _errorEvents.emit(result.exceptionOrNull()?.message ?: "Erro")
         }
     }
 
     fun updateCharacterName(characterId: Long, name: String) {
         viewModelScope.launch {
-            try {
-                characterRepository.updateName(characterId, name)
-                val novelId = _selectedNovel.value?.id ?: return@launch
-                refreshCharacters(novelId)
-            } catch (e: Exception) {
-                _errorEvents.emit(e.message ?: e.toString())
-            }
+            val result = characterManagementUseCase.updateName(characterId, name)
+            val novelId = _selectedNovel.value?.id ?: return@launch
+            if (result.isSuccess) refreshCharacters(novelId)
+            else _errorEvents.emit(result.exceptionOrNull()?.message ?: "Erro")
         }
     }
 
     fun updateCharacterNotes(characterId: Long, notes: String?) {
         viewModelScope.launch {
-            try {
-                characterRepository.updateNotes(characterId, notes)
-                val novelId = _selectedNovel.value?.id ?: return@launch
-                refreshCharacters(novelId)
-            } catch (e: Exception) {
-                _errorEvents.emit(e.message ?: e.toString())
-            }
+            val result = characterManagementUseCase.updateNotes(characterId, notes)
+            val novelId = _selectedNovel.value?.id ?: return@launch
+            if (result.isSuccess) refreshCharacters(novelId)
+            else _errorEvents.emit(result.exceptionOrNull()?.message ?: "Erro")
         }
     }
 
     fun toggleCharacterFavorite(characterId: Long, isFavorite: Boolean) {
         viewModelScope.launch {
-            try {
-                characterRepository.toggleFavorite(characterId, isFavorite)
-                val novelId = _selectedNovel.value?.id ?: return@launch
-                refreshCharacters(novelId)
-            } catch (e: Exception) {
-                _errorEvents.emit(e.message ?: e.toString())
-            }
+            val result = characterManagementUseCase.toggleFavorite(characterId, isFavorite)
+            val novelId = _selectedNovel.value?.id ?: return@launch
+            if (result.isSuccess) refreshCharacters(novelId)
+            else _errorEvents.emit(result.exceptionOrNull()?.message ?: "Erro")
         }
     }
 
-    fun clearCharacterImportResult() {
-        _characterImportResult.value = null
-    }
+    fun clearCharacterImportResult() { _characterImportResult.value = null }
 
     fun importCharactersFromUrl(url: String) {
         viewModelScope.launch {
@@ -529,7 +442,7 @@ class LibraryViewModel @Inject constructor(
     }
 
     private suspend fun refreshCharacters(novelId: Long) {
-        val chars = characterRepository.getByNovelSync(novelId)
+        val chars = characterManagementUseCase.getCharacters(novelId)
         _characters.value = chars
         val allPhotos = characterPhotoRepository.getByCharacterIds(chars.map { it.id })
         _characterPhotos.value = allPhotos.groupBy { it.characterId }

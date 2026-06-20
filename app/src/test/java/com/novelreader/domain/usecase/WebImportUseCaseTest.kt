@@ -10,6 +10,10 @@ import com.novelreader.data.parser.MhtParser
 import com.novelreader.data.parser.ParserRegistry
 import com.novelreader.data.repository.ChapterRepository
 import com.novelreader.data.repository.NovelRepository
+import com.novelreader.domain.usecase.webimport.ChapterCrawler
+import com.novelreader.domain.usecase.webimport.ChapterFetcher
+import com.novelreader.domain.usecase.webimport.CoverDownloader
+import com.novelreader.domain.usecase.webimport.NovelImporter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import org.junit.After
@@ -44,9 +48,10 @@ class WebImportUseCaseTest {
 
         useCase = WebImportUseCase(
             context = context,
-            novelRepository = novelRepo,
-            chapterRepository = chapterRepo,
-            parserRegistry = parserRegistry,
+            chapterCrawler = ChapterCrawler(),
+            chapterFetcher = ChapterFetcher(parserRegistry),
+            coverDownloader = CoverDownloader(novelRepo),
+            novelImporter = NovelImporter(novelRepo, chapterRepo),
             io = Dispatchers.Unconfined
         )
     }
@@ -81,7 +86,7 @@ class WebImportUseCaseTest {
     }
 
     @Test
-    fun importChapters_emptyLinks_returnsFailure() = runBlocking {
+    fun importChapters_emptyLinks_returnsSuccess() = runBlocking {
         val result = useCase.importChapters(
             novelTitle = "Empty Novel",
             links = emptyList()

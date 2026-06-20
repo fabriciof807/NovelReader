@@ -21,24 +21,6 @@ Offline-first Android novel reader. Import HTML/MHT files from local storage, fe
 |---|---|---|
 | ![Library](screenshots/library.png) | ![Reader](screenshots/reader.png) | ![Characters](screenshots/characters.png) |
 
-## Tech Stack
-
-| Component | Version |
-|---|---|
-| Kotlin | 2.2.10 |
-| AGP | 9.2.1 |
-| Compose BOM | 2024.12.01 |
-| Hilt | 2.59.2 |
-| Room | 2.8.4 |
-| KSP | 2.3.9 |
-| Jsoup | 1.22.1 |
-| Coil | 2.7.0 |
-| DataStore | 1.1.3 |
-| WorkManager | 2.10.0 |
-| Min SDK | 26 (Android 8.0) |
-| Target SDK | 34 (Android 14) |
-| JVM | 17 |
-
 ## Architecture
 
 MVVM + Repository + UseCase + Hilt DI with unidirectional data flow:
@@ -149,6 +131,24 @@ Locales: `pt` (default) and `en`. Selection persisted in DataStore via `AppPrefe
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines.
+
+## Tech Stack
+
+| Component | Version |
+|---|---|
+| Kotlin | 2.2.10 |
+| AGP | 9.2.1 |
+| Compose BOM | 2024.12.01 |
+| Hilt | 2.59.2 |
+| Room | 2.8.4 |
+| KSP | 2.3.9 |
+| Jsoup | 1.22.1 |
+| Coil | 2.7.0 |
+| DataStore | 1.1.3 |
+| WorkManager | 2.10.0 |
+| Min SDK | 26 (Android 8.0) |
+| Target SDK | 34 (Android 14) |
+| JVM | 17 |
 
 ## License
 

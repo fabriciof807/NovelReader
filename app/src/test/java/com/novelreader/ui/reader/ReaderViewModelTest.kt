@@ -6,6 +6,7 @@ import app.cash.turbine.test
 import com.google.common.truth.Truth.assertThat
 import com.novelreader.data.local.db.entity.BookmarkEntity
 import com.novelreader.data.local.db.entity.ChapterEntity
+import com.novelreader.data.local.db.FtsSearchService
 import com.novelreader.data.local.preferences.ReaderPreferences
 import com.novelreader.data.repository.BookmarkRepository
 import com.novelreader.data.repository.CharacterRepository
@@ -37,6 +38,7 @@ class ReaderViewModelTest {
     private val bookmarkRepo: BookmarkRepository = mockk(relaxed = true)
     private val readerPrefs: ReaderPreferences = mockk(relaxed = true)
     private val charRepo: CharacterRepository = mockk(relaxed = true)
+    private val ftsSearchService: FtsSearchService = mockk(relaxed = true)
 
     private lateinit var viewModel: ReaderViewModel
 
@@ -59,7 +61,8 @@ class ReaderViewModelTest {
         chapterRepository = chapterRepo,
         bookmarkRepository = bookmarkRepo,
         readerPreferences = readerPrefs,
-        characterRepository = charRepo
+        characterRepository = charRepo,
+        ftsSearchService = ftsSearchService
     )
 
     @Test

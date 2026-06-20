@@ -47,7 +47,7 @@ class ParserRegistry @Inject constructor(
                     result.novelTitle == "Unknown Novel" ||
                     result.novelTitle.equals(fileBasedTitle, ignoreCase = true)
                 ) {
-                    titleFromMhtSubject(mhtSubject) ?: result.novelTitle
+                    TitleExtractor.extractNovelTitle(mhtSubject) ?: result.novelTitle
                 } else {
                     result.novelTitle
                 }
@@ -55,7 +55,7 @@ class ParserRegistry @Inject constructor(
                 val finalChapterTitle = if (result.chapterTitle.isBlank() ||
                     result.chapterTitle.equals(fileBasedTitle, ignoreCase = true)
                 ) {
-                    chapterTitleFromMhtSubject(mhtSubject)
+                    TitleExtractor.extractChapterTitle(mhtSubject)
                         ?: result.chapterTitle
                 } else {
                     result.chapterTitle
@@ -80,48 +80,6 @@ class ParserRegistry @Inject constructor(
                 val host = Uri.parse(href).host
                 if (host != null && findParserForDomain(host) != null) {
                     return host
-                }
-            }
-        }
-        return null
-    }
-
-    private fun titleFromMhtSubject(subject: String?): String? {
-        if (subject.isNullOrBlank()) return null
-        val cleaned = subject.trim()
-        val separators = listOf(" | ", " – ", " - ", " — ", " :: ", " « ")
-        for (sep in separators) {
-            val idx = cleaned.indexOf(sep)
-            if (idx > 0) {
-                val candidate = cleaned.substring(0, idx).trim()
-                if (!candidate.contains("Chapter", ignoreCase = true) &&
-                    candidate.length < 100
-                ) return candidate
-            }
-        }
-        val pipeIdx = cleaned.indexOf(" | ")
-        return if (pipeIdx > 0) cleaned.substring(0, pipeIdx).trim() else cleaned
-    }
-
-    private fun chapterTitleFromMhtSubject(subject: String?): String? {
-        if (subject.isNullOrBlank()) return null
-        val cleaned = subject.trim()
-        val pipeIdx = cleaned.indexOf(" | ")
-        val candidate = if (pipeIdx > 0) cleaned.substring(pipeIdx + 3).trim() else cleaned
-        if (candidate.contains("Chapter", ignoreCase = true) ||
-            candidate.contains("Cap", ignoreCase = true)
-        ) {
-            val secondPipe = candidate.indexOf(" | ")
-            return if (secondPipe > 0) candidate.substring(0, secondPipe).trim() else candidate
-        }
-        val separators = listOf(" - ", " – ", " — ", " :: ", " « ")
-        for (sep in separators) {
-            val idx = candidate.indexOf(sep)
-            if (idx > 0) {
-                val after = candidate.substring(idx + sep.length).trim()
-                if (after.isNotEmpty()) {
-                    val pipe2 = after.indexOf(" | ")
-                    return if (pipe2 > 0) after.substring(0, pipe2).trim() else after
                 }
             }
         }

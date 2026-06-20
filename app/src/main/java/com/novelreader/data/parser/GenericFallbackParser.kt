@@ -23,24 +23,8 @@ class GenericFallbackParser @Inject constructor() : AbstractNovelParser() {
     private fun parseNovelTitle(doc: Document, fileName: String): String {
         val titleTag = doc.title().trim()
         if (titleTag.isNotEmpty()) {
-            val separators = listOf(" | ", " – ", " - ", " — ", " :: ", " « ")
-            for (sep in separators) {
-                val idx = titleTag.indexOf(sep)
-                if (idx > 0) {
-                    val candidate = titleTag.substring(0, idx).trim()
-                    if (!candidate.contains("Chapter", ignoreCase = true) &&
-                        candidate.length < 100
-                    ) return candidate
-                }
-            }
-            val pipeIdx = titleTag.indexOf(" | ")
-            if (pipeIdx > 0) {
-                val beforePipe = titleTag.substring(0, pipeIdx).trim()
-                val dashParts = beforePipe.split(Regex("\\s+-\\s+"))
-                if (dashParts.size >= 2 && !dashParts[0].contains("Chapter", ignoreCase = true)) {
-                    return dashParts[0].trim()
-                }
-            }
+            val extracted = TitleExtractor.extractNovelTitle(titleTag)
+            if (extracted != null) return extracted
             return titleTag
         }
 
@@ -74,17 +58,8 @@ class GenericFallbackParser @Inject constructor() : AbstractNovelParser() {
     private fun parseChapterTitle(doc: Document, fileName: String, novelTitle: String): String {
         val titleTag = doc.title().trim()
         if (titleTag.isNotEmpty()) {
-            val cleaned = titleTag.removePrefix(novelTitle)
-            if (cleaned.isNotEmpty() && cleaned != titleTag) {
-                val separators = listOf(" | ", " – ", " - ", " — ", " :: ", " « ")
-                for (sep in separators) {
-                    if (cleaned.startsWith(sep)) {
-                        val rest = cleaned.removePrefix(sep).trim()
-                        val pipeIdx = rest.indexOf(" | ")
-                        return if (pipeIdx > 0) rest.substring(0, pipeIdx).trim() else rest
-                    }
-                }
-            }
+            val extracted = TitleExtractor.extractChapterTitle(titleTag, novelTitle)
+            if (extracted != null) return extracted
         }
 
         val h2 = doc.selectFirst("h2")

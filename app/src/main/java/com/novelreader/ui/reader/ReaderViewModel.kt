@@ -9,6 +9,7 @@ import com.novelreader.data.local.db.entity.BookmarkEntity
 import com.novelreader.data.local.db.entity.CharacterEntity
 import com.novelreader.data.local.db.entity.ChapterEntity
 import com.novelreader.data.local.db.entity.NovelEntity
+import com.novelreader.data.local.db.FtsSearchService
 import com.novelreader.data.local.preferences.ReaderConfig
 import com.novelreader.data.local.preferences.ReaderPreferences
 import com.novelreader.data.repository.BookmarkRepository
@@ -55,7 +56,8 @@ class ReaderViewModel @Inject constructor(
     private val chapterRepository: ChapterRepository,
     private val bookmarkRepository: BookmarkRepository,
     private val readerPreferences: ReaderPreferences,
-    private val characterRepository: CharacterRepository
+    private val characterRepository: CharacterRepository,
+    private val ftsSearchService: FtsSearchService
 ) : ViewModel() {
 
     private val novelId: Long = savedStateHandle["novelId"] ?: 0L
@@ -292,7 +294,7 @@ class ReaderViewModel @Inject constructor(
         }
         searchJob = viewModelScope.launch {
             delay(300)
-            val results = chapterRepository.searchInNovel(novelId, query)
+            val results = ftsSearchService.searchInNovel(novelId, query)
             _state.value = _state.value.copy(searchResults = results)
         }
     }
