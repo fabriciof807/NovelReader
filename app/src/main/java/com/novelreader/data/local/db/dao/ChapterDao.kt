@@ -34,4 +34,10 @@ interface ChapterDao {
 
     @Query("SELECT novelId, COUNT(*) as readCount FROM chapters WHERE isRead = 1 GROUP BY novelId")
     suspend fun getReadCountPerNovel(): List<NovelReadCount>
+
+    @Query("SELECT * FROM chapters WHERE novelId = :novelId AND (content IS NULL OR content = '')")
+    suspend fun getEmptyChapters(novelId: Long): List<ChapterEntity>
+
+    @Query("DELETE FROM chapters WHERE novelId = :novelId")
+    suspend fun deleteByNovelId(novelId: Long)
 }

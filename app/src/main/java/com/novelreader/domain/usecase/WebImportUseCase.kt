@@ -88,7 +88,7 @@ class WebImportUseCase @Inject constructor(
                 onProgress?.invoke(successCount, sorted.size)
             }
 
-            novelImporter.insertChapters(novelId, importedChapters, existingFileNames)
+            novelImporter.insertChapters(novelId, importedChapters)
             Result.success(novelId)
         } catch (e: Exception) {
             Result.failure(e)

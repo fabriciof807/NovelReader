@@ -207,6 +207,15 @@
     <!-- Auto-update toggle -->
     <string name="auto_update_enable">Ativar verificação de atualizações</string>
     <string name="auto_update_disable">Desativar verificação de atualizações</string>
+    <string name="check_for_updates">Verificar atualizações agora</string>
+    <string name="update_check_no_source_url">Este romance não tem URL fonte configurada</string>
+    <string name="update_check_no_new_chapters">Nenhum capítulo novo encontrado</string>
+    <string name="update_check_found_new_chapters">%1$d novo(s) capítulo(s) encontrado(s) — importando…</string>
+    <string name="update_check_error">Erro na verificação: %1$s</string>
+    <string name="update_check_with_repair">%1$d capítulo(s) — %2$d vazio(s) serão reimportados</string>
+    <string name="resync_chapters">Resincronizar todos os capítulos</string>
+    <string name="resync_no_source_url">Este romance não tem URL fonte para resync</string>
+    <string name="resync_started">%1$d capítulo(s) sendo reimportados do zero</string>
 
     <!-- Export -->
     <string name="export_data">Exportar dados</string>

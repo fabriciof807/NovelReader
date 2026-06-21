@@ -54,4 +54,10 @@ class ChapterRepository @Inject constructor(
 
     suspend fun getReadCountPerNovel(): List<NovelReadCount> =
         chapterDao.getReadCountPerNovel()
+
+    suspend fun getEmptyChapters(novelId: Long): List<ChapterEntity> =
+        chapterDao.getEmptyChapters(novelId)
+
+    suspend fun deleteByNovelId(novelId: Long) =
+        chapterDao.deleteByNovelId(novelId)
 }

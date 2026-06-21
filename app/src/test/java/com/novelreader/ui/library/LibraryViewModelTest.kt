@@ -13,8 +13,10 @@ import com.novelreader.data.repository.ChapterRepository
 import com.novelreader.data.repository.NovelRepository
 import com.novelreader.domain.usecase.BackgroundImportManager
 import com.novelreader.domain.usecase.BackgroundImportState
+import com.novelreader.data.worker.UpdateCheckScheduler
 import com.novelreader.domain.usecase.CharacterManagementUseCase
 import com.novelreader.domain.usecase.CoverManagementUseCase
+import com.novelreader.domain.usecase.WebImportUseCase
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
@@ -44,6 +46,8 @@ class LibraryViewModelTest {
     private val charManagement: CharacterManagementUseCase = mockk(relaxed = true)
     private val coverManagement: CoverManagementUseCase = mockk(relaxed = true)
     private val importer: MvlempyrCharacterImporter = mockk(relaxed = true)
+    private val updateCheckScheduler: UpdateCheckScheduler = mockk(relaxed = true)
+    private val webImportUseCase: WebImportUseCase = mockk(relaxed = true)
 
     private lateinit var viewModel: LibraryViewModel
 
@@ -65,7 +69,10 @@ class LibraryViewModelTest {
             characterManagementUseCase = charManagement,
             coverManagementUseCase = coverManagement,
             characterPhotoRepository = charPhotoRepo,
-            mvlempyrCharacterImporter = importer
+            mvlempyrCharacterImporter = importer,
+            updateCheckScheduler = updateCheckScheduler,
+            webImportUseCase = webImportUseCase,
+            io = kotlinx.coroutines.Dispatchers.Unconfined
         )
     }
 

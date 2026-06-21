@@ -207,6 +207,15 @@
     <!-- Auto-update toggle -->
     <string name="auto_update_enable">Enable update checks</string>
     <string name="auto_update_disable">Disable update checks</string>
+    <string name="check_for_updates">Check for updates now</string>
+    <string name="update_check_no_source_url">This novel has no source URL configured</string>
+    <string name="update_check_no_new_chapters">No new chapters found</string>
+    <string name="update_check_found_new_chapters">%1$d new chapter(s) found — importing…</string>
+    <string name="update_check_error">Update check error: %1$s</string>
+    <string name="update_check_with_repair">%1$d chapter(s) found — %2$d empty will be reimported</string>
+    <string name="resync_chapters">Resync all chapters</string>
+    <string name="resync_no_source_url">This novel has no source URL to resync</string>
+    <string name="resync_started">%1$d chapter(s) being reimported from scratch</string>
 
     <!-- Export -->
     <string name="export_data">Export data</string>

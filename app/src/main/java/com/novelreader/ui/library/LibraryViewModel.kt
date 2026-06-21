@@ -15,10 +15,15 @@ import com.novelreader.data.repository.CharacterPhotoRepository
 import com.novelreader.data.repository.CharacterRepository
 import com.novelreader.data.repository.ChapterRepository
 import com.novelreader.data.repository.NovelRepository
+import com.novelreader.data.worker.UpdateCheckScheduler
+import com.novelreader.di.qualifiers.IoDispatcher
 import com.novelreader.domain.usecase.BackgroundImportManager
 import com.novelreader.domain.usecase.BackgroundImportState
+import com.novelreader.util.StringUtils
 import com.novelreader.domain.usecase.CharacterManagementUseCase
 import com.novelreader.domain.usecase.CoverManagementUseCase
+import com.novelreader.domain.usecase.WebImportUseCase
+import kotlinx.coroutines.CoroutineDispatcher
 import com.novelreader.ui.library.mvi.LibraryIntent
 import com.novelreader.ui.library.mvi.LibraryState
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -59,7 +64,10 @@ class LibraryViewModel @Inject constructor(
     private val characterManagementUseCase: CharacterManagementUseCase,
     private val coverManagementUseCase: CoverManagementUseCase,
     private val characterPhotoRepository: CharacterPhotoRepository,
-    private val mvlempyrCharacterImporter: MvlempyrCharacterImporter
+    private val mvlempyrCharacterImporter: MvlempyrCharacterImporter,
+    private val updateCheckScheduler: UpdateCheckScheduler,
+    private val webImportUseCase: WebImportUseCase,
+    @IoDispatcher private val io: CoroutineDispatcher
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(LibraryState())
@@ -139,6 +147,14 @@ class LibraryViewModel @Inject constructor(
     private val _characterImportResult = MutableStateFlow<String?>(null)
     val characterImportResult: StateFlow<String?> = _characterImportResult
 
+    private val _updateCheckResult = MutableSharedFlow<String>(
+        replay = 0, extraBufferCapacity = 2, onBufferOverflow = BufferOverflow.DROP_OLDEST
+    )
+    val updateCheckResult: SharedFlow<String> = _updateCheckResult.asSharedFlow()
+
+    private val _isCheckingUpdates = MutableStateFlow(false)
+    val isCheckingUpdates: StateFlow<Boolean> = _isCheckingUpdates
+
     val backgroundImportState: StateFlow<BackgroundImportState> = backgroundImportManager.state
 
     val readProgress: StateFlow<Map<Long, Float>> = novelRepository.getAllNovels().map { novels ->
@@ -169,6 +185,9 @@ class LibraryViewModel @Inject constructor(
                 _bookmarkCounts.value = counts
             }
         }
+        viewModelScope.launch {
+            updateCheckScheduler.rescheduleIfNeeded()
+        }
     }
 
     fun onIntent(intent: LibraryIntent) {
@@ -187,6 +206,8 @@ class LibraryViewModel @Inject constructor(
             is LibraryIntent.CancelUrlDialog -> cancelUrlDialog()
             is LibraryIntent.ClearCoverError -> clearCoverError()
             is LibraryIntent.ToggleAutoUpdate -> toggleAutoUpdate(intent.novelId)
+            is LibraryIntent.CheckForUpdates -> checkForUpdates(intent.novelId)
+            is LibraryIntent.ResyncChapters -> resyncChapters(intent.novelId)
             is LibraryIntent.CancelBackgroundImport -> cancelBackgroundImport()
             is LibraryIntent.SelectNovel -> selectNovel(intent.novel)
             is LibraryIntent.DeselectNovel -> deselectNovel()
@@ -452,6 +473,121 @@ class LibraryViewModel @Inject constructor(
         viewModelScope.launch {
             val novel = novelRepository.getNovelById(novelId) ?: return@launch
             novelRepository.updateAutoUpdate(novelId, !novel.autoUpdate)
+            updateCheckScheduler.rescheduleIfNeeded()
+        }
+    }
+
+    fun checkForUpdates(novelId: Long) {
+        viewModelScope.launch {
+            val novel = novelRepository.getNovelById(novelId) ?: return@launch
+            if (novel.sourceUrl.isBlank()) {
+                _updateCheckResult.emit(context.getString(R.string.update_check_no_source_url))
+                return@launch
+            }
+            _isCheckingUpdates.value = true
+            try {
+                val result = webImportUseCase.fetchChapterList(novel.sourceUrl)
+                result.fold(
+                    onSuccess = { fetchResult ->
+                        val existingFileNames = chapterRepository
+                            .getChaptersByNovelSync(novelId)
+                            .map { it.fileName }
+                            .toSet()
+
+                        val newChapters = fetchResult.chapters.filter { link ->
+                            StringUtils.fileNameFromUrl(link.url) !in existingFileNames
+                        }
+
+                        val emptyChapters = chapterRepository
+                            .getEmptyChapters(novelId)
+                            .mapNotNull { ec ->
+                                fetchResult.chapters.find { link ->
+                                    StringUtils.fileNameFromUrl(link.url) == ec.fileName
+                                }
+                            }
+
+                        val allMissing = (newChapters + emptyChapters).distinctBy { it.url }
+
+                        if (allMissing.isEmpty()) {
+                            _updateCheckResult.emit(context.getString(R.string.update_check_no_new_chapters))
+                        } else {
+                            val newCount = newChapters.size
+                            val emptyCount = emptyChapters.size
+                            backgroundImportManager.startImport(
+                                novelTitle = fetchResult.novelTitle ?: novel.title,
+                                links = allMissing,
+                                coverUrl = fetchResult.coverUrl,
+                                sourceUrl = novel.sourceUrl
+                            )
+                            if (emptyCount > 0) {
+                                _updateCheckResult.emit(
+                                    context.getString(R.string.update_check_with_repair, allMissing.size, emptyCount)
+                                )
+                            } else {
+                                _updateCheckResult.emit(
+                                    context.getString(R.string.update_check_found_new_chapters, allMissing.size)
+                                )
+                            }
+                        }
+                        novelRepository.updateLastChecked(novelId, System.currentTimeMillis())
+                    },
+                    onFailure = { e ->
+                        _updateCheckResult.emit(
+                            context.getString(R.string.update_check_error, e.message ?: "Erro")
+                        )
+                    }
+                )
+            } catch (e: Exception) {
+                _updateCheckResult.emit(
+                    context.getString(R.string.update_check_error, e.message ?: "Erro")
+                )
+            } finally {
+                _isCheckingUpdates.value = false
+            }
+        }
+    }
+
+    fun resyncChapters(novelId: Long) {
+        viewModelScope.launch {
+            val novel = novelRepository.getNovelById(novelId) ?: return@launch
+            if (novel.sourceUrl.isBlank()) {
+                _updateCheckResult.emit(context.getString(R.string.resync_no_source_url))
+                return@launch
+            }
+            _isCheckingUpdates.value = true
+            try {
+                val result = webImportUseCase.fetchChapterList(novel.sourceUrl)
+                result.fold(
+                    onSuccess = { fetchResult ->
+                        if (fetchResult.chapters.isEmpty()) {
+                            _updateCheckResult.emit(context.getString(R.string.update_check_no_new_chapters))
+                            return@fold
+                        }
+                        chapterRepository.deleteByNovelId(novelId)
+                        backgroundImportManager.startImport(
+                            novelTitle = fetchResult.novelTitle ?: novel.title,
+                            links = fetchResult.chapters,
+                            coverUrl = fetchResult.coverUrl,
+                            sourceUrl = novel.sourceUrl
+                        )
+                        novelRepository.updateLastChecked(novelId, System.currentTimeMillis())
+                        _updateCheckResult.emit(
+                            context.getString(R.string.resync_started, fetchResult.chapters.size)
+                        )
+                    },
+                    onFailure = { e ->
+                        _updateCheckResult.emit(
+                            context.getString(R.string.update_check_error, e.message ?: "Erro")
+                        )
+                    }
+                )
+            } catch (e: Exception) {
+                _updateCheckResult.emit(
+                    context.getString(R.string.update_check_error, e.message ?: "Erro")
+                )
+            } finally {
+                _isCheckingUpdates.value = false
+            }
         }
     }
 

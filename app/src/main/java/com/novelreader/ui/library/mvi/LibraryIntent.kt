@@ -16,6 +16,8 @@ sealed interface LibraryIntent {
     data object CancelUrlDialog : LibraryIntent
     data object ClearCoverError : LibraryIntent
     data class ToggleAutoUpdate(val novelId: Long) : LibraryIntent
+    data class CheckForUpdates(val novelId: Long) : LibraryIntent
+    data class ResyncChapters(val novelId: Long) : LibraryIntent
     data object CancelBackgroundImport : LibraryIntent
 
     data class SelectNovel(val novel: com.novelreader.data.local.db.entity.NovelEntity) : LibraryIntent

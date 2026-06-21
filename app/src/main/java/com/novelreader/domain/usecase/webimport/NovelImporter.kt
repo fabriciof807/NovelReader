@@ -51,13 +51,11 @@ class NovelImporter @Inject constructor(
 
     suspend fun insertChapters(
         novelId: Long,
-        chapters: List<ImportedChapter>,
-        knownFileNames: Set<String>
+        chapters: List<ImportedChapter>
     ) {
-        val inserts = chapters.filter { it.fileName !in knownFileNames }
-        if (inserts.isEmpty()) return
+        if (chapters.isEmpty()) return
 
-        chapterRepository.insertAll(inserts.map { chapter ->
+        chapterRepository.insertAll(chapters.map { chapter ->
             ChapterEntity(
                 novelId = novelId,
                 title = chapter.title,

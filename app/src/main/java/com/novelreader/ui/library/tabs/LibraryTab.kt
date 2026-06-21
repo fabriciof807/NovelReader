@@ -22,6 +22,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Sort
 import androidx.compose.material.icons.filled.SortByAlpha
 import androidx.compose.material3.DropdownMenu
@@ -65,6 +66,8 @@ fun LibraryTab(
     onNovelClick: (NovelEntity) -> Unit,
     onLongClick: (NovelEntity) -> Unit,
     onToggleAutoUpdate: (NovelEntity) -> Unit,
+    onCheckForUpdates: (NovelEntity) -> Unit,
+    onResyncChapters: (NovelEntity) -> Unit,
     onRequestChangeCover: (NovelEntity) -> Unit,
     onRequestCoverByUrl: (NovelEntity) -> Unit,
     onContinueReading: (NovelEntity) -> Unit,
@@ -160,6 +163,8 @@ fun LibraryTab(
                         onChangeCover = { showMenu = false; onRequestChangeCover(novel) },
                         onCoverByUrl = { showMenu = false; onRequestCoverByUrl(novel) },
                         onToggleAutoUpdate = { showMenu = false; onToggleAutoUpdate(novel) },
+                        onCheckForUpdates = { showMenu = false; onCheckForUpdates(novel) },
+                        onResyncChapters = { showMenu = false; onResyncChapters(novel) },
                         onDelete = { showMenu = false; onLongClick(novel) }
                     )
                 }
@@ -186,6 +191,8 @@ fun LibraryTab(
                         onChangeCover = { showMenu = false; onRequestChangeCover(novel) },
                         onCoverByUrl = { showMenu = false; onRequestCoverByUrl(novel) },
                         onToggleAutoUpdate = { showMenu = false; onToggleAutoUpdate(novel) },
+                        onCheckForUpdates = { showMenu = false; onCheckForUpdates(novel) },
+                        onResyncChapters = { showMenu = false; onResyncChapters(novel) },
                         onDelete = { showMenu = false; onLongClick(novel) }
                     )
                 }
@@ -250,6 +257,8 @@ private fun NovelMenu(
     onChangeCover: () -> Unit,
     onCoverByUrl: () -> Unit,
     onToggleAutoUpdate: () -> Unit,
+    onCheckForUpdates: () -> Unit,
+    onResyncChapters: () -> Unit,
     onDelete: () -> Unit
 ) {
     DropdownMenu(
@@ -274,6 +283,16 @@ private fun NovelMenu(
                 )
             },
             onClick = onToggleAutoUpdate,
+            leadingIcon = { Icon(Icons.Default.Refresh, contentDescription = null) }
+        )
+        DropdownMenuItem(
+            text = { Text(stringResource(R.string.check_for_updates)) },
+            onClick = onCheckForUpdates,
+            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) }
+        )
+        DropdownMenuItem(
+            text = { Text(stringResource(R.string.resync_chapters)) },
+            onClick = onResyncChapters,
             leadingIcon = { Icon(Icons.Default.Refresh, contentDescription = null) }
         )
         DropdownMenuItem(

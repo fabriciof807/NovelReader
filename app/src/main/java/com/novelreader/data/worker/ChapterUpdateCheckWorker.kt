@@ -8,9 +8,10 @@ import androidx.work.ListenableWorker.Result
 import androidx.work.WorkerParameters
 import com.novelreader.data.repository.ChapterRepository
 import com.novelreader.data.repository.NovelRepository
+import com.novelreader.domain.usecase.ImportJobSpec
+import com.novelreader.domain.usecase.WebImportUseCase
 import com.novelreader.util.StringUtils
 import com.novelreader.di.qualifiers.IoDispatcher
-import com.novelreader.domain.usecase.WebImportUseCase
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.CoroutineDispatcher
@@ -24,6 +25,7 @@ class ChapterUpdateCheckWorker @AssistedInject constructor(
     private val chapterRepository: ChapterRepository,
     private val webImportUseCase: WebImportUseCase,
     private val notificationHelper: UpdateNotificationHelper,
+    private val importWorkScheduler: ImportWorkScheduler,
     @IoDispatcher private val io: CoroutineDispatcher
 ) : CoroutineWorker(appContext, params) {
 
@@ -51,6 +53,16 @@ class ChapterUpdateCheckWorker @AssistedInject constructor(
                                 novelTitle = novel.title,
                                 newChapterCount = newChapters.size
                             )
+
+                            val specs = ImportJobSpec.create(
+                                novelTitle = fetchResult.novelTitle ?: novel.title,
+                                links = newChapters,
+                                coverUrl = fetchResult.coverUrl,
+                                sourceUrl = novel.sourceUrl
+                            )
+                            for (spec in specs) {
+                                importWorkScheduler.schedule(spec)
+                            }
                         }
 
                         novelRepository.updateLastChecked(novel.id, System.currentTimeMillis())
