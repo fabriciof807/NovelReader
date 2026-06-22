@@ -2,6 +2,7 @@ package com.novelreader
 
 import android.Manifest
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
@@ -18,6 +19,8 @@ import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
 import androidx.navigation.compose.rememberNavController
 import com.novelreader.data.local.preferences.AppPreferences
+import com.novelreader.ui.navigation.DeepLinkAction
+import com.novelreader.ui.navigation.DeepLinkBus
 import com.novelreader.ui.navigation.NovelReaderNavGraph
 import com.novelreader.ui.theme.NovelReaderTheme
 import com.novelreader.util.LocaleHelper
@@ -29,6 +32,9 @@ class MainActivity : ComponentActivity() {
 
     @Inject
     lateinit var appPreferences: AppPreferences
+
+    @Inject
+    lateinit var deepLinkBus: DeepLinkBus
 
     private val notificationPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -42,6 +48,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         requestNotificationPermissionIfNeeded()
+        handleIntent(intent)
         setContent {
             val appTheme by appPreferences.appTheme.collectAsState(initial = "system")
 
@@ -51,8 +58,30 @@ class MainActivity : ComponentActivity() {
                     color = MaterialTheme.colorScheme.background
                 ) {
                     val navController = rememberNavController()
-                    NovelReaderNavGraph(navController = navController)
+                    NovelReaderNavGraph(
+                        navController = navController,
+                        deepLinkBus = deepLinkBus
+                    )
                 }
+            }
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleIntent(intent)
+    }
+
+    private fun handleIntent(intent: Intent?) {
+        intent ?: return
+        val action = intent.getStringExtra(EXTRA_DEEP_LINK_ACTION) ?: return
+        if (action == ACTION_OPEN_NOVEL) {
+            val novelId = intent.getLongExtra(EXTRA_NOVEL_ID, -1L)
+            if (novelId > 0L) {
+                deepLinkBus.emit(DeepLinkAction.ViewNovel(novelId))
+                intent.removeExtra(EXTRA_DEEP_LINK_ACTION)
+                intent.removeExtra(EXTRA_NOVEL_ID)
             }
         }
     }
@@ -66,5 +95,11 @@ class MainActivity : ComponentActivity() {
         if (!granted) {
             notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
         }
+    }
+
+    companion object {
+        const val EXTRA_DEEP_LINK_ACTION = "deep_link_action"
+        const val EXTRA_NOVEL_ID = "deep_link_novel_id"
+        const val ACTION_OPEN_NOVEL = "open_novel"
     }
 }

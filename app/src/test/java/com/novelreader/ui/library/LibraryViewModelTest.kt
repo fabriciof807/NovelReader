@@ -1,19 +1,20 @@
 package com.novelreader.ui.library
 
 import android.content.Context
+import androidx.lifecycle.SavedStateHandle
 import app.cash.turbine.test
 import com.google.common.truth.Truth.assertThat
+import com.novelreader.data.local.db.dao.BookmarkDao
+import com.novelreader.data.local.db.dao.ChapterDao
+import com.novelreader.data.local.db.dao.CharacterPhotoDao
+import com.novelreader.data.local.db.dao.NovelDao
 import com.novelreader.data.local.db.entity.ChapterEntity
 import com.novelreader.data.local.db.entity.NovelEntity
 import com.novelreader.data.local.preferences.LibraryPreferences
 import com.novelreader.data.remote.MvlempyrCharacterImporter
-import com.novelreader.data.repository.BookmarkRepository
-import com.novelreader.data.repository.CharacterPhotoRepository
-import com.novelreader.data.repository.ChapterRepository
-import com.novelreader.data.repository.NovelRepository
+import com.novelreader.data.worker.UpdateCheckScheduler
 import com.novelreader.domain.usecase.BackgroundImportManager
 import com.novelreader.domain.usecase.BackgroundImportState
-import com.novelreader.data.worker.UpdateCheckScheduler
 import com.novelreader.domain.usecase.CharacterManagementUseCase
 import com.novelreader.domain.usecase.CoverManagementUseCase
 import com.novelreader.domain.usecase.WebImportUseCase
@@ -37,12 +38,13 @@ class LibraryViewModelTest {
 
     private val testDispatcher = UnconfinedTestDispatcher()
     private val context: Context = mockk(relaxed = true)
-    private val novelRepo: NovelRepository = mockk(relaxed = true)
-    private val chapterRepo: ChapterRepository = mockk(relaxed = true)
-    private val bookmarkRepo: BookmarkRepository = mockk(relaxed = true)
+    private val savedState = SavedStateHandle()
+    private val novelDao: NovelDao = mockk(relaxed = true)
+    private val chapterDao: ChapterDao = mockk(relaxed = true)
+    private val bookmarkDao: BookmarkDao = mockk(relaxed = true)
     private val bgManager: BackgroundImportManager = mockk(relaxed = true)
     private val prefs: LibraryPreferences = mockk(relaxed = true)
-    private val charPhotoRepo: CharacterPhotoRepository = mockk(relaxed = true)
+    private val charPhotoDao: CharacterPhotoDao = mockk(relaxed = true)
     private val charManagement: CharacterManagementUseCase = mockk(relaxed = true)
     private val coverManagement: CoverManagementUseCase = mockk(relaxed = true)
     private val importer: MvlempyrCharacterImporter = mockk(relaxed = true)
@@ -54,21 +56,22 @@ class LibraryViewModelTest {
     @Before
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
-        every { novelRepo.getAllNovels() } returns flowOf(emptyList())
-        every { bookmarkRepo.getAll() } returns flowOf(emptyList())
+        every { novelDao.getAllNovels() } returns flowOf(emptyList())
+        every { bookmarkDao.getAll() } returns flowOf(emptyList())
         every { prefs.sortOrder } returns flowOf("LAST_READ")
         every { prefs.viewMode } returns flowOf("GRID")
         every { bgManager.state } returns MutableStateFlow(BackgroundImportState())
         viewModel = LibraryViewModel(
             context = context,
-            novelRepository = novelRepo,
-            chapterRepository = chapterRepo,
-            bookmarkRepository = bookmarkRepo,
+            savedStateHandle = savedState,
+            novelDao = novelDao,
+            chapterDao = chapterDao,
+            bookmarkDao = bookmarkDao,
             backgroundImportManager = bgManager,
             libraryPreferences = prefs,
             characterManagementUseCase = charManagement,
             coverManagementUseCase = coverManagement,
-            characterPhotoRepository = charPhotoRepo,
+            characterPhotoDao = charPhotoDao,
             mvlempyrCharacterImporter = importer,
             updateCheckScheduler = updateCheckScheduler,
             webImportUseCase = webImportUseCase,
@@ -111,11 +114,11 @@ class LibraryViewModelTest {
     @Test
     fun `selectNovel switches to chapters tab and loads chapters`() = runTest {
         val novel = NovelEntity(id = 5, title = "Selected")
-        coEvery { chapterRepo.getChaptersByNovelSync(5) } returns listOf(
+        coEvery { chapterDao.getChaptersByNovelSync(5) } returns listOf(
             ChapterEntity(id = 1, novelId = 5, title = "Ch1", fileName = "ch1.html", orderIndex = 0, content = "")
         )
         coEvery { charManagement.getCharacters(5) } returns emptyList()
-        coEvery { charPhotoRepo.getByCharacterIds(any()) } returns emptyList()
+        coEvery { charPhotoDao.getByCharacterIds(any()) } returns emptyList()
 
         viewModel.selectNovel(novel)
 

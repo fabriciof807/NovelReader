@@ -1,32 +1,32 @@
 package com.novelreader.domain.usecase.importnovel
 
+import com.novelreader.data.local.db.dao.ChapterDao
+import com.novelreader.data.local.db.dao.NovelDao
 import com.novelreader.data.local.db.entity.ChapterEntity
 import com.novelreader.data.local.db.entity.NovelEntity
-import com.novelreader.data.repository.ChapterRepository
-import com.novelreader.data.repository.NovelRepository
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
 class ChapterInserter @Inject constructor(
-    private val novelRepository: NovelRepository,
-    private val chapterRepository: ChapterRepository
+    private val novelDao: NovelDao,
+    private val chapterDao: ChapterDao
 ) {
     suspend fun ensureNovel(novelTitle: String): Pair<Long, List<ChapterEntity>> {
-        var existingNovel = novelRepository.getNovelByTitle(novelTitle)
+        var existingNovel = novelDao.getNovelByTitle(novelTitle)
         val novelId: Long
         val existingChapters: List<ChapterEntity>
 
         if (existingNovel != null) {
             novelId = existingNovel.id
-            existingChapters = chapterRepository.getChaptersByNovelSync(novelId)
+            existingChapters = chapterDao.getChaptersByNovelSync(novelId)
         } else {
             val novelEntity = NovelEntity(
                 title = novelTitle,
                 sourceFolder = "",
                 totalChapters = 0
             )
-            novelId = novelRepository.insert(novelEntity)
+            novelId = novelDao.insert(novelEntity)
             existingChapters = emptyList()
         }
 
@@ -40,7 +40,7 @@ class ChapterInserter @Inject constructor(
         val inserts = mutableListOf<ChapterEntity>()
         for ((index, entry) in entries.withIndex()) {
             if (entry.existingId != null) {
-                chapterRepository.updateOrderIndex(entry.existingId, index)
+                chapterDao.updateOrderIndex(entry.existingId, index)
             } else {
                 inserts.add(
                     ChapterEntity(
@@ -55,8 +55,8 @@ class ChapterInserter @Inject constructor(
         }
 
         if (inserts.isNotEmpty()) {
-            chapterRepository.insertAll(inserts)
+            chapterDao.insertAll(inserts)
         }
-        novelRepository.updateChapterCount(novelId, entries.size)
+        novelDao.updateChapterCount(novelId, entries.size)
     }
 }

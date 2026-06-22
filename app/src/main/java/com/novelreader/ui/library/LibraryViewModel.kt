@@ -1,20 +1,19 @@
 package com.novelreader.ui.library
 
 import android.content.Context
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.novelreader.R
 import com.novelreader.data.local.preferences.LibraryPreferences
+import com.novelreader.data.local.db.dao.ChapterDao
+import com.novelreader.data.local.db.dao.CharacterPhotoDao
+import com.novelreader.data.local.db.dao.NovelDao
 import com.novelreader.data.local.db.entity.CharacterEntity
 import com.novelreader.data.local.db.entity.CharacterPhotoEntity
 import com.novelreader.data.local.db.entity.ChapterEntity
 import com.novelreader.data.local.db.entity.NovelEntity
 import com.novelreader.data.remote.MvlempyrCharacterImporter
-import com.novelreader.data.repository.BookmarkRepository
-import com.novelreader.data.repository.CharacterPhotoRepository
-import com.novelreader.data.repository.CharacterRepository
-import com.novelreader.data.repository.ChapterRepository
-import com.novelreader.data.repository.NovelRepository
 import com.novelreader.data.worker.UpdateCheckScheduler
 import com.novelreader.di.qualifiers.IoDispatcher
 import com.novelreader.domain.usecase.BackgroundImportManager
@@ -56,14 +55,15 @@ data class LibraryStats(
 @HiltViewModel
 class LibraryViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val novelRepository: NovelRepository,
-    private val chapterRepository: ChapterRepository,
-    private val bookmarkRepository: BookmarkRepository,
+    savedStateHandle: SavedStateHandle,
+    private val novelDao: NovelDao,
+    private val chapterDao: ChapterDao,
+    private val bookmarkDao: com.novelreader.data.local.db.dao.BookmarkDao,
     private val backgroundImportManager: BackgroundImportManager,
     private val libraryPreferences: LibraryPreferences,
     private val characterManagementUseCase: CharacterManagementUseCase,
     private val coverManagementUseCase: CoverManagementUseCase,
-    private val characterPhotoRepository: CharacterPhotoRepository,
+    private val characterPhotoDao: CharacterPhotoDao,
     private val mvlempyrCharacterImporter: MvlempyrCharacterImporter,
     private val updateCheckScheduler: UpdateCheckScheduler,
     private val webImportUseCase: WebImportUseCase,
@@ -87,7 +87,7 @@ class LibraryViewModel @Inject constructor(
     val viewMode: StateFlow<ViewMode> = _viewMode
 
     val novels: StateFlow<List<NovelEntity>> = combine(
-        novelRepository.getAllNovels(),
+        novelDao.getAllNovels(),
         _sortOrder
     ) { list, order ->
         when (order) {
@@ -98,8 +98,8 @@ class LibraryViewModel @Inject constructor(
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val stats: StateFlow<LibraryStats> = combine(
-        novelRepository.getAllNovels(),
-        bookmarkRepository.getAll()
+        novelDao.getAllNovels(),
+        bookmarkDao.getAll()
     ) { novels, bookmarks ->
         LibraryStats(
             totalNovels = novels.size,
@@ -157,8 +157,8 @@ class LibraryViewModel @Inject constructor(
 
     val backgroundImportState: StateFlow<BackgroundImportState> = backgroundImportManager.state
 
-    val readProgress: StateFlow<Map<Long, Float>> = novelRepository.getAllNovels().map { novels ->
-        val counts = chapterRepository.getReadCountPerNovel().associate { it.novelId to it.readCount }
+    val readProgress: StateFlow<Map<Long, Float>> = novelDao.getAllNovels().map { novels ->
+        val counts = chapterDao.getReadCountPerNovel().associate { it.novelId to it.readCount }
         novels.associate { novel ->
             val read = counts[novel.id] ?: 0
             val progress = if (novel.totalChapters > 0) read.toFloat() / novel.totalChapters else 0f
@@ -180,13 +180,23 @@ class LibraryViewModel @Inject constructor(
             _state.value = _state.value.copy(viewMode = mode)
         }
         viewModelScope.launch {
-            bookmarkRepository.getAll().collect { bookmarks ->
+            bookmarkDao.getAll().collect { bookmarks ->
                 val counts = bookmarks.groupBy { it.chapterId }.mapValues { it.value.size }
                 _bookmarkCounts.value = counts
             }
         }
         viewModelScope.launch {
             updateCheckScheduler.rescheduleIfNeeded()
+        }
+        val pendingNovelId = savedStateHandle.get<Long>(ARG_SELECTED_NOVEL_ID)?.takeIf { it > 0L }
+        if (pendingNovelId != null) {
+            viewModelScope.launch {
+                val novel = novelDao.getNovelById(pendingNovelId)
+                if (novel != null) {
+                    selectNovel(novel)
+                }
+                savedStateHandle.remove<Long>(ARG_SELECTED_NOVEL_ID)
+            }
         }
     }
 
@@ -244,7 +254,7 @@ class LibraryViewModel @Inject constructor(
 
     private fun loadChapters(novelId: Long) {
         viewModelScope.launch {
-            val raw = chapterRepository.getChaptersByNovelSync(novelId)
+            val raw = chapterDao.getChaptersByNovelSync(novelId)
             _chapters.value = when (_chapterSortOrder.value) {
                 ChapterSortOrder.ASCENDING -> raw.sortedBy { it.orderIndex }
                 ChapterSortOrder.DESCENDING -> raw.sortedByDescending { it.orderIndex }
@@ -465,21 +475,21 @@ class LibraryViewModel @Inject constructor(
     private suspend fun refreshCharacters(novelId: Long) {
         val chars = characterManagementUseCase.getCharacters(novelId)
         _characters.value = chars
-        val allPhotos = characterPhotoRepository.getByCharacterIds(chars.map { it.id })
+        val allPhotos = characterPhotoDao.getByCharacterIds(chars.map { it.id })
         _characterPhotos.value = allPhotos.groupBy { it.characterId }
     }
 
     fun toggleAutoUpdate(novelId: Long) {
         viewModelScope.launch {
-            val novel = novelRepository.getNovelById(novelId) ?: return@launch
-            novelRepository.updateAutoUpdate(novelId, !novel.autoUpdate)
+            val novel = novelDao.getNovelById(novelId) ?: return@launch
+            novelDao.updateAutoUpdate(novelId, !novel.autoUpdate)
             updateCheckScheduler.rescheduleIfNeeded()
         }
     }
 
     fun checkForUpdates(novelId: Long) {
         viewModelScope.launch {
-            val novel = novelRepository.getNovelById(novelId) ?: return@launch
+            val novel = novelDao.getNovelById(novelId) ?: return@launch
             if (novel.sourceUrl.isBlank()) {
                 _updateCheckResult.emit(context.getString(R.string.update_check_no_source_url))
                 return@launch
@@ -489,20 +499,20 @@ class LibraryViewModel @Inject constructor(
                 val result = webImportUseCase.fetchChapterList(novel.sourceUrl)
                 result.fold(
                     onSuccess = { fetchResult ->
-                        val existingFileNames = chapterRepository
+                        val existingFileNames = chapterDao
                             .getChaptersByNovelSync(novelId)
                             .map { it.fileName }
                             .toSet()
 
                         val newChapters = fetchResult.chapters.filter { link ->
-                            StringUtils.fileNameFromUrl(link.url) !in existingFileNames
+                            StringUtils.fileNameFromUrl(link.url, "chapter_${link.chapterNumber}") !in existingFileNames
                         }
 
-                        val emptyChapters = chapterRepository
+                        val emptyChapters = chapterDao
                             .getEmptyChapters(novelId)
                             .mapNotNull { ec ->
                                 fetchResult.chapters.find { link ->
-                                    StringUtils.fileNameFromUrl(link.url) == ec.fileName
+                                    StringUtils.fileNameFromUrl(link.url, "chapter_${link.chapterNumber}") == ec.fileName
                                 }
                             }
 
@@ -529,7 +539,7 @@ class LibraryViewModel @Inject constructor(
                                 )
                             }
                         }
-                        novelRepository.updateLastChecked(novelId, System.currentTimeMillis())
+                        novelDao.updateLastChecked(novelId, System.currentTimeMillis())
                     },
                     onFailure = { e ->
                         _updateCheckResult.emit(
@@ -549,7 +559,7 @@ class LibraryViewModel @Inject constructor(
 
     fun resyncChapters(novelId: Long) {
         viewModelScope.launch {
-            val novel = novelRepository.getNovelById(novelId) ?: return@launch
+            val novel = novelDao.getNovelById(novelId) ?: return@launch
             if (novel.sourceUrl.isBlank()) {
                 _updateCheckResult.emit(context.getString(R.string.resync_no_source_url))
                 return@launch
@@ -563,14 +573,14 @@ class LibraryViewModel @Inject constructor(
                             _updateCheckResult.emit(context.getString(R.string.update_check_no_new_chapters))
                             return@fold
                         }
-                        chapterRepository.deleteByNovelId(novelId)
+                        chapterDao.deleteByNovelId(novelId)
                         backgroundImportManager.startImport(
                             novelTitle = fetchResult.novelTitle ?: novel.title,
                             links = fetchResult.chapters,
                             coverUrl = fetchResult.coverUrl,
                             sourceUrl = novel.sourceUrl
                         )
-                        novelRepository.updateLastChecked(novelId, System.currentTimeMillis())
+                        novelDao.updateLastChecked(novelId, System.currentTimeMillis())
                         _updateCheckResult.emit(
                             context.getString(R.string.resync_started, fetchResult.chapters.size)
                         )
@@ -598,5 +608,9 @@ class LibraryViewModel @Inject constructor(
     override fun onCleared() {
         super.onCleared()
         viewModelScope.launch { backgroundImportManager.cancel() }
+    }
+
+    companion object {
+        const val ARG_SELECTED_NOVEL_ID = "selectedNovelId"
     }
 }

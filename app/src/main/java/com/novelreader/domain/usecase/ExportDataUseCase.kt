@@ -1,14 +1,14 @@
 package com.novelreader.domain.usecase
 
-import com.novelreader.data.local.db.entity.CharacterEntity
+import com.novelreader.data.local.db.dao.BookmarkDao
+import com.novelreader.data.local.db.dao.ChapterDao
+import com.novelreader.data.local.db.dao.CharacterDao
+import com.novelreader.data.local.db.dao.CharacterPhotoDao
+import com.novelreader.data.local.db.dao.NovelDao
 import com.novelreader.data.local.db.entity.NovelEntity
-import com.novelreader.data.repository.BookmarkRepository
-import com.novelreader.data.repository.ChapterRepository
-import com.novelreader.data.repository.CharacterPhotoRepository
-import com.novelreader.data.repository.CharacterRepository
-import com.novelreader.data.repository.NovelRepository
 import com.novelreader.di.qualifiers.IoDispatcher
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
@@ -20,11 +20,11 @@ import javax.inject.Singleton
 
 @Singleton
 class ExportDataUseCase @Inject constructor(
-    private val novelRepository: NovelRepository,
-    private val chapterRepository: ChapterRepository,
-    private val bookmarkRepository: BookmarkRepository,
-    private val characterRepository: CharacterRepository,
-    private val characterPhotoRepository: CharacterPhotoRepository,
+    private val novelDao: NovelDao,
+    private val chapterDao: ChapterDao,
+    private val bookmarkDao: BookmarkDao,
+    private val characterDao: CharacterDao,
+    private val characterPhotoDao: CharacterPhotoDao,
     @IoDispatcher private val ioDispatcher: CoroutineDispatcher
 ) {
     suspend fun execute(): String = withContext(ioDispatcher) {
@@ -33,7 +33,7 @@ class ExportDataUseCase @Inject constructor(
         root.put("version", 1)
         root.put("exportedAt", SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US).format(Date()))
 
-        val novels = novelRepository.getAllNovelsSync()
+        val novels = novelDao.getAllNovels().first()
         root.put("novels", exportNovels(novels))
 
         root.put("bookmarks", exportBookmarks())
@@ -57,9 +57,9 @@ class ExportDataUseCase @Inject constructor(
 
     private suspend fun exportBookmarks(): JSONArray {
         val arr = JSONArray()
-        val bookmarks = bookmarkRepository.getAllSync()
+        val bookmarks = bookmarkDao.getAllSync()
         for (bm in bookmarks) {
-            val chapter = chapterRepository.getChapterById(bm.chapterId)
+            val chapter = chapterDao.getChapterById(bm.chapterId)
             arr.put(JSONObject().apply {
                 put("title", bm.title)
                 put("note", bm.note ?: "")
@@ -78,9 +78,9 @@ class ExportDataUseCase @Inject constructor(
 
     private suspend fun exportCharacters(novelMap: Map<Long, NovelEntity>): JSONArray {
         val arr = JSONArray()
-        val characters = characterRepository.getAllCharactersSync()
+        val characters = characterDao.getAllCharactersSync()
         val characterIds = characters.map { it.id }
-        val photosMap = characterPhotoRepository.getByCharacterIds(characterIds)
+        val photosMap = characterPhotoDao.getByCharacterIds(characterIds)
             .groupBy { it.characterId }
         for (char in characters) {
             arr.put(JSONObject().apply {

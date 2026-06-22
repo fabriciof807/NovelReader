@@ -2,12 +2,12 @@ package com.novelreader.ui.favorites
 
 import app.cash.turbine.test
 import com.google.common.truth.Truth.assertThat
+import com.novelreader.data.local.db.dao.BookmarkDao
+import com.novelreader.data.local.db.dao.ChapterDao
+import com.novelreader.data.local.db.dao.NovelDao
 import com.novelreader.data.local.db.entity.BookmarkEntity
 import com.novelreader.data.local.db.entity.ChapterEntity
 import com.novelreader.data.local.db.entity.NovelEntity
-import com.novelreader.data.repository.BookmarkRepository
-import com.novelreader.data.repository.ChapterRepository
-import com.novelreader.data.repository.NovelRepository
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -28,9 +28,9 @@ import org.junit.Test
 class FavoritesViewModelTest {
 
     private val testDispatcher = UnconfinedTestDispatcher()
-    private val novelRepo: NovelRepository = mockk(relaxed = true)
-    private val chapterRepo: ChapterRepository = mockk(relaxed = true)
-    private val bookmarkRepo: BookmarkRepository = mockk(relaxed = true)
+    private val novelDao: NovelDao = mockk(relaxed = true)
+    private val chapterDao: ChapterDao = mockk(relaxed = true)
+    private val bookmarkDao: BookmarkDao = mockk(relaxed = true)
 
     private lateinit var viewModel: FavoritesViewModel
 
@@ -50,11 +50,11 @@ class FavoritesViewModelTest {
 
     @Test
     fun init_loadsDisplayItems() = runTest {
-        every { bookmarkRepo.getAll() } returns flowOf(listOf(bookmark))
-        coEvery { chapterRepo.getChaptersByIds(listOf(10L)) } returns listOf(chapter)
-        coEvery { novelRepo.getNovelsByIds(listOf(1L)) } returns listOf(novel)
+        every { bookmarkDao.getAll() } returns flowOf(listOf(bookmark))
+        coEvery { chapterDao.getChaptersByIds(listOf(10L)) } returns listOf(chapter)
+        coEvery { novelDao.getNovelsByIds(listOf(1L)) } returns listOf(novel)
 
-        viewModel = FavoritesViewModel(novelRepo, chapterRepo, bookmarkRepo)
+        viewModel = FavoritesViewModel(novelDao, chapterDao, bookmarkDao)
 
         viewModel.displayItems.test {
             val items = awaitItem()
@@ -69,14 +69,14 @@ class FavoritesViewModelTest {
     @Test
     fun deleteBookmark_updatesList() = runTest {
         val bookmarkFlow = MutableStateFlow(listOf(bookmark))
-        every { bookmarkRepo.getAll() } returns bookmarkFlow
-        coEvery { chapterRepo.getChaptersByIds(listOf(10L)) } returns listOf(chapter)
-        coEvery { novelRepo.getNovelsByIds(listOf(1L)) } returns listOf(novel)
-        coEvery { bookmarkRepo.deleteById(100) } answers {
+        every { bookmarkDao.getAll() } returns bookmarkFlow
+        coEvery { chapterDao.getChaptersByIds(listOf(10L)) } returns listOf(chapter)
+        coEvery { novelDao.getNovelsByIds(listOf(1L)) } returns listOf(novel)
+        coEvery { bookmarkDao.deleteById(100) } answers {
             bookmarkFlow.value = emptyList()
         }
 
-        viewModel = FavoritesViewModel(novelRepo, chapterRepo, bookmarkRepo)
+        viewModel = FavoritesViewModel(novelDao, chapterDao, bookmarkDao)
 
         viewModel.displayItems.test {
             awaitItem()
@@ -85,14 +85,14 @@ class FavoritesViewModelTest {
             assertThat(updatedItems).isEmpty()
             cancelAndConsumeRemainingEvents()
         }
-        coVerify { bookmarkRepo.deleteById(100) }
+        coVerify { bookmarkDao.deleteById(100) }
     }
 
     @Test
     fun emptyBookmarks_showsEmptyList() = runTest {
-        every { bookmarkRepo.getAll() } returns flowOf(emptyList())
+        every { bookmarkDao.getAll() } returns flowOf(emptyList())
 
-        viewModel = FavoritesViewModel(novelRepo, chapterRepo, bookmarkRepo)
+        viewModel = FavoritesViewModel(novelDao, chapterDao, bookmarkDao)
 
         viewModel.displayItems.test {
             val items = awaitItem()
@@ -103,11 +103,11 @@ class FavoritesViewModelTest {
 
     @Test
     fun joinsChapterAndNovel() = runTest {
-        every { bookmarkRepo.getAll() } returns flowOf(listOf(bookmark))
-        coEvery { chapterRepo.getChaptersByIds(listOf(10L)) } returns listOf(chapter)
-        coEvery { novelRepo.getNovelsByIds(listOf(1L)) } returns listOf(novel)
+        every { bookmarkDao.getAll() } returns flowOf(listOf(bookmark))
+        coEvery { chapterDao.getChaptersByIds(listOf(10L)) } returns listOf(chapter)
+        coEvery { novelDao.getNovelsByIds(listOf(1L)) } returns listOf(novel)
 
-        viewModel = FavoritesViewModel(novelRepo, chapterRepo, bookmarkRepo)
+        viewModel = FavoritesViewModel(novelDao, chapterDao, bookmarkDao)
 
         viewModel.displayItems.test {
             val item = awaitItem().first()
@@ -120,10 +120,10 @@ class FavoritesViewModelTest {
     @Test
     fun missingChapter_handledGracefully() = runTest {
         val orphanBookmark = BookmarkEntity(id = 200, chapterId = 9999, title = "Orphan bookmark", page = 1)
-        every { bookmarkRepo.getAll() } returns flowOf(listOf(orphanBookmark))
-        coEvery { chapterRepo.getChaptersByIds(listOf(9999L)) } returns emptyList()
+        every { bookmarkDao.getAll() } returns flowOf(listOf(orphanBookmark))
+        coEvery { chapterDao.getChaptersByIds(listOf(9999L)) } returns emptyList()
 
-        viewModel = FavoritesViewModel(novelRepo, chapterRepo, bookmarkRepo)
+        viewModel = FavoritesViewModel(novelDao, chapterDao, bookmarkDao)
 
         viewModel.displayItems.test {
             val items = awaitItem()
@@ -140,11 +140,11 @@ class FavoritesViewModelTest {
         val b2 = BookmarkEntity(id = 2, chapterId = 10, title = "Second", page = 2, createdAt = 2000)
         val b3 = BookmarkEntity(id = 3, chapterId = 10, title = "Third", page = 3, createdAt = 3000)
 
-        every { bookmarkRepo.getAll() } returns flowOf(listOf(b1, b2, b3))
-        coEvery { chapterRepo.getChaptersByIds(listOf(10L)) } returns listOf(chapter)
-        coEvery { novelRepo.getNovelsByIds(listOf(1L)) } returns listOf(novel)
+        every { bookmarkDao.getAll() } returns flowOf(listOf(b1, b2, b3))
+        coEvery { chapterDao.getChaptersByIds(listOf(10L)) } returns listOf(chapter)
+        coEvery { novelDao.getNovelsByIds(listOf(1L)) } returns listOf(novel)
 
-        viewModel = FavoritesViewModel(novelRepo, chapterRepo, bookmarkRepo)
+        viewModel = FavoritesViewModel(novelDao, chapterDao, bookmarkDao)
 
         viewModel.displayItems.test {
             val items = awaitItem()

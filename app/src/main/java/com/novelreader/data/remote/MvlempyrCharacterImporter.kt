@@ -3,12 +3,12 @@ package com.novelreader.data.remote
 import android.content.Context
 import com.novelreader.BuildConfig
 import com.novelreader.R
+import com.novelreader.data.local.db.dao.CharacterDao
+import com.novelreader.data.local.db.dao.CharacterPhotoDao
 import com.novelreader.data.local.db.entity.CharacterEntity
 import com.novelreader.data.local.db.entity.CharacterPhotoEntity
-import com.novelreader.util.StringUtils
-import com.novelreader.data.repository.CharacterPhotoRepository
-import com.novelreader.data.repository.CharacterRepository
 import com.novelreader.di.qualifiers.IoDispatcher
+import com.novelreader.util.StringUtils
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.withContext
@@ -22,8 +22,8 @@ import javax.inject.Singleton
 @Singleton
 class MvlempyrCharacterImporter @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val characterRepository: CharacterRepository,
-    private val characterPhotoRepository: CharacterPhotoRepository,
+    private val characterDao: CharacterDao,
+    private val characterPhotoDao: CharacterPhotoDao,
     @IoDispatcher private val io: CoroutineDispatcher
 ) {
 
@@ -73,7 +73,7 @@ class MvlempyrCharacterImporter @Inject constructor(
                 downloadImage(char.designImageUrl, designFile)?.absolutePath
             } else null
 
-            val characterId = characterRepository.insert(
+            val characterId = characterDao.insert(
                 CharacterEntity(
                     novelId = novelId,
                     name = char.name,
@@ -83,7 +83,7 @@ class MvlempyrCharacterImporter @Inject constructor(
             )
 
             if (designPath != null) {
-                characterPhotoRepository.insert(
+                characterPhotoDao.insert(
                     CharacterPhotoEntity(
                         characterId = characterId,
                         photoPath = designPath,

@@ -7,6 +7,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import androidx.core.app.NotificationCompat
+import com.novelreader.MainActivity
 import com.novelreader.R
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
@@ -46,8 +47,8 @@ class UpdateNotificationHelper @Inject constructor(
 
         val intent = context.packageManager.getLaunchIntentForPackage(context.packageName)?.apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-            putExtra("action", "open_import")
-            putExtra("novelId", novelId)
+            putExtra(MainActivity.EXTRA_DEEP_LINK_ACTION, MainActivity.ACTION_OPEN_NOVEL)
+            putExtra(MainActivity.EXTRA_NOVEL_ID, novelId)
         }
         val pendingIntent = PendingIntent.getActivity(
             context,

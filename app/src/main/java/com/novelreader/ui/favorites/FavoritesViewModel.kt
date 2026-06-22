@@ -2,12 +2,12 @@ package com.novelreader.ui.favorites
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.novelreader.data.local.db.dao.BookmarkDao
+import com.novelreader.data.local.db.dao.ChapterDao
+import com.novelreader.data.local.db.dao.NovelDao
 import com.novelreader.data.local.db.entity.BookmarkEntity
 import com.novelreader.data.local.db.entity.ChapterEntity
 import com.novelreader.data.local.db.entity.NovelEntity
-import com.novelreader.data.repository.BookmarkRepository
-import com.novelreader.data.repository.ChapterRepository
-import com.novelreader.data.repository.NovelRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -22,9 +22,9 @@ data class BookmarkDisplayItem(
 
 @HiltViewModel
 class FavoritesViewModel @Inject constructor(
-    private val novelRepository: NovelRepository,
-    private val chapterRepository: ChapterRepository,
-    private val bookmarkRepository: BookmarkRepository
+    private val novelDao: NovelDao,
+    private val chapterDao: ChapterDao,
+    private val bookmarkDao: BookmarkDao
 ) : ViewModel() {
 
     private val _displayItems = MutableStateFlow<List<BookmarkDisplayItem>>(emptyList())
@@ -32,16 +32,16 @@ class FavoritesViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            bookmarkRepository.getAll().collect { bookmarks ->
+            bookmarkDao.getAll().collect { bookmarks ->
                 if (bookmarks.isEmpty()) {
                     _displayItems.value = emptyList()
                     return@collect
                 }
                 val chapterIds = bookmarks.map { it.chapterId }.distinct()
-                val chapters = chapterRepository.getChaptersByIds(chapterIds)
+                val chapters = chapterDao.getChaptersByIds(chapterIds)
                     .associateBy { it.id }
                 val novelIds = chapters.values.map { it.novelId }.distinct()
-                val novels = novelRepository.getNovelsByIds(novelIds)
+                val novels = novelDao.getNovelsByIds(novelIds)
                     .associateBy { it.id }
                 val items = bookmarks.map { bookmark ->
                     val chapter = chapters[bookmark.chapterId]
@@ -55,7 +55,7 @@ class FavoritesViewModel @Inject constructor(
 
     fun deleteBookmark(id: Long) {
         viewModelScope.launch {
-            bookmarkRepository.deleteById(id)
+            bookmarkDao.deleteById(id)
         }
     }
 }

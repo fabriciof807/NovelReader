@@ -1,6 +1,6 @@
 package com.novelreader.domain.usecase.webimport
 
-import com.novelreader.data.repository.NovelRepository
+import com.novelreader.data.local.db.dao.NovelDao
 import java.io.File
 import java.net.URL
 import javax.inject.Inject
@@ -8,7 +8,7 @@ import javax.inject.Singleton
 
 @Singleton
 class CoverDownloader @Inject constructor(
-    private val novelRepository: NovelRepository
+    private val novelDao: NovelDao
 ) {
     suspend fun downloadCover(novelId: Long, coverUrl: String, filesDir: File) {
         try {
@@ -25,7 +25,7 @@ class CoverDownloader @Inject constructor(
                 }
             }
             if (dest.exists()) {
-                novelRepository.updateCoverPath(novelId, dest.absolutePath)
+                novelDao.updateCoverPath(novelId, dest.absolutePath)
             }
         } catch (_: Exception) { }
     }

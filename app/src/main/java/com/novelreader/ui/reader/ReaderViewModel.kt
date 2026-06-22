@@ -5,17 +5,17 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.novelreader.R
+import com.novelreader.data.local.db.FtsSearchService
+import com.novelreader.data.local.db.dao.BookmarkDao
+import com.novelreader.data.local.db.dao.ChapterDao
+import com.novelreader.data.local.db.dao.CharacterDao
+import com.novelreader.data.local.db.dao.NovelDao
 import com.novelreader.data.local.db.entity.BookmarkEntity
 import com.novelreader.data.local.db.entity.CharacterEntity
 import com.novelreader.data.local.db.entity.ChapterEntity
 import com.novelreader.data.local.db.entity.NovelEntity
-import com.novelreader.data.local.db.FtsSearchService
 import com.novelreader.data.local.preferences.ReaderConfig
 import com.novelreader.data.local.preferences.ReaderPreferences
-import com.novelreader.data.repository.BookmarkRepository
-import com.novelreader.data.repository.CharacterRepository
-import com.novelreader.data.repository.ChapterRepository
-import com.novelreader.data.repository.NovelRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Job
@@ -52,11 +52,11 @@ data class ReaderState(
 class ReaderViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     savedStateHandle: SavedStateHandle,
-    private val novelRepository: NovelRepository,
-    private val chapterRepository: ChapterRepository,
-    private val bookmarkRepository: BookmarkRepository,
+    private val novelDao: NovelDao,
+    private val chapterDao: ChapterDao,
+    private val bookmarkDao: BookmarkDao,
     private val readerPreferences: ReaderPreferences,
-    private val characterRepository: CharacterRepository,
+    private val characterDao: CharacterDao,
     private val ftsSearchService: FtsSearchService
 ) : ViewModel() {
 
@@ -90,7 +90,7 @@ class ReaderViewModel @Inject constructor(
         viewModelScope.launch {
             _state.value = _state.value.copy(isLoading = true)
 
-            val chapter = chapterRepository.getChapterById(chapterId)
+            val chapter = chapterDao.getChapterById(chapterId)
             if (chapter == null) {
                 _state.value = _state.value.copy(
                     isLoading = false,
@@ -99,10 +99,10 @@ class ReaderViewModel @Inject constructor(
                 return@launch
             }
             currentChapter = chapter
-            val novel = novelRepository.getNovelById(chapter.novelId)
+            val novel = novelDao.getNovelById(chapter.novelId)
 
             if (allChapters.isEmpty() || allChapters.firstOrNull()?.novelId != chapter.novelId) {
-                allChapters = chapterRepository.getChaptersByNovelSync(chapter.novelId)
+                allChapters = chapterDao.getChaptersByNovelSync(chapter.novelId)
             }
 
             val currentIndex = allChapters.indexOfFirst { it.id == chapterId }
@@ -120,10 +120,10 @@ class ReaderViewModel @Inject constructor(
 
             collectBookmarks(chapterId)
 
-            novelRepository.updateLastRead(chapter.novelId, chapterId)
+            novelDao.updateLastRead(chapter.novelId, chapterId)
 
             if (!chapter.isRead) {
-                chapterRepository.markAsRead(chapter.id, chapter.lastScrollPosition)
+                chapterDao.markAsRead(chapter.id, chapter.lastScrollPosition)
             }
         }
     }
@@ -131,7 +131,7 @@ class ReaderViewModel @Inject constructor(
     private fun collectBookmarks(chapterId: Long) {
         bookmarkCollectionJob?.cancel()
         bookmarkCollectionJob = viewModelScope.launch {
-            bookmarkRepository.getByChapter(chapterId).collect { list ->
+            bookmarkDao.getByChapter(chapterId).collect { list ->
                 _state.value = _state.value.copy(
                     bookmarks = list,
                     reloadVersion = _state.value.reloadVersion + 1
@@ -171,7 +171,7 @@ class ReaderViewModel @Inject constructor(
         lastKnownScrollPosition = position
         viewModelScope.launch {
             try {
-                chapterRepository.markAsRead(chapter.id, position)
+                chapterDao.markAsRead(chapter.id, position)
             } catch (e: Exception) {
                 _errorEvents.emit(e.message ?: e.toString())
             }
@@ -194,7 +194,7 @@ class ReaderViewModel @Inject constructor(
                     else chapter.lastScrollPosition
                 val finalTitle = title.ifBlank { getDefaultBookmarkTitle() }
                     .ifBlank { "Bookmark #${_state.value.bookmarks.size + 1}" }
-                bookmarkRepository.insert(
+                bookmarkDao.insert(
                     BookmarkEntity(
                         chapterId = chapter.id,
                         title = finalTitle,
@@ -212,7 +212,7 @@ class ReaderViewModel @Inject constructor(
     fun deleteBookmark(id: Long) {
         viewModelScope.launch {
             try {
-                bookmarkRepository.deleteById(id)
+                bookmarkDao.deleteById(id)
             } catch (e: Exception) {
                 _errorEvents.emit(e.message ?: e.toString())
             }
@@ -310,7 +310,7 @@ class ReaderViewModel @Inject constructor(
     fun createCharacter(name: String, photoPath: String?) {
         viewModelScope.launch {
             try {
-                characterRepository.insert(
+                characterDao.insert(
                     CharacterEntity(
                         novelId = novelId,
                         name = name,

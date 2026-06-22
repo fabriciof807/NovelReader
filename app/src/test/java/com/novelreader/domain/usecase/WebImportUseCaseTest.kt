@@ -5,11 +5,11 @@ import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import com.google.common.truth.Truth.assertThat
 import com.novelreader.data.local.db.NovelDatabase
+import com.novelreader.data.local.db.dao.ChapterDao
+import com.novelreader.data.local.db.dao.NovelDao
 import com.novelreader.data.parser.GenericFallbackParser
 import com.novelreader.data.parser.MhtParser
 import com.novelreader.data.parser.ParserRegistry
-import com.novelreader.data.repository.ChapterRepository
-import com.novelreader.data.repository.NovelRepository
 import com.novelreader.domain.usecase.webimport.ChapterCrawler
 import com.novelreader.domain.usecase.webimport.ChapterFetcher
 import com.novelreader.domain.usecase.webimport.CoverDownloader
@@ -28,8 +28,8 @@ import org.robolectric.annotation.Config
 class WebImportUseCaseTest {
 
     private lateinit var database: NovelDatabase
-    private lateinit var novelRepo: NovelRepository
-    private lateinit var chapterRepo: ChapterRepository
+    private lateinit var novelDao: NovelDao
+    private lateinit var chapterDao: ChapterDao
     private lateinit var useCase: WebImportUseCase
 
     @Before
@@ -38,20 +38,22 @@ class WebImportUseCaseTest {
         database = Room.inMemoryDatabaseBuilder(context, NovelDatabase::class.java)
             .allowMainThreadQueries()
             .build()
-        novelRepo = NovelRepository(database.novelDao())
-        chapterRepo = ChapterRepository(database.chapterDao())
+        novelDao = database.novelDao()
+        chapterDao = database.chapterDao()
         val parserRegistry = ParserRegistry(
             parsers = emptySet(),
             fallbackParser = GenericFallbackParser(),
             mhtParser = MhtParser()
         )
+        val coverDownloader = CoverDownloader(novelDao)
+        val novelImporter = NovelImporter(novelDao, chapterDao, ChapterOrderNormalizer(chapterDao))
 
         useCase = WebImportUseCase(
             context = context,
             chapterCrawler = ChapterCrawler(),
             chapterFetcher = ChapterFetcher(parserRegistry),
-            coverDownloader = CoverDownloader(novelRepo),
-            novelImporter = NovelImporter(novelRepo, chapterRepo),
+            coverDownloader = coverDownloader,
+            novelImporter = novelImporter,
             io = Dispatchers.Unconfined
         )
     }
@@ -81,7 +83,7 @@ class WebImportUseCaseTest {
 
         assertThat(result.isSuccess).isTrue()
         assertThat(errorMessage).contains("HTTPS")
-        val novel = novelRepo.getNovelByTitle("Test Novel")
+        val novel = novelDao.getNovelByTitle("Test Novel")
         assertThat(novel).isNotNull()
     }
 
@@ -92,7 +94,7 @@ class WebImportUseCaseTest {
             links = emptyList()
         )
         assertThat(result.isSuccess).isTrue()
-        val novel = novelRepo.getNovelByTitle("Empty Novel")
+        val novel = novelDao.getNovelByTitle("Empty Novel")
         assertThat(novel).isNotNull()
     }
 }

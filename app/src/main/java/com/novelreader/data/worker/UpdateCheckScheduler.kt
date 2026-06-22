@@ -6,7 +6,7 @@ import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.NetworkType
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
-import com.novelreader.data.repository.NovelRepository
+import com.novelreader.data.local.db.dao.NovelDao
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
@@ -15,7 +15,7 @@ import javax.inject.Singleton
 @Singleton
 class UpdateCheckScheduler @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val novelRepository: NovelRepository
+    private val novelDao: NovelDao
 ) {
     fun schedule(intervalHours: Long) {
         if (intervalHours <= 0) {
@@ -48,7 +48,7 @@ class UpdateCheckScheduler @Inject constructor(
     }
 
     suspend fun rescheduleIfNeeded() {
-        val hasAutoUpdateNovels = novelRepository.getAutoUpdateNovels().isNotEmpty()
+        val hasAutoUpdateNovels = novelDao.getAutoUpdateNovels().isNotEmpty()
         if (hasAutoUpdateNovels) {
             schedule(DEFAULT_INTERVAL_HOURS)
         } else {

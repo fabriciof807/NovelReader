@@ -1,28 +1,28 @@
 package com.novelreader.domain.usecase
 
+import com.novelreader.data.local.db.dao.CharacterDao
+import com.novelreader.data.local.db.dao.CharacterPhotoDao
 import com.novelreader.data.local.db.entity.CharacterEntity
 import com.novelreader.data.local.db.entity.CharacterPhotoEntity
-import com.novelreader.data.repository.CharacterPhotoRepository
-import com.novelreader.data.repository.CharacterRepository
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
 class CharacterManagementUseCase @Inject constructor(
-    private val characterRepository: CharacterRepository,
-    private val characterPhotoRepository: CharacterPhotoRepository
+    private val characterDao: CharacterDao,
+    private val characterPhotoDao: CharacterPhotoDao
 ) {
     suspend fun addCharacter(novelId: Long, name: String, photoPath: String?): Result<CharacterEntity> {
         return try {
-            val id = characterRepository.insert(
+            val id = characterDao.insert(
                 CharacterEntity(novelId = novelId, name = name, photoPath = photoPath)
             )
             if (photoPath != null) {
-                characterPhotoRepository.insert(
+                characterPhotoDao.insert(
                     CharacterPhotoEntity(characterId = id, photoPath = photoPath, orderIndex = 0)
                 )
             }
-            Result.success(characterRepository.getByNovelSync(novelId).first { it.id == id })
+            Result.success(characterDao.getByNovelSync(novelId).first { it.id == id })
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -30,7 +30,7 @@ class CharacterManagementUseCase @Inject constructor(
 
     suspend fun deleteCharacter(id: Long, novelId: Long): Result<Unit> {
         return try {
-            characterRepository.deleteById(id)
+            characterDao.deleteById(id)
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
@@ -39,7 +39,7 @@ class CharacterManagementUseCase @Inject constructor(
 
     suspend fun updatePhoto(id: Long, path: String): Result<Unit> {
         return try {
-            characterRepository.updatePhoto(id, path)
+            characterDao.updatePhoto(id, path)
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
@@ -48,16 +48,16 @@ class CharacterManagementUseCase @Inject constructor(
 
     suspend fun batchAddPhotos(characterId: Long, photoPaths: List<String>): Result<Unit> {
         return try {
-            val existing = characterPhotoRepository.getByCharacterSync(characterId)
+            val existing = characterPhotoDao.getByCharacterSync(characterId)
             var order = existing.size
             for (path in photoPaths) {
-                characterPhotoRepository.insert(
+                characterPhotoDao.insert(
                     CharacterPhotoEntity(characterId = characterId, photoPath = path, orderIndex = order)
                 )
                 order++
             }
             if (existing.isEmpty() && photoPaths.isNotEmpty()) {
-                characterRepository.updatePhoto(characterId, photoPaths.first())
+                characterDao.updatePhoto(characterId, photoPaths.first())
             }
             Result.success(Unit)
         } catch (e: Exception) {
@@ -67,12 +67,12 @@ class CharacterManagementUseCase @Inject constructor(
 
     suspend fun addPhoto(characterId: Long, photoPath: String): Result<Unit> {
         return try {
-            val existing = characterPhotoRepository.getByCharacterSync(characterId)
-            characterPhotoRepository.insert(
+            val existing = characterPhotoDao.getByCharacterSync(characterId)
+            characterPhotoDao.insert(
                 CharacterPhotoEntity(characterId = characterId, photoPath = photoPath, orderIndex = existing.size)
             )
             if (existing.isEmpty()) {
-                characterRepository.updatePhoto(characterId, photoPath)
+                characterDao.updatePhoto(characterId, photoPath)
             }
             Result.success(Unit)
         } catch (e: Exception) {
@@ -82,12 +82,12 @@ class CharacterManagementUseCase @Inject constructor(
 
     suspend fun deletePhoto(photoId: Long, characterId: Long): Result<Unit> {
         return try {
-            characterPhotoRepository.deleteById(photoId)
-            val remaining = characterPhotoRepository.getByCharacterSync(characterId)
+            characterPhotoDao.deleteById(photoId)
+            val remaining = characterPhotoDao.getByCharacterSync(characterId)
             if (remaining.isNotEmpty()) {
-                characterRepository.updatePhoto(characterId, remaining.first().photoPath)
+                characterDao.updatePhoto(characterId, remaining.first().photoPath)
             } else {
-                characterRepository.updatePhoto(characterId, "")
+                characterDao.updatePhoto(characterId, "")
             }
             Result.success(Unit)
         } catch (e: Exception) {
@@ -97,7 +97,7 @@ class CharacterManagementUseCase @Inject constructor(
 
     suspend fun updateName(characterId: Long, name: String): Result<Unit> {
         return try {
-            characterRepository.updateName(characterId, name)
+            characterDao.updateName(characterId, name)
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
@@ -106,7 +106,7 @@ class CharacterManagementUseCase @Inject constructor(
 
     suspend fun updateNotes(characterId: Long, notes: String?): Result<Unit> {
         return try {
-            characterRepository.updateNotes(characterId, notes)
+            characterDao.updateNotes(characterId, notes)
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
@@ -115,7 +115,7 @@ class CharacterManagementUseCase @Inject constructor(
 
     suspend fun toggleFavorite(characterId: Long, isFavorite: Boolean): Result<Unit> {
         return try {
-            characterRepository.toggleFavorite(characterId, isFavorite)
+            characterDao.toggleFavorite(characterId, isFavorite)
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
@@ -123,6 +123,6 @@ class CharacterManagementUseCase @Inject constructor(
     }
 
     suspend fun getCharacters(novelId: Long): List<CharacterEntity> {
-        return characterRepository.getByNovelSync(novelId)
+        return characterDao.getByNovelSync(novelId)
     }
 }

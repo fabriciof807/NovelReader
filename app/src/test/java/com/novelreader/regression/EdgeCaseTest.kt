@@ -4,12 +4,12 @@ import android.content.Context
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import com.google.common.truth.Truth.assertThat
+import com.novelreader.data.local.db.FtsSearchService
 import com.novelreader.data.local.db.NovelDatabase
 import com.novelreader.data.local.db.entity.ChapterEntity
 import com.novelreader.data.local.db.entity.NovelEntity
 import com.novelreader.data.parser.GenericFallbackParser
 import com.novelreader.data.parser.HtmlSanitizer
-import com.novelreader.data.repository.ChapterRepository
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.jsoup.Jsoup
@@ -101,8 +101,8 @@ class EdgeCaseTest {
             ChapterEntity(novelId = novelId, title = "Normal Chapter", fileName = "c.html", orderIndex = 0, content = "Normal content for testing")
         ))
 
-        val repo = ChapterRepository(database.chapterDao())
-        val results = repo.searchInNovel(novelId, "@#$%^&*()")
+        val service = FtsSearchService(database.chapterDao())
+        val results = service.searchInNovel(novelId, "@#$%^&*()")
         assertThat(results).isEmpty()
     }
 

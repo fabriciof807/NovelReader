@@ -1,13 +1,13 @@
 package com.novelreader.data.worker
 
 import android.content.Context
-import android.net.Uri
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.ListenableWorker.Result
 import androidx.work.WorkerParameters
-import com.novelreader.data.repository.ChapterRepository
-import com.novelreader.data.repository.NovelRepository
+import com.novelreader.data.local.db.dao.ChapterDao
+import com.novelreader.data.local.db.dao.NovelDao
+import com.novelreader.domain.usecase.ChapterLink
 import com.novelreader.domain.usecase.ImportJobSpec
 import com.novelreader.domain.usecase.WebImportUseCase
 import com.novelreader.util.StringUtils
@@ -21,8 +21,8 @@ import kotlinx.coroutines.withContext
 class ChapterUpdateCheckWorker @AssistedInject constructor(
     @Assisted appContext: Context,
     @Assisted params: WorkerParameters,
-    private val novelRepository: NovelRepository,
-    private val chapterRepository: ChapterRepository,
+    private val novelDao: NovelDao,
+    private val chapterDao: ChapterDao,
     private val webImportUseCase: WebImportUseCase,
     private val notificationHelper: UpdateNotificationHelper,
     private val importWorkScheduler: ImportWorkScheduler,
@@ -31,20 +31,20 @@ class ChapterUpdateCheckWorker @AssistedInject constructor(
 
     override suspend fun doWork(): Result = withContext(io) {
         try {
-            val novels = novelRepository.getAutoUpdateNovels()
+            val novels = novelDao.getAutoUpdateNovels()
             if (novels.isEmpty()) return@withContext Result.success()
 
             for (novel in novels) {
                 val result = webImportUseCase.fetchChapterList(novel.sourceUrl)
                 result.fold(
                     onSuccess = { fetchResult ->
-                        val existingFileNames = chapterRepository
+                        val existingFileNames = chapterDao
                             .getChaptersByNovelSync(novel.id)
                             .map { it.fileName }
                             .toSet()
 
                         val newChapters = fetchResult.chapters.filter { link ->
-                            fileNameFromUrl(link.url) !in existingFileNames
+                            fileNameFromLink(link) !in existingFileNames
                         }
 
                         if (newChapters.isNotEmpty()) {
@@ -65,7 +65,7 @@ class ChapterUpdateCheckWorker @AssistedInject constructor(
                             }
                         }
 
-                        novelRepository.updateLastChecked(novel.id, System.currentTimeMillis())
+                        novelDao.updateLastChecked(novel.id, System.currentTimeMillis())
                     },
                     onFailure = { }
                 )
@@ -77,8 +77,8 @@ class ChapterUpdateCheckWorker @AssistedInject constructor(
         }
     }
 
-    private fun fileNameFromUrl(url: String): String {
-        return StringUtils.fileNameFromUrl(url)
+    private fun fileNameFromLink(link: ChapterLink): String {
+        return StringUtils.fileNameFromUrl(link.url, "chapter_${link.chapterNumber}")
     }
 
     companion object {

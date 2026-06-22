@@ -2,6 +2,7 @@ package com.novelreader.ui.navigation
 
 import android.net.Uri
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -11,11 +12,13 @@ import com.novelreader.ui.about.AboutScreen
 import com.novelreader.ui.favorites.FavoritesScreen
 import com.novelreader.ui.import_novel.ImportScreen
 import com.novelreader.ui.library.LibraryScreen
+import com.novelreader.ui.library.LibraryViewModel
 import com.novelreader.ui.reader.ReaderScreen
 import com.novelreader.ui.settings.SettingsScreen
 
 object Routes {
     const val LIBRARY = "library"
+    const val LIBRARY_WITH_SELECTION = "library?${LibraryViewModel.ARG_SELECTED_NOVEL_ID}={${LibraryViewModel.ARG_SELECTED_NOVEL_ID}}"
     const val IMPORT = "import"
     const val READER = "reader/{novelId}/{chapterId}?searchQuery={searchQuery}"
     const val FAVORITES = "favorites"
@@ -29,15 +32,42 @@ object Routes {
             "reader/$novelId/$chapterId"
         }
     }
+
+    fun libraryWithSelectedNovel(novelId: Long): String {
+        return "library?${LibraryViewModel.ARG_SELECTED_NOVEL_ID}=$novelId"
+    }
 }
 
 @Composable
-fun NovelReaderNavGraph(navController: NavHostController) {
+fun NovelReaderNavGraph(
+    navController: NavHostController,
+    deepLinkBus: DeepLinkBus
+) {
+    LaunchedEffect(Unit) {
+        deepLinkBus.events.collect { action ->
+            when (action) {
+                is DeepLinkAction.ViewNovel -> {
+                    navController.navigate(Routes.libraryWithSelectedNovel(action.novelId)) {
+                        launchSingleTop = true
+                    }
+                }
+            }
+        }
+    }
+
     NavHost(
         navController = navController,
         startDestination = Routes.LIBRARY
     ) {
-        composable(Routes.LIBRARY) {
+        composable(
+            route = Routes.LIBRARY_WITH_SELECTION,
+            arguments = listOf(
+                navArgument(LibraryViewModel.ARG_SELECTED_NOVEL_ID) {
+                    type = NavType.LongType
+                    defaultValue = -1L
+                }
+            )
+        ) {
             LibraryScreen(
                 onImportClick = {
                     navController.navigate(Routes.IMPORT)

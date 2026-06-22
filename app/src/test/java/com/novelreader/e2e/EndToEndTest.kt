@@ -6,7 +6,6 @@ import androidx.test.core.app.ApplicationProvider
 import com.novelreader.data.local.db.NovelDatabase
 import com.novelreader.data.local.db.dao.NovelDao
 import com.novelreader.data.local.db.entity.NovelEntity
-import com.novelreader.data.repository.NovelRepository
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
@@ -22,7 +21,6 @@ class EndToEndTest {
 
     private lateinit var database: NovelDatabase
     private lateinit var novelDao: NovelDao
-    private lateinit var novelRepository: NovelRepository
 
     @Before
     fun setUp() {
@@ -31,7 +29,6 @@ class EndToEndTest {
             .allowMainThreadQueries()
             .build()
         novelDao = database.novelDao()
-        novelRepository = NovelRepository(novelDao)
     }
 
     @After
@@ -106,59 +103,6 @@ class EndToEndTest {
     }
 
     @Test
-    fun novelRepository_insertAndRead() = runBlocking {
-        val id = novelRepository.insert(NovelEntity(title = "Repository Novel", totalChapters = 10))
-        val novel = novelRepository.getNovelById(id)
-        assert(novel != null) { "Novel should exist" }
-        assert(novel!!.title == "Repository Novel") { "Title should match" }
-        assert(novel.totalChapters == 10) { "Chapters should match" }
-    }
-
-    @Test
-    fun novelRepository_updateAutoUpdate() = runBlocking {
-        val id = novelRepository.insert(NovelEntity(title = "Repo Auto", totalChapters = 0))
-        novelRepository.updateAutoUpdate(id, true)
-        val novel = novelRepository.getNovelById(id)
-        assert(novel!!.autoUpdate) { "autoUpdate should be true" }
-    }
-
-    @Test
-    fun novelRepository_toggleAutoUpdate() = runBlocking {
-        val id = novelRepository.insert(NovelEntity(title = "Repo Toggle", totalChapters = 0))
-        novelRepository.updateAutoUpdate(id, true)
-        var novel = novelRepository.getNovelById(id)
-        assert(novel!!.autoUpdate) { "Should be true after enable" }
-        novelRepository.updateAutoUpdate(id, false)
-        novel = novelRepository.getNovelById(id)
-        assert(!novel!!.autoUpdate) { "Should be false after disable" }
-    }
-
-    @Test
-    fun novelRepository_updateSourceUrl() = runBlocking {
-        val id = novelRepository.insert(NovelEntity(title = "Repo URL", totalChapters = 0))
-        novelRepository.updateSourceUrl(id, "https://repo.example.com")
-        val novel = novelRepository.getNovelById(id)
-        assert(novel!!.sourceUrl == "https://repo.example.com") { "sourceUrl should match" }
-    }
-
-    @Test
-    fun novelRepository_getAutoUpdateNovels() = runBlocking {
-        novelRepository.insert(NovelEntity(title = "Auto1", totalChapters = 0, autoUpdate = true, sourceUrl = "https://x.com"))
-        novelRepository.insert(NovelEntity(title = "NonAuto", totalChapters = 0, autoUpdate = false, sourceUrl = "https://y.com"))
-        novelRepository.insert(NovelEntity(title = "Auto2", totalChapters = 0, autoUpdate = true, sourceUrl = "https://z.com"))
-        val autoNovels = novelRepository.getAutoUpdateNovels()
-        assert(autoNovels.size == 2) { "Should have 2 auto-update novels" }
-    }
-
-    @Test
-    fun novelRepository_deleteById() = runBlocking {
-        val id = novelRepository.insert(NovelEntity(title = "Repo Delete", totalChapters = 0))
-        novelRepository.deleteById(id)
-        val deleted = novelRepository.getNovelById(id)
-        assert(deleted == null) { "Deleted novel should not exist" }
-    }
-
-    @Test
     fun fullFlow_insertToggleAutoUpdateVerify() = runBlocking {
         val id = novelDao.insert(NovelEntity(
             title = "Full Flow Novel",
@@ -174,12 +118,12 @@ class EndToEndTest {
 
     @Test
     fun autoUpdateToggleCycle() = runBlocking {
-        val id = novelRepository.insert(NovelEntity(title = "Cycle Novel", totalChapters = 0))
-        novelRepository.updateAutoUpdate(id, true)
-        assert(novelRepository.getNovelById(id)!!.autoUpdate)
-        novelRepository.updateAutoUpdate(id, false)
-        assert(!novelRepository.getNovelById(id)!!.autoUpdate)
-        novelRepository.updateAutoUpdate(id, true)
-        assert(novelRepository.getNovelById(id)!!.autoUpdate)
+        val id = novelDao.insert(NovelEntity(title = "Cycle Novel", totalChapters = 0))
+        novelDao.updateAutoUpdate(id, true)
+        assert(novelDao.getNovelById(id)!!.autoUpdate)
+        novelDao.updateAutoUpdate(id, false)
+        assert(!novelDao.getNovelById(id)!!.autoUpdate)
+        novelDao.updateAutoUpdate(id, true)
+        assert(novelDao.getNovelById(id)!!.autoUpdate)
     }
 }

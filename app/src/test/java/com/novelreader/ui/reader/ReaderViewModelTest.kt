@@ -4,20 +4,19 @@ import android.content.Context
 import androidx.lifecycle.SavedStateHandle
 import app.cash.turbine.test
 import com.google.common.truth.Truth.assertThat
+import com.novelreader.data.local.db.dao.BookmarkDao
+import com.novelreader.data.local.db.dao.ChapterDao
+import com.novelreader.data.local.db.dao.CharacterDao
+import com.novelreader.data.local.db.dao.NovelDao
 import com.novelreader.data.local.db.entity.BookmarkEntity
 import com.novelreader.data.local.db.entity.ChapterEntity
 import com.novelreader.data.local.db.FtsSearchService
 import com.novelreader.data.local.preferences.ReaderPreferences
-import com.novelreader.data.repository.BookmarkRepository
-import com.novelreader.data.repository.CharacterRepository
-import com.novelreader.data.repository.ChapterRepository
-import com.novelreader.data.repository.NovelRepository
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
@@ -33,11 +32,11 @@ class ReaderViewModelTest {
     private val testDispatcher = UnconfinedTestDispatcher()
     private val context: Context = mockk(relaxed = true)
     private val savedState = SavedStateHandle(mapOf("novelId" to 1L, "chapterId" to 10L))
-    private val novelRepo: NovelRepository = mockk(relaxed = true)
-    private val chapterRepo: ChapterRepository = mockk(relaxed = true)
-    private val bookmarkRepo: BookmarkRepository = mockk(relaxed = true)
+    private val novelDao: NovelDao = mockk(relaxed = true)
+    private val chapterDao: ChapterDao = mockk(relaxed = true)
+    private val bookmarkDao: BookmarkDao = mockk(relaxed = true)
     private val readerPrefs: ReaderPreferences = mockk(relaxed = true)
-    private val charRepo: CharacterRepository = mockk(relaxed = true)
+    private val charDao: CharacterDao = mockk(relaxed = true)
     private val ftsSearchService: FtsSearchService = mockk(relaxed = true)
 
     private lateinit var viewModel: ReaderViewModel
@@ -46,7 +45,7 @@ class ReaderViewModelTest {
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
         every { readerPrefs.config } returns flowOf(com.novelreader.data.local.preferences.ReaderConfig())
-        every { bookmarkRepo.getByChapter(any()) } returns flowOf(emptyList())
+        every { bookmarkDao.getByChapter(any()) } returns flowOf(emptyList())
     }
 
     @After
@@ -57,17 +56,17 @@ class ReaderViewModelTest {
     private fun createViewModel() = ReaderViewModel(
         context = context,
         savedStateHandle = savedState,
-        novelRepository = novelRepo,
-        chapterRepository = chapterRepo,
-        bookmarkRepository = bookmarkRepo,
+        novelDao = novelDao,
+        chapterDao = chapterDao,
+        bookmarkDao = bookmarkDao,
         readerPreferences = readerPrefs,
-        characterRepository = charRepo,
+        characterDao = charDao,
         ftsSearchService = ftsSearchService
     )
 
     @Test
     fun `loadChapter with missing chapter sets error in state`() = runTest {
-        coEvery { chapterRepo.getChapterById(10) } returns null
+        coEvery { chapterDao.getChapterById(10) } returns null
         viewModel = createViewModel()
 
         viewModel.state.test {
@@ -83,11 +82,11 @@ class ReaderViewModelTest {
             id = 10, novelId = 1, title = "Ch1",
             fileName = "ch1.html", orderIndex = 0, content = "<p>hi</p>"
         )
-        coEvery { chapterRepo.getChapterById(10) } returns chapter
-        coEvery { chapterRepo.getChaptersByNovelSync(1) } returns listOf(chapter)
-        coEvery { novelRepo.getNovelById(1) } returns null
-        coEvery { novelRepo.updateLastRead(any(), any()) } returns Unit
-        coEvery { chapterRepo.markAsRead(any(), any()) } returns Unit
+        coEvery { chapterDao.getChapterById(10) } returns chapter
+        coEvery { chapterDao.getChaptersByNovelSync(1) } returns listOf(chapter)
+        coEvery { novelDao.getNovelById(1) } returns null
+        coEvery { novelDao.updateLastRead(any(), any()) } returns Unit
+        coEvery { chapterDao.markAsRead(any(), any()) } returns Unit
 
         viewModel = createViewModel()
 
@@ -100,17 +99,17 @@ class ReaderViewModelTest {
     }
 
     @Test
-    fun `addBookmark with repository error emits error event`() = runTest {
+    fun `addBookmark with dao error emits error event`() = runTest {
         val chapter = ChapterEntity(
             id = 10, novelId = 1, title = "Ch1",
             fileName = "ch1.html", orderIndex = 0, content = "<p>x</p>"
         )
-        coEvery { chapterRepo.getChapterById(10) } returns chapter
-        coEvery { chapterRepo.getChaptersByNovelSync(1) } returns listOf(chapter)
-        coEvery { novelRepo.getNovelById(1) } returns null
-        coEvery { novelRepo.updateLastRead(any(), any()) } returns Unit
-        coEvery { chapterRepo.markAsRead(any(), any()) } returns Unit
-        coEvery { bookmarkRepo.insert(any()) } throws RuntimeException("insert failed")
+        coEvery { chapterDao.getChapterById(10) } returns chapter
+        coEvery { chapterDao.getChaptersByNovelSync(1) } returns listOf(chapter)
+        coEvery { novelDao.getNovelById(1) } returns null
+        coEvery { novelDao.updateLastRead(any(), any()) } returns Unit
+        coEvery { chapterDao.markAsRead(any(), any()) } returns Unit
+        coEvery { bookmarkDao.insert(any()) } throws RuntimeException("insert failed")
 
         viewModel = createViewModel()
         viewModel.showBookmarkDialog()

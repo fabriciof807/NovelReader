@@ -7,9 +7,9 @@ import androidx.work.ForegroundInfo
 import androidx.work.ListenableWorker.Result
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
-import com.novelreader.data.repository.ChapterRepository
 import com.novelreader.domain.usecase.BackgroundImportError
 import com.novelreader.domain.usecase.ChapterLink
+import com.novelreader.domain.usecase.ChapterOrderNormalizer
 import com.novelreader.domain.usecase.ImportJobSpec
 import com.novelreader.domain.usecase.WebImportUseCase
 import dagger.assisted.Assisted
@@ -25,7 +25,7 @@ class ChapterImportWorker @AssistedInject constructor(
     private val webImportUseCase: WebImportUseCase,
     private val notificationHelper: ImportNotificationHelper,
     private val workCompletionObserver: WorkCompletionObserver,
-    private val chapterRepository: ChapterRepository
+    private val chapterOrderNormalizer: ChapterOrderNormalizer
 ) : CoroutineWorker(appContext, params) {
 
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
@@ -66,7 +66,7 @@ class ChapterImportWorker @AssistedInject constructor(
 
         if (result.isSuccess) {
             result.getOrNull()?.let { novelId ->
-                chapterRepository.reNormalizeOrderIndices(novelId)
+                chapterOrderNormalizer.normalize(novelId)
             }
             val importedCount = total - errors.size
             notificationHelper.postCompletionNotification(spec, importedCount, total, errors.size)

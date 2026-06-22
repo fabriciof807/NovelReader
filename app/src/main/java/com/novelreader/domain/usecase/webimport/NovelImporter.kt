@@ -1,9 +1,10 @@
 package com.novelreader.domain.usecase.webimport
 
+import com.novelreader.data.local.db.dao.ChapterDao
+import com.novelreader.data.local.db.dao.NovelDao
 import com.novelreader.data.local.db.entity.ChapterEntity
 import com.novelreader.data.local.db.entity.NovelEntity
-import com.novelreader.data.repository.ChapterRepository
-import com.novelreader.data.repository.NovelRepository
+import com.novelreader.domain.usecase.ChapterOrderNormalizer
 import com.novelreader.util.StringUtils
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -17,20 +18,21 @@ data class ImportedChapter(
 
 @Singleton
 class NovelImporter @Inject constructor(
-    private val novelRepository: NovelRepository,
-    private val chapterRepository: ChapterRepository
+    private val novelDao: NovelDao,
+    private val chapterDao: ChapterDao,
+    private val chapterOrderNormalizer: ChapterOrderNormalizer
 ) {
     suspend fun ensureNovel(
         novelTitle: String,
         sourceUrl: String
     ): Pair<Long, MutableSet<String>> {
-        var existingNovel = novelRepository.getNovelByTitle(novelTitle)
+        var existingNovel = novelDao.getNovelByTitle(novelTitle)
         val novelId: Long
         val existingFileNames: MutableSet<String>
 
         if (existingNovel != null) {
             novelId = existingNovel.id
-            existingFileNames = chapterRepository.getChaptersByNovelSync(novelId)
+            existingFileNames = chapterDao.getChaptersByNovelSync(novelId)
                 .map { it.fileName }.toMutableSet()
         } else {
             val novelEntity = NovelEntity(
@@ -38,12 +40,12 @@ class NovelImporter @Inject constructor(
                 sourceFolder = "",
                 totalChapters = 0
             )
-            novelId = novelRepository.insert(novelEntity)
+            novelId = novelDao.insert(novelEntity)
             existingFileNames = mutableSetOf()
         }
 
         if (sourceUrl.isNotBlank()) {
-            novelRepository.updateSourceUrl(novelId, sourceUrl)
+            novelDao.updateSourceUrl(novelId, sourceUrl)
         }
 
         return novelId to existingFileNames
@@ -55,7 +57,7 @@ class NovelImporter @Inject constructor(
     ) {
         if (chapters.isEmpty()) return
 
-        chapterRepository.insertAll(chapters.map { chapter ->
+        chapterDao.insertAll(chapters.map { chapter ->
             ChapterEntity(
                 novelId = novelId,
                 title = chapter.title,
@@ -64,9 +66,9 @@ class NovelImporter @Inject constructor(
                 content = chapter.content
             )
         })
-        chapterRepository.reNormalizeOrderIndices(novelId)
-        val totalChapters = chapterRepository.getChaptersByNovelSync(novelId).size
-        novelRepository.updateChapterCount(novelId, totalChapters)
+        chapterOrderNormalizer.normalize(novelId)
+        val totalChapters = chapterDao.getChaptersByNovelSync(novelId).size
+        novelDao.updateChapterCount(novelId, totalChapters)
     }
 
     fun fileNameFromUrl(url: String, chapterNumber: Int): String {
