@@ -119,13 +119,6 @@ fun LibraryScreen(
         previousBgRunning.value = bgState.running
     }
 
-    LaunchedEffect(characterImportResult) {
-        characterImportResult?.let {
-            snackbarHostState.showSnackbar(it)
-            viewModel.onIntent(LibraryIntent.ClearCharacterImportResult)
-        }
-    }
-
     LaunchedEffect(Unit) {
         viewModel.errorEvents.collect { message ->
             snackbarHostState.showSnackbar(message)
@@ -172,7 +165,7 @@ fun LibraryScreen(
                     },
                     navigationIcon = {
                         if (selectedTab == 1 || selectedTab == 2) {
-                            IconButton(onClick = { viewModel.onIntent(LibraryIntent.SelectTab(0)) }) {
+                            IconButton(onClick = { viewModel.onIntent(LibraryIntent.DeselectNovel) }) {
                                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                             }
                         } else if (isSearchActive) {
@@ -246,7 +239,7 @@ fun LibraryScreen(
                 TabRow(selectedTabIndex = selectedTab) {
                     Tab(
                         selected = selectedTab == 0,
-                        onClick = { viewModel.onIntent(LibraryIntent.SelectTab(0)) },
+                        onClick = { viewModel.onIntent(LibraryIntent.DeselectNovel) },
                         text = { Text(stringResource(R.string.library)) }
                     )
                     if (selectedNovel != null) {
@@ -310,6 +303,8 @@ fun LibraryScreen(
                     characterPhotos = characterPhotos,
                     selectedNovel = selectedNovel,
                     isImporting = isImportingCharacters,
+                    importResult = characterImportResult,
+                    onClearImportResult = { viewModel.onIntent(LibraryIntent.ClearCharacterImportResult) },
                     onAddCharacter = { name, photoPath ->
                         selectedNovel?.let { viewModel.onIntent(LibraryIntent.AddCharacter(it.id, name, photoPath)) }
                     },

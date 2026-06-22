@@ -36,6 +36,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -66,6 +67,8 @@ fun PersonagensTab(
     characterPhotos: Map<Long, List<CharacterPhotoEntity>>,
     selectedNovel: NovelEntity?,
     isImporting: Boolean = false,
+    importResult: String? = null,
+    onClearImportResult: () -> Unit = {},
     onAddCharacter: (String, String?) -> Unit,
     onDeleteCharacter: (Long) -> Unit,
     onAddCharacterPhoto: (Long, String) -> Unit,
@@ -94,6 +97,12 @@ fun PersonagensTab(
         pendingPhotoCharacterId = null
     }
 
+    LaunchedEffect(showImportDialog) {
+        if (showImportDialog && importResult != null) {
+            onClearImportResult()
+        }
+    }
+
     characterToDelete?.let {
         DeleteCharacterDialog(
             onConfirm = {
@@ -119,12 +128,17 @@ fun PersonagensTab(
             importUrl = importUrl,
             onUrlChange = { importUrl = it },
             isImporting = isImporting,
+            resultMessage = importResult,
             onConfirm = {
                 onImportCharacters?.invoke(importUrl)
-                importUrl = ""
-                showImportDialog = false
             },
-            onDismiss = { showImportDialog = false }
+            onDismiss = {
+                showImportDialog = false
+                importUrl = ""
+                if (importResult != null) {
+                    onClearImportResult()
+                }
+            }
         )
     }
 

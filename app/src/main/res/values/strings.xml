@@ -5,6 +5,7 @@
     <!-- General -->
     <string name="back">Voltar</string>
     <string name="cancel">Cancelar</string>
+    <string name="ok">OK</string>
     <string name="delete">Deletar</string>
     <string name="settings">Configurações</string>
     <string name="favorites">Favoritos</string>
