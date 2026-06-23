@@ -8,17 +8,19 @@ import com.novelreader.data.local.db.dao.BookmarkDao
 import com.novelreader.data.local.db.dao.CharacterDao
 import com.novelreader.data.local.db.dao.CharacterPhotoDao
 import com.novelreader.data.local.db.dao.ChapterDao
+import com.novelreader.data.local.db.dao.FailedChapterDao
 import com.novelreader.data.local.db.dao.NovelDao
 import com.novelreader.data.local.db.entity.BookmarkEntity
 import com.novelreader.data.local.db.entity.CharacterEntity
 import com.novelreader.data.local.db.entity.CharacterPhotoEntity
 import com.novelreader.data.local.db.entity.ChapterEntity
 import com.novelreader.data.local.db.entity.ChapterFts
+import com.novelreader.data.local.db.entity.FailedChapterEntity
 import com.novelreader.data.local.db.entity.NovelEntity
 
 @Database(
-    entities = [NovelEntity::class, ChapterEntity::class, BookmarkEntity::class, CharacterEntity::class, CharacterPhotoEntity::class, ChapterFts::class],
-    version = 7,
+    entities = [NovelEntity::class, ChapterEntity::class, BookmarkEntity::class, CharacterEntity::class, CharacterPhotoEntity::class, ChapterFts::class, FailedChapterEntity::class],
+    version = 8,
     exportSchema = true
 )
 abstract class NovelDatabase : RoomDatabase() {
@@ -27,6 +29,7 @@ abstract class NovelDatabase : RoomDatabase() {
     abstract fun bookmarkDao(): BookmarkDao
     abstract fun characterDao(): CharacterDao
     abstract fun characterPhotoDao(): CharacterPhotoDao
+    abstract fun failedChapterDao(): FailedChapterDao
 
     companion object {
         val MIGRATION_1_2 = object : Migration(1, 2) {
@@ -125,6 +128,28 @@ abstract class NovelDatabase : RoomDatabase() {
                 database.execSQL("ALTER TABLE novels ADD COLUMN sourceUrl TEXT NOT NULL DEFAULT ''")
                 database.execSQL("ALTER TABLE novels ADD COLUMN lastCheckedAt INTEGER NOT NULL DEFAULT 0")
                 database.execSQL("ALTER TABLE novels ADD COLUMN autoUpdate INTEGER NOT NULL DEFAULT 0")
+            }
+        }
+
+        val MIGRATION_7_8 = object : Migration(7, 8) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("""
+                    CREATE TABLE IF NOT EXISTS `failed_chapters` (
+                        `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        `novelId` INTEGER NOT NULL,
+                        `title` TEXT NOT NULL,
+                        `fileName` TEXT NOT NULL,
+                        `url` TEXT,
+                        `sourceType` TEXT NOT NULL,
+                        `chapterNumber` INTEGER NOT NULL,
+                        `errorType` TEXT NOT NULL,
+                        `errorMessage` TEXT NOT NULL,
+                        `attemptedAt` INTEGER NOT NULL,
+                        FOREIGN KEY (`novelId`) REFERENCES `novels`(`id`) ON DELETE CASCADE
+                    )
+                """)
+                database.execSQL("CREATE INDEX IF NOT EXISTS `index_failed_chapters_novelId` ON `failed_chapters` (`novelId`)")
+                database.execSQL("CREATE INDEX IF NOT EXISTS `index_failed_chapters_fileName` ON `failed_chapters` (`fileName`)")
             }
         }
     }

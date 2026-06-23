@@ -170,6 +170,20 @@
     <string name="character_import_https_required">URL deve usar HTTPS</string>
     <string name="character_import_no_novel_selected">Nenhuma novel selecionada</string>
 
+    <!-- Failed chapters -->
+    <string name="failed_chapters_section_title">Capítulos com falha</string>
+    <string name="failed_chapters_count">%1$d capítulo(s) com falha</string>
+    <string name="failed_chapters_retry">Re-tentar</string>
+    <string name="failed_chapters_import_file">Importar arquivo</string>
+    <string name="failed_chapters_dismiss">Descartar</string>
+    <string name="failed_chapters_retry_success">Capítulo reimportado</string>
+    <string name="failed_chapters_retry_failed">Falha ao reimportar: %1$s</string>
+    <string name="failed_chapters_retry_no_match">Importado, mas arquivo não corresponde a nenhuma falha registrada</string>
+    <string name="failed_chapters_empty">Nenhum capítulo com falha</string>
+    <string name="error_type_network">Rede</string>
+    <string name="error_type_parse">Parsing</string>
+    <string name="error_type_io">Leitura</string>
+
     <!-- Background import -->
     <string name="background_import_complete">Importação em segundo plano concluída</string>
     <string name="import_banner_title">Importando %1$s</string>

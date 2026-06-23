@@ -1,6 +1,7 @@
 package com.novelreader.ui.library
 
 import android.content.Context
+import android.net.Uri
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -8,19 +9,27 @@ import com.novelreader.R
 import com.novelreader.data.local.preferences.LibraryPreferences
 import com.novelreader.data.local.db.dao.ChapterDao
 import com.novelreader.data.local.db.dao.CharacterPhotoDao
+import com.novelreader.data.local.db.dao.FailedChapterDao
 import com.novelreader.data.local.db.dao.NovelDao
 import com.novelreader.data.local.db.entity.CharacterEntity
 import com.novelreader.data.local.db.entity.CharacterPhotoEntity
 import com.novelreader.data.local.db.entity.ChapterEntity
+import com.novelreader.data.local.db.entity.FailedChapterEntity
 import com.novelreader.data.local.db.entity.NovelEntity
+import com.novelreader.data.parser.MhtParser
+import com.novelreader.data.parser.ParserRegistry
 import com.novelreader.data.remote.MvlempyrCharacterImporter
 import com.novelreader.data.worker.UpdateCheckScheduler
 import com.novelreader.di.qualifiers.IoDispatcher
 import com.novelreader.domain.usecase.BackgroundImportManager
 import com.novelreader.domain.usecase.BackgroundImportState
+import com.novelreader.domain.usecase.importnovel.ChapterEntry
+import com.novelreader.domain.usecase.importnovel.ChapterInserter
+import com.novelreader.domain.usecase.importnovel.FileCharsetDetector
 import com.novelreader.util.StringUtils
 import com.novelreader.domain.usecase.CharacterManagementUseCase
 import com.novelreader.domain.usecase.CoverManagementUseCase
+import com.novelreader.domain.usecase.RetryChapterUseCase
 import com.novelreader.domain.usecase.WebImportUseCase
 import kotlinx.coroutines.CoroutineDispatcher
 import com.novelreader.ui.library.mvi.LibraryIntent
@@ -67,6 +76,12 @@ class LibraryViewModel @Inject constructor(
     private val mvlempyrCharacterImporter: MvlempyrCharacterImporter,
     private val updateCheckScheduler: UpdateCheckScheduler,
     private val webImportUseCase: WebImportUseCase,
+    private val failedChapterDao: FailedChapterDao,
+    private val retryChapterUseCase: RetryChapterUseCase,
+    private val chapterInserter: ChapterInserter,
+    private val parserRegistry: ParserRegistry,
+    private val mhtParser: MhtParser,
+    private val fileCharsetDetector: FileCharsetDetector,
     @IoDispatcher private val io: CoroutineDispatcher
 ) : ViewModel() {
 
@@ -146,6 +161,9 @@ class LibraryViewModel @Inject constructor(
 
     private val _characterImportResult = MutableStateFlow<String?>(null)
     val characterImportResult: StateFlow<String?> = _characterImportResult
+
+    private val _failedChapters = MutableStateFlow<List<FailedChapterEntity>>(emptyList())
+    val failedChapters: StateFlow<List<FailedChapterEntity>> = _failedChapters
 
     private val _updateCheckResult = MutableSharedFlow<String>(
         replay = 0, extraBufferCapacity = 2, onBufferOverflow = BufferOverflow.DROP_OLDEST
@@ -235,6 +253,9 @@ class LibraryViewModel @Inject constructor(
             is LibraryIntent.ToggleCharacterFavorite -> toggleCharacterFavorite(intent.characterId, intent.isFavorite)
             is LibraryIntent.ImportCharactersFromUrl -> importCharactersFromUrl(intent.url)
             is LibraryIntent.ClearCharacterImportResult -> clearCharacterImportResult()
+            is LibraryIntent.RetryFailedChapter -> retryFailedChapter(intent.failedId)
+            is LibraryIntent.RetryFailedChapterManually -> retryFailedChapterManually(intent.failedId, intent.uri)
+            is LibraryIntent.DismissFailedChapter -> dismissFailedChapter(intent.failedId)
             is LibraryIntent.SelectTab -> selectTab(intent.index)
         }
     }
@@ -250,6 +271,7 @@ class LibraryViewModel @Inject constructor(
     private fun deselectNovel() {
         _selectedNovel.value = null
         _selectedTab.value = 0
+        _failedChapters.value = emptyList()
     }
 
     private fun loadChapters(novelId: Long) {
@@ -259,7 +281,14 @@ class LibraryViewModel @Inject constructor(
                 ChapterSortOrder.ASCENDING -> raw.sortedBy { it.orderIndex }
                 ChapterSortOrder.DESCENDING -> raw.sortedByDescending { it.orderIndex }
             }
+            _failedChapters.value = failedChapterDao.getByNovel(novelId)
             refreshCharacters(novelId)
+        }
+    }
+
+    private fun refreshFailedChapters(novelId: Long) {
+        viewModelScope.launch {
+            _failedChapters.value = failedChapterDao.getByNovel(novelId)
         }
     }
 
@@ -574,6 +603,8 @@ class LibraryViewModel @Inject constructor(
                             return@fold
                         }
                         chapterDao.deleteByNovelId(novelId)
+                        failedChapterDao.deleteByNovelId(novelId)
+                        refreshFailedChapters(novelId)
                         backgroundImportManager.startImport(
                             novelTitle = fetchResult.novelTitle ?: novel.title,
                             links = fetchResult.chapters,
@@ -603,6 +634,65 @@ class LibraryViewModel @Inject constructor(
 
     fun cancelBackgroundImport() {
         viewModelScope.launch { backgroundImportManager.cancel() }
+    }
+
+    fun retryFailedChapter(failedId: Long) {
+        viewModelScope.launch {
+            val failed = failedChapterDao.getById(failedId) ?: return@launch
+            val result = retryChapterUseCase.retryByUrl(failedId)
+            refreshFailedChapters(failed.novelId)
+            if (result.isSuccess) {
+                _errorEvents.emit(context.getString(R.string.failed_chapters_retry_success))
+            } else {
+                _errorEvents.emit(
+                    context.getString(
+                        R.string.failed_chapters_retry_failed,
+                        result.exceptionOrNull()?.message ?: "Erro"
+                    )
+                )
+            }
+        }
+    }
+
+    fun retryFailedChapterManually(failedId: Long, uri: Uri) {
+        viewModelScope.launch {
+            val failed = failedChapterDao.getById(failedId) ?: return@launch
+            try {
+                val fileName = fileCharsetDetector.getFileName(uri, context)
+                val raw = fileCharsetDetector.readContent(uri, context)
+                val parsed = if (mhtParser.isMhtFile(fileName)) {
+                    parserRegistry.parseRaw(raw, fileName)
+                } else {
+                    parserRegistry.parse(raw, fileName)
+                }
+                val entry = ChapterEntry(
+                    novelTitle = "",
+                    chapterTitle = parsed.chapterTitle,
+                    content = parsed.content,
+                    fileName = failed.fileName
+                )
+                chapterInserter.insertEntries(failed.novelId, listOf(entry))
+                val stillThere = failedChapterDao.getById(failedId)
+                if (stillThere != null) {
+                    _errorEvents.emit(context.getString(R.string.failed_chapters_retry_no_match))
+                } else {
+                    _errorEvents.emit(context.getString(R.string.failed_chapters_retry_success))
+                }
+                refreshFailedChapters(failed.novelId)
+            } catch (e: Exception) {
+                _errorEvents.emit(
+                    context.getString(R.string.failed_chapters_retry_failed, e.message ?: "Erro")
+                )
+            }
+        }
+    }
+
+    fun dismissFailedChapter(failedId: Long) {
+        viewModelScope.launch {
+            val failed = failedChapterDao.getById(failedId) ?: return@launch
+            failedChapterDao.deleteById(failedId)
+            refreshFailedChapters(failed.novelId)
+        }
     }
 
     override fun onCleared() {

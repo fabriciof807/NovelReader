@@ -7,6 +7,7 @@ import com.novelreader.data.local.db.dao.BookmarkDao
 import com.novelreader.data.local.db.dao.CharacterDao
 import com.novelreader.data.local.db.dao.CharacterPhotoDao
 import com.novelreader.data.local.db.dao.ChapterDao
+import com.novelreader.data.local.db.dao.FailedChapterDao
 import com.novelreader.data.local.db.dao.NovelDao
 import dagger.Module
 import dagger.Provides
@@ -26,7 +27,7 @@ object DatabaseModule {
             context,
             NovelDatabase::class.java,
             "novel_reader.db"
-        ).addMigrations(NovelDatabase.MIGRATION_1_2, NovelDatabase.MIGRATION_2_3, NovelDatabase.MIGRATION_3_4, NovelDatabase.MIGRATION_4_5, NovelDatabase.MIGRATION_5_6, NovelDatabase.MIGRATION_6_7).build()
+        ).addMigrations(NovelDatabase.MIGRATION_1_2, NovelDatabase.MIGRATION_2_3, NovelDatabase.MIGRATION_3_4, NovelDatabase.MIGRATION_4_5, NovelDatabase.MIGRATION_5_6, NovelDatabase.MIGRATION_6_7, NovelDatabase.MIGRATION_7_8).build()
     }
 
     @Provides
@@ -43,4 +44,7 @@ object DatabaseModule {
 
     @Provides
     fun provideCharacterPhotoDao(database: NovelDatabase): CharacterPhotoDao = database.characterPhotoDao()
+
+    @Provides
+    fun provideFailedChapterDao(database: NovelDatabase): FailedChapterDao = database.failedChapterDao()
 }

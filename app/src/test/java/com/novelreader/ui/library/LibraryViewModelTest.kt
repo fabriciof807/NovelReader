@@ -7,17 +7,23 @@ import com.google.common.truth.Truth.assertThat
 import com.novelreader.data.local.db.dao.BookmarkDao
 import com.novelreader.data.local.db.dao.ChapterDao
 import com.novelreader.data.local.db.dao.CharacterPhotoDao
+import com.novelreader.data.local.db.dao.FailedChapterDao
 import com.novelreader.data.local.db.dao.NovelDao
 import com.novelreader.data.local.db.entity.ChapterEntity
 import com.novelreader.data.local.db.entity.NovelEntity
 import com.novelreader.data.local.preferences.LibraryPreferences
+import com.novelreader.data.parser.MhtParser
+import com.novelreader.data.parser.ParserRegistry
 import com.novelreader.data.remote.MvlempyrCharacterImporter
 import com.novelreader.data.worker.UpdateCheckScheduler
 import com.novelreader.domain.usecase.BackgroundImportManager
 import com.novelreader.domain.usecase.BackgroundImportState
 import com.novelreader.domain.usecase.CharacterManagementUseCase
 import com.novelreader.domain.usecase.CoverManagementUseCase
+import com.novelreader.domain.usecase.RetryChapterUseCase
 import com.novelreader.domain.usecase.WebImportUseCase
+import com.novelreader.domain.usecase.importnovel.ChapterInserter
+import com.novelreader.domain.usecase.importnovel.FileCharsetDetector
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
@@ -50,6 +56,12 @@ class LibraryViewModelTest {
     private val importer: MvlempyrCharacterImporter = mockk(relaxed = true)
     private val updateCheckScheduler: UpdateCheckScheduler = mockk(relaxed = true)
     private val webImportUseCase: WebImportUseCase = mockk(relaxed = true)
+    private val failedChapterDao: FailedChapterDao = mockk(relaxed = true)
+    private val retryChapterUseCase: RetryChapterUseCase = mockk(relaxed = true)
+    private val chapterInserter: ChapterInserter = mockk(relaxed = true)
+    private val parserRegistry: ParserRegistry = mockk(relaxed = true)
+    private val mhtParser: MhtParser = mockk(relaxed = true)
+    private val fileCharsetDetector: FileCharsetDetector = mockk(relaxed = true)
 
     private lateinit var viewModel: LibraryViewModel
 
@@ -75,6 +87,12 @@ class LibraryViewModelTest {
             mvlempyrCharacterImporter = importer,
             updateCheckScheduler = updateCheckScheduler,
             webImportUseCase = webImportUseCase,
+            failedChapterDao = failedChapterDao,
+            retryChapterUseCase = retryChapterUseCase,
+            chapterInserter = chapterInserter,
+            parserRegistry = parserRegistry,
+            mhtParser = mhtParser,
+            fileCharsetDetector = fileCharsetDetector,
             io = kotlinx.coroutines.Dispatchers.Unconfined
         )
     }

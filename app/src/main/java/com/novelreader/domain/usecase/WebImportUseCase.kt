@@ -2,6 +2,9 @@ package com.novelreader.domain.usecase
 
 import android.content.Context
 import com.novelreader.R
+import com.novelreader.data.local.db.dao.FailedChapterDao
+import com.novelreader.data.local.db.entity.FailedChapterEntity
+import com.novelreader.data.local.db.entity.FailedChapterErrorType
 import com.novelreader.di.qualifiers.IoDispatcher
 import com.novelreader.domain.usecase.webimport.ChapterCrawler
 import com.novelreader.domain.usecase.webimport.ChapterFetcher
@@ -22,6 +25,7 @@ class WebImportUseCase @Inject constructor(
     private val chapterFetcher: ChapterFetcher,
     private val coverDownloader: CoverDownloader,
     private val novelImporter: NovelImporter,
+    private val failedChapterDao: FailedChapterDao,
     @IoDispatcher private val io: CoroutineDispatcher
 ) {
     suspend fun fetchChapterList(homeUrl: String): Result<FetchResult> = withContext(io) {
@@ -83,7 +87,22 @@ class WebImportUseCase @Inject constructor(
                     )
                     successCount++
                 } catch (e: Exception) {
-                    onError?.invoke(link.url, e.message ?: "Erro desconhecido")
+                    val errorType = FailedChapterErrorType.classify(e)
+                    val errorMessage = e.message ?: "Erro desconhecido"
+                    onError?.invoke(link.url, errorMessage)
+                    failedChapterDao.deleteByNovelAndFileName(novelId, fileName)
+                    failedChapterDao.insert(
+                        FailedChapterEntity(
+                            novelId = novelId,
+                            title = link.title.ifBlank { fileName },
+                            fileName = fileName,
+                            url = link.url,
+                            sourceType = "WEB",
+                            chapterNumber = link.chapterNumber,
+                            errorType = errorType,
+                            errorMessage = errorMessage
+                        )
+                    )
                 }
                 onProgress?.invoke(successCount, sorted.size)
             }

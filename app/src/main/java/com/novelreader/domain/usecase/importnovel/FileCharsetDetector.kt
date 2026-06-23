@@ -10,15 +10,12 @@ import javax.inject.Singleton
 @Singleton
 class FileCharsetDetector @Inject constructor() {
 
-    fun readContent(uri: Uri, context: Context): String? {
-        return try {
-            val inputStream = context.contentResolver.openInputStream(uri) ?: return null
-            val bytes = inputStream.readBytes()
-            val charset = detectCharset(bytes)
-            String(bytes, charset)
-        } catch (e: Exception) {
-            null
-        }
+    fun readContent(uri: Uri, context: Context): String {
+        val inputStream = context.contentResolver.openInputStream(uri)
+            ?: throw java.io.IOException("Não foi possível abrir o arquivo")
+        val bytes = inputStream.readBytes()
+        val charset = detectCharset(bytes)
+        return String(bytes, charset)
     }
 
     fun getFileName(uri: Uri, context: Context): String {

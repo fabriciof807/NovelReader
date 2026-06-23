@@ -1,9 +1,12 @@
 package com.novelreader.ui.library.tabs
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -16,12 +19,20 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.CloudOff
+import androidx.compose.material.icons.filled.FileDownload
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -30,7 +41,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.novelreader.R
 import com.novelreader.data.local.db.entity.ChapterEntity
+import com.novelreader.data.local.db.entity.FailedChapterEntity
+import com.novelreader.data.local.db.entity.FailedChapterErrorType
 import com.novelreader.ui.library.ChapterSortOrder
+import android.net.Uri
 
 @Composable
 fun ChaptersTab(
@@ -39,9 +53,25 @@ fun ChaptersTab(
     onChapterClick: (Long) -> Unit,
     sortOrder: ChapterSortOrder = ChapterSortOrder.ASCENDING,
     onToggleSort: () -> Unit = {},
+    failedChapters: List<FailedChapterEntity> = emptyList(),
+    onRetryFailed: (FailedChapterEntity) -> Unit = {},
+    onRetryFailedManually: (FailedChapterEntity, Uri) -> Unit = { _, _ -> },
+    onDismissFailed: (FailedChapterEntity) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    if (chapters.isEmpty()) {
+    var pendingFilePickForFailed by remember { mutableStateOf<Long?>(null) }
+    val filePicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri: Uri? ->
+        val failedId = pendingFilePickForFailed
+        pendingFilePickForFailed = null
+        if (uri != null && failedId != null) {
+            val failed = failedChapters.firstOrNull { it.id == failedId }
+            if (failed != null) onRetryFailedManually(failed, uri)
+        }
+    }
+
+    if (chapters.isEmpty() && failedChapters.isEmpty()) {
         Box(
             modifier = modifier.fillMaxSize(),
             contentAlignment = Alignment.Center
@@ -52,10 +82,13 @@ fun ChaptersTab(
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
             )
         }
-    } else {
-        LazyColumn(
-            modifier = modifier.fillMaxSize()
-        ) {
+        return
+    }
+
+    LazyColumn(
+        modifier = modifier.fillMaxSize()
+    ) {
+        if (chapters.isNotEmpty()) {
             item {
                 Row(
                     modifier = Modifier
@@ -74,8 +107,8 @@ fun ChaptersTab(
                     )
                     Spacer(Modifier.size(4.dp))
                     IconButton(onClick = onToggleSort) {
-                            Icon(
-                                Icons.AutoMirrored.Filled.Sort,
+                        Icon(
+                            Icons.AutoMirrored.Filled.Sort,
                             contentDescription = stringResource(R.string.sort),
                             tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                         )
@@ -126,5 +159,138 @@ fun ChaptersTab(
                 HorizontalDivider()
             }
         }
+
+        if (failedChapters.isNotEmpty()) {
+            item {
+                HorizontalDivider(thickness = 8.dp, color = MaterialTheme.colorScheme.surfaceVariant)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        Icons.Default.CloudOff,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(Modifier.size(8.dp))
+                    Text(
+                        text = stringResource(R.string.failed_chapters_section_title) +
+                            " (${failedChapters.size})",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+            }
+            items(failedChapters, key = { it.id }) { failed ->
+                FailedChapterRow(
+                    failed = failed,
+                    onRetry = { onRetryFailed(failed) },
+                    onImportFile = {
+                        pendingFilePickForFailed = failed.id
+                        filePicker.launch(arrayOf("*/*"))
+                    },
+                    onDismiss = { onDismissFailed(failed) }
+                )
+                HorizontalDivider()
+            }
+        }
+    }
+}
+
+@Composable
+private fun FailedChapterRow(
+    failed: FailedChapterEntity,
+    onRetry: () -> Unit,
+    onImportFile: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 12.dp)
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = failed.title,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Medium,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f)
+            )
+            ErrorTypeBadge(failed.errorType)
+        }
+        Spacer(Modifier.size(4.dp))
+        Text(
+            text = failed.errorMessage,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.error,
+            maxLines = 3,
+            overflow = TextOverflow.Ellipsis
+        )
+        Text(
+            text = failed.fileName,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+        Spacer(Modifier.size(8.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            if (failed.sourceType == "WEB" && failed.url != null) {
+                TextButton(onClick = onRetry) {
+                    Icon(
+                        Icons.Default.Refresh,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(Modifier.size(4.dp))
+                    Text(stringResource(R.string.failed_chapters_retry))
+                }
+            }
+            TextButton(onClick = onImportFile) {
+                Icon(
+                    Icons.Default.FileDownload,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(Modifier.size(4.dp))
+                Text(stringResource(R.string.failed_chapters_import_file))
+            }
+            TextButton(
+                onClick = onDismiss,
+                colors = androidx.compose.material3.ButtonDefaults.textButtonColors(
+                    contentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                )
+            ) {
+                Text(stringResource(R.string.failed_chapters_dismiss))
+            }
+        }
+    }
+}
+
+@Composable
+private fun ErrorTypeBadge(errorType: String) {
+    val label = when (errorType) {
+        FailedChapterErrorType.NETWORK -> stringResource(R.string.error_type_network)
+        FailedChapterErrorType.PARSE -> stringResource(R.string.error_type_parse)
+        else -> stringResource(R.string.error_type_io)
+    }
+    Box(
+        modifier = Modifier
+            .background(
+                color = MaterialTheme.colorScheme.errorContainer,
+                shape = RoundedCornerShape(8.dp)
+            )
+            .padding(horizontal = 8.dp, vertical = 2.dp)
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onErrorContainer
+        )
     }
 }

@@ -44,7 +44,7 @@ class NovelGrouper @Inject constructor(
     }
 
     private fun parseUri(uri: Uri, context: Context, fileName: String): ParsedChapter? {
-        val raw = fileCharsetDetector.readContent(uri, context) ?: return null
+        val raw = fileCharsetDetector.readContent(uri, context)
         val fromFileName = fromFileName(fileName)
 
         val parsed = try {

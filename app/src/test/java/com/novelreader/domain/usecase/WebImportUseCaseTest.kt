@@ -6,6 +6,7 @@ import androidx.test.core.app.ApplicationProvider
 import com.google.common.truth.Truth.assertThat
 import com.novelreader.data.local.db.NovelDatabase
 import com.novelreader.data.local.db.dao.ChapterDao
+import com.novelreader.data.local.db.dao.FailedChapterDao
 import com.novelreader.data.local.db.dao.NovelDao
 import com.novelreader.data.parser.GenericFallbackParser
 import com.novelreader.data.parser.MhtParser
@@ -30,6 +31,7 @@ class WebImportUseCaseTest {
     private lateinit var database: NovelDatabase
     private lateinit var novelDao: NovelDao
     private lateinit var chapterDao: ChapterDao
+    private lateinit var failedChapterDao: FailedChapterDao
     private lateinit var useCase: WebImportUseCase
 
     @Before
@@ -40,6 +42,7 @@ class WebImportUseCaseTest {
             .build()
         novelDao = database.novelDao()
         chapterDao = database.chapterDao()
+        failedChapterDao = database.failedChapterDao()
         val parserRegistry = ParserRegistry(
             parsers = emptySet(),
             fallbackParser = GenericFallbackParser(),
@@ -54,6 +57,7 @@ class WebImportUseCaseTest {
             chapterFetcher = ChapterFetcher(parserRegistry),
             coverDownloader = coverDownloader,
             novelImporter = novelImporter,
+            failedChapterDao = failedChapterDao,
             io = Dispatchers.Unconfined
         )
     }

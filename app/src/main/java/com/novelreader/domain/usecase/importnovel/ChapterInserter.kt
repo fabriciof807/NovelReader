@@ -1,6 +1,7 @@
 package com.novelreader.domain.usecase.importnovel
 
 import com.novelreader.data.local.db.dao.ChapterDao
+import com.novelreader.data.local.db.dao.FailedChapterDao
 import com.novelreader.data.local.db.dao.NovelDao
 import com.novelreader.data.local.db.entity.ChapterEntity
 import com.novelreader.data.local.db.entity.NovelEntity
@@ -10,7 +11,8 @@ import javax.inject.Singleton
 @Singleton
 class ChapterInserter @Inject constructor(
     private val novelDao: NovelDao,
-    private val chapterDao: ChapterDao
+    private val chapterDao: ChapterDao,
+    private val failedChapterDao: FailedChapterDao
 ) {
     suspend fun ensureNovel(novelTitle: String): Pair<Long, List<ChapterEntity>> {
         var existingNovel = novelDao.getNovelByTitle(novelTitle)
@@ -58,5 +60,9 @@ class ChapterInserter @Inject constructor(
             chapterDao.insertAll(inserts)
         }
         novelDao.updateChapterCount(novelId, entries.size)
+
+        for (entry in entries) {
+            failedChapterDao.deleteByNovelAndFileName(novelId, entry.fileName)
+        }
     }
 }

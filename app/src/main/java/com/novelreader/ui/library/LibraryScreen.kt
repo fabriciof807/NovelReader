@@ -82,6 +82,7 @@ fun LibraryScreen(
     val readProgress by viewModel.readProgress.collectAsState()
     val isImportingCharacters by viewModel.isImportingCharacters.collectAsState()
     val characterImportResult by viewModel.characterImportResult.collectAsState()
+    val failedChapters by viewModel.failedChapters.collectAsState()
     val viewMode by viewModel.viewMode.collectAsState()
     val context = LocalContext.current
     var showSortMenu by remember { mutableStateOf(false) }
@@ -294,6 +295,12 @@ fun LibraryScreen(
                     bookmarkCounts = bookmarkCounts,
                     sortOrder = chapterSortOrder,
                     onToggleSort = { viewModel.onIntent(LibraryIntent.ToggleChapterSortOrder) },
+                    failedChapters = failedChapters,
+                    onRetryFailed = { viewModel.onIntent(LibraryIntent.RetryFailedChapter(it.id)) },
+                    onRetryFailedManually = { failed, uri ->
+                        viewModel.onIntent(LibraryIntent.RetryFailedChapterManually(failed.id, uri))
+                    },
+                    onDismissFailed = { viewModel.onIntent(LibraryIntent.DismissFailedChapter(it.id)) },
                     onChapterClick = { chapterId ->
                         selectedNovel?.let { onChapterClick(it.id, chapterId) }
                     }
