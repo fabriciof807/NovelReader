@@ -18,6 +18,8 @@ private val DarkColorScheme = darkColorScheme(
     primaryContainer = DarkPrimary.copy(alpha = 0.18f),
     secondary = DarkSecondary,
     onSecondary = DarkOnSecondary,
+    secondaryContainer = DarkSecondaryContainer,
+    onSecondaryContainer = DarkOnSecondaryContainer,
     background = DarkBackground,
     surface = DarkSurface,
     surfaceVariant = DarkSurface,
@@ -31,6 +33,8 @@ private val DarkColorScheme = darkColorScheme(
 private val LightColorScheme = lightColorScheme(
     primary = Primary,
     secondary = Secondary,
+    secondaryContainer = LightSecondaryContainer,
+    onSecondaryContainer = LightOnSecondaryContainer,
     background = LightBackground,
     surface = LightSurface,
     surfaceVariant = Color(0xFFE8E0D0),
