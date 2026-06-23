@@ -180,9 +180,18 @@
     <string name="failed_chapters_retry_failed">Retry failed: %1$s</string>
     <string name="failed_chapters_retry_no_match">Imported, but file doesn\'t match any registered failure</string>
     <string name="failed_chapters_empty">No failed chapters</string>
+    <string name="failed_chapters_scan">Scan for missing chapters</string>
+    <string name="failed_chapters_scan_title">Scan chapters</string>
+    <string name="failed_chapters_scan_result">%1$d problematic chapter(s) found</string>
+    <string name="failed_chapters_scan_no_url">Novel has no source URL</string>
+    <string name="failed_chapters_scan_invalid_range">Invalid range</string>
+    <string name="failed_chapters_scan_range_from">From</string>
+    <string name="failed_chapters_scan_range_to">To</string>
     <string name="error_type_network">Network</string>
     <string name="error_type_parse">Parse</string>
     <string name="error_type_io">I/O</string>
+    <string name="error_type_missing_number">Missing number</string>
+    <string name="error_type_empty_content">Empty content</string>
 
     <!-- Background import -->
     <string name="background_import_complete">Background import complete</string>

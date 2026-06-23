@@ -23,6 +23,8 @@ import com.novelreader.data.worker.UpdateCheckScheduler
 import com.novelreader.di.qualifiers.IoDispatcher
 import com.novelreader.domain.usecase.BackgroundImportManager
 import com.novelreader.domain.usecase.BackgroundImportState
+import com.novelreader.domain.usecase.ScanMissingChaptersUseCase
+import com.novelreader.domain.usecase.ScanResult
 import com.novelreader.domain.usecase.importnovel.ChapterEntry
 import com.novelreader.domain.usecase.importnovel.ChapterInserter
 import com.novelreader.domain.usecase.importnovel.FileCharsetDetector
@@ -78,6 +80,7 @@ class LibraryViewModel @Inject constructor(
     private val webImportUseCase: WebImportUseCase,
     private val failedChapterDao: FailedChapterDao,
     private val retryChapterUseCase: RetryChapterUseCase,
+    private val scanMissingChaptersUseCase: ScanMissingChaptersUseCase,
     private val chapterInserter: ChapterInserter,
     private val parserRegistry: ParserRegistry,
     private val mhtParser: MhtParser,
@@ -256,6 +259,8 @@ class LibraryViewModel @Inject constructor(
             is LibraryIntent.RetryFailedChapter -> retryFailedChapter(intent.failedId)
             is LibraryIntent.RetryFailedChapterManually -> retryFailedChapterManually(intent.failedId, intent.uri)
             is LibraryIntent.DismissFailedChapter -> dismissFailedChapter(intent.failedId)
+            is LibraryIntent.ScanMissingChapters -> scanMissingChapters(intent.novelId)
+            is LibraryIntent.ScanMissingChaptersLocal -> scanMissingChaptersLocal(intent.novelId, intent.from, intent.to)
             is LibraryIntent.SelectTab -> selectTab(intent.index)
         }
     }
@@ -693,6 +698,32 @@ class LibraryViewModel @Inject constructor(
             failedChapterDao.deleteById(failedId)
             refreshFailedChapters(failed.novelId)
         }
+    }
+
+    fun scanMissingChapters(novelId: Long) {
+        viewModelScope.launch {
+            val result = scanMissingChaptersUseCase.scanWeb(novelId)
+            handleScanResult(novelId, result)
+        }
+    }
+
+    fun scanMissingChaptersLocal(novelId: Long, from: Int, to: Int) {
+        viewModelScope.launch {
+            val result = scanMissingChaptersUseCase.scanLocal(novelId, from, to)
+            handleScanResult(novelId, result)
+        }
+    }
+
+    private suspend fun handleScanResult(novelId: Long, result: Result<ScanResult>) {
+        refreshFailedChapters(novelId)
+        result.fold(
+            onSuccess = { scan ->
+                _errorEvents.emit(context.getString(R.string.failed_chapters_scan_result, scan.total))
+            },
+            onFailure = { e ->
+                _errorEvents.emit(e.message ?: context.getString(R.string.failed_chapters_scan_invalid_range))
+            }
+        )
     }
 
     override fun onCleared() {

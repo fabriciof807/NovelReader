@@ -36,6 +36,8 @@ object FailedChapterErrorType {
     const val NETWORK = "network"
     const val PARSE = "parse"
     const val IO = "io"
+    const val MISSING_NUMBER = "missing_number"
+    const val EMPTY_CONTENT = "empty_content"
 
     fun classify(e: Throwable): String {
         val msg = (e.message ?: "").lowercase()

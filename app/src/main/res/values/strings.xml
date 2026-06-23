@@ -180,9 +180,18 @@
     <string name="failed_chapters_retry_failed">Falha ao reimportar: %1$s</string>
     <string name="failed_chapters_retry_no_match">Importado, mas arquivo não corresponde a nenhuma falha registrada</string>
     <string name="failed_chapters_empty">Nenhum capítulo com falha</string>
+    <string name="failed_chapters_scan">Escanear capítulos faltantes</string>
+    <string name="failed_chapters_scan_title">Escanear capítulos</string>
+    <string name="failed_chapters_scan_result">%1$d capítulo(s) com problema encontrado(s)</string>
+    <string name="failed_chapters_scan_no_url">Novel sem URL de origem</string>
+    <string name="failed_chapters_scan_invalid_range">Range inválido</string>
+    <string name="failed_chapters_scan_range_from">De</string>
+    <string name="failed_chapters_scan_range_to">Até</string>
     <string name="error_type_network">Rede</string>
     <string name="error_type_parse">Parsing</string>
     <string name="error_type_io">Leitura</string>
+    <string name="error_type_missing_number">Número ausente</string>
+    <string name="error_type_empty_content">Conteúdo vazio</string>
 
     <!-- Background import -->
     <string name="background_import_complete">Importação em segundo plano concluída</string>

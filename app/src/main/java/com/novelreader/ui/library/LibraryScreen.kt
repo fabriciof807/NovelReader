@@ -291,6 +291,7 @@ fun LibraryScreen(
                     onCancelImport = { viewModel.onIntent(LibraryIntent.CancelBackgroundImport) }
                 )
                 1 -> ChaptersTab(
+                    novelId = selectedNovel?.id ?: 0L,
                     chapters = chapters,
                     bookmarkCounts = bookmarkCounts,
                     sortOrder = chapterSortOrder,
@@ -301,6 +302,12 @@ fun LibraryScreen(
                         viewModel.onIntent(LibraryIntent.RetryFailedChapterManually(failed.id, uri))
                     },
                     onDismissFailed = { viewModel.onIntent(LibraryIntent.DismissFailedChapter(it.id)) },
+                    onScanWeb = { id -> viewModel.onIntent(LibraryIntent.ScanMissingChapters(id)) },
+                    onScanLocal = { id, from, to ->
+                        viewModel.onIntent(LibraryIntent.ScanMissingChaptersLocal(id, from, to))
+                    },
+                    sourceUrlAvailable = selectedNovel?.sourceUrl?.isNotBlank() == true,
+                    maxChapterNumber = chapters.maxOfOrNull { it.orderIndex } ?: 0,
                     onChapterClick = { chapterId ->
                         selectedNovel?.let { onChapterClick(it.id, chapterId) }
                     }

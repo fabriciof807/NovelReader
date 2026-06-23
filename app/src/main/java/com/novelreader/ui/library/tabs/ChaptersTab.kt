@@ -22,6 +22,7 @@ import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -44,10 +45,12 @@ import com.novelreader.data.local.db.entity.ChapterEntity
 import com.novelreader.data.local.db.entity.FailedChapterEntity
 import com.novelreader.data.local.db.entity.FailedChapterErrorType
 import com.novelreader.ui.library.ChapterSortOrder
+import com.novelreader.ui.library.components.ScanRangeDialog
 import android.net.Uri
 
 @Composable
 fun ChaptersTab(
+    novelId: Long = 0L,
     chapters: List<ChapterEntity>,
     bookmarkCounts: Map<Long, Int>,
     onChapterClick: (Long) -> Unit,
@@ -57,9 +60,14 @@ fun ChaptersTab(
     onRetryFailed: (FailedChapterEntity) -> Unit = {},
     onRetryFailedManually: (FailedChapterEntity, Uri) -> Unit = { _, _ -> },
     onDismissFailed: (FailedChapterEntity) -> Unit = {},
+    onScanWeb: (Long) -> Unit = {},
+    onScanLocal: (Long, Int, Int) -> Unit = { _, _, _ -> },
+    sourceUrlAvailable: Boolean = false,
+    maxChapterNumber: Int = 0,
     modifier: Modifier = Modifier
 ) {
     var pendingFilePickForFailed by remember { mutableStateOf<Long?>(null) }
+    var showScanDialog by remember { mutableStateOf(false) }
     val filePicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
     ) { uri: Uri? ->
@@ -83,6 +91,18 @@ fun ChaptersTab(
             )
         }
         return
+    }
+
+    if (showScanDialog) {
+        ScanRangeDialog(
+            initialFrom = 1,
+            initialTo = (maxChapterNumber + 5).coerceAtLeast(1),
+            onConfirm = { from, to ->
+                showScanDialog = false
+                onScanLocal(novelId, from, to)
+            },
+            onDismiss = { showScanDialog = false }
+        )
     }
 
     LazyColumn(
@@ -180,8 +200,21 @@ fun ChaptersTab(
                         text = stringResource(R.string.failed_chapters_section_title) +
                             " (${failedChapters.size})",
                         style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.weight(1f)
                     )
+                    IconButton(onClick = {
+                        if (sourceUrlAvailable) {
+                            onScanWeb(novelId)
+                        } else {
+                            showScanDialog = true
+                        }
+                    }) {
+                        Icon(
+                            Icons.Default.Search,
+                            contentDescription = stringResource(R.string.failed_chapters_scan)
+                        )
+                    }
                 }
             }
             items(failedChapters, key = { it.id }) { failed ->
@@ -195,6 +228,43 @@ fun ChaptersTab(
                     onDismiss = { onDismissFailed(failed) }
                 )
                 HorizontalDivider()
+            }
+        } else if (chapters.isNotEmpty()) {
+            item {
+                HorizontalDivider(thickness = 8.dp, color = MaterialTheme.colorScheme.surfaceVariant)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        Icons.Default.CloudOff,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(Modifier.size(8.dp))
+                    Text(
+                        text = stringResource(R.string.failed_chapters_section_title) + " (0)",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                        modifier = Modifier.weight(1f)
+                    )
+                    IconButton(onClick = {
+                        if (sourceUrlAvailable) {
+                            onScanWeb(novelId)
+                        } else {
+                            showScanDialog = true
+                        }
+                    }) {
+                        Icon(
+                            Icons.Default.Search,
+                            contentDescription = stringResource(R.string.failed_chapters_scan)
+                        )
+                    }
+                }
             }
         }
     }

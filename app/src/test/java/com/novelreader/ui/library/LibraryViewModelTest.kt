@@ -21,6 +21,7 @@ import com.novelreader.domain.usecase.BackgroundImportState
 import com.novelreader.domain.usecase.CharacterManagementUseCase
 import com.novelreader.domain.usecase.CoverManagementUseCase
 import com.novelreader.domain.usecase.RetryChapterUseCase
+import com.novelreader.domain.usecase.ScanMissingChaptersUseCase
 import com.novelreader.domain.usecase.WebImportUseCase
 import com.novelreader.domain.usecase.importnovel.ChapterInserter
 import com.novelreader.domain.usecase.importnovel.FileCharsetDetector
@@ -58,6 +59,7 @@ class LibraryViewModelTest {
     private val webImportUseCase: WebImportUseCase = mockk(relaxed = true)
     private val failedChapterDao: FailedChapterDao = mockk(relaxed = true)
     private val retryChapterUseCase: RetryChapterUseCase = mockk(relaxed = true)
+    private val scanMissingChaptersUseCase: ScanMissingChaptersUseCase = mockk(relaxed = true)
     private val chapterInserter: ChapterInserter = mockk(relaxed = true)
     private val parserRegistry: ParserRegistry = mockk(relaxed = true)
     private val mhtParser: MhtParser = mockk(relaxed = true)
@@ -89,6 +91,7 @@ class LibraryViewModelTest {
             webImportUseCase = webImportUseCase,
             failedChapterDao = failedChapterDao,
             retryChapterUseCase = retryChapterUseCase,
+            scanMissingChaptersUseCase = scanMissingChaptersUseCase,
             chapterInserter = chapterInserter,
             parserRegistry = parserRegistry,
             mhtParser = mhtParser,

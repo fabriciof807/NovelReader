@@ -41,6 +41,8 @@ sealed interface LibraryIntent {
     data class RetryFailedChapter(val failedId: Long) : LibraryIntent
     data class RetryFailedChapterManually(val failedId: Long, val uri: android.net.Uri) : LibraryIntent
     data class DismissFailedChapter(val failedId: Long) : LibraryIntent
+    data class ScanMissingChapters(val novelId: Long) : LibraryIntent
+    data class ScanMissingChaptersLocal(val novelId: Long, val from: Int, val to: Int) : LibraryIntent
 
     data class SelectTab(val index: Int) : LibraryIntent
     data object Init : LibraryIntent
