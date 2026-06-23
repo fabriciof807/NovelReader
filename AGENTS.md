@@ -2,7 +2,7 @@
 
 ## Overview
 
-NovelReader (v2.3.2) is an offline-first Android novel reader. It imports HTML/MHT files from local storage or fetches chapters from web novel sites. All data stays on the device.
+NovelReader (v2.4.0) is an offline-first Android novel reader. It imports HTML/MHT files from local storage or fetches chapters from web novel sites. All data stays on the device.
 
 The app is end-user focused: 100% offline, no analytics, no account, no cloud.
 
@@ -180,4 +180,4 @@ See git log and `handoff-*.md` files for session handoffs. The handoff file is i
 
 ## Current Version
 
-v2.3.2 (versionCode 13). See [README.md](README.md) for the user-facing changelog and the full release history in `git log`.
+v2.4.0 (versionCode 14). See [README.md](README.md) for the user-facing changelog and the full release history in `git log`.

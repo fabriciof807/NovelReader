@@ -195,7 +195,12 @@ fun PersonagensTab(
                     modifier = Modifier
                         .fillMaxSize()
                         .weight(1f),
-                    contentPadding = PaddingValues(vertical = 4.dp)
+                    contentPadding = PaddingValues(
+                        start = 4.dp,
+                        top = 4.dp,
+                        end = 4.dp,
+                        bottom = 140.dp
+                    )
                 ) {
                     items(filteredCharacters, key = { it.id }) { character ->
                         val photos = characterPhotos[character.id] ?: emptyList()

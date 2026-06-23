@@ -25,7 +25,9 @@ import com.novelreader.domain.usecase.ScanMissingChaptersUseCase
 import com.novelreader.domain.usecase.WebImportUseCase
 import com.novelreader.domain.usecase.importnovel.ChapterInserter
 import com.novelreader.domain.usecase.importnovel.FileCharsetDetector
+import com.novelreader.ui.library.mvi.LibraryIntent
 import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
@@ -149,6 +151,22 @@ class LibraryViewModelTest {
     }
 
     @Test
+    fun `DeselectNovel intent clears selectedNovel and resets tab`() = runTest {
+        val novel = NovelEntity(id = 5, title = "Selected")
+        coEvery { chapterDao.getChaptersByNovelSync(5) } returns emptyList()
+        coEvery { charManagement.getCharacters(5) } returns emptyList()
+        coEvery { charPhotoDao.getByCharacterIds(any()) } returns emptyList()
+
+        viewModel.selectNovel(novel)
+        assertThat(viewModel.selectedNovel.value).isEqualTo(novel)
+
+        viewModel.onIntent(LibraryIntent.DeselectNovel)
+
+        assertThat(viewModel.selectedNovel.value).isNull()
+        assertThat(viewModel.selectedTab.value).isEqualTo(0)
+    }
+
+    @Test
     fun `confirmDelete with use case error emits error event`() = runTest {
         val novel = NovelEntity(id = 1, title = "Fail", coverPath = null)
         viewModel.requestDelete(novel)
@@ -170,5 +188,82 @@ class LibraryViewModelTest {
 
         viewModel.confirmDelete()
         assertThat(viewModel.showDeleteDialog.value).isNull()
+    }
+
+    @Test
+    fun `RequestDelete intent sets showDeleteDialog when novels flow contains the id`() = runTest {
+        val novel = NovelEntity(id = 7, title = "In Flow")
+        val novelsFlow = MutableStateFlow(listOf(novel))
+        every { novelDao.getAllNovels() } returns novelsFlow
+        viewModel = LibraryViewModel(
+            context = context,
+            savedStateHandle = savedState,
+            novelDao = novelDao,
+            chapterDao = chapterDao,
+            bookmarkDao = bookmarkDao,
+            backgroundImportManager = bgManager,
+            libraryPreferences = prefs,
+            characterManagementUseCase = charManagement,
+            coverManagementUseCase = coverManagement,
+            characterPhotoDao = charPhotoDao,
+            mvlempyrCharacterImporter = importer,
+            updateCheckScheduler = updateCheckScheduler,
+            webImportUseCase = webImportUseCase,
+            failedChapterDao = failedChapterDao,
+            retryChapterUseCase = retryChapterUseCase,
+            scanMissingChaptersUseCase = scanMissingChaptersUseCase,
+            chapterInserter = chapterInserter,
+            parserRegistry = parserRegistry,
+            mhtParser = mhtParser,
+            fileCharsetDetector = fileCharsetDetector,
+            io = Dispatchers.Unconfined
+        )
+
+        viewModel.novels.test {
+            awaitItem()
+            viewModel.onIntent(LibraryIntent.RequestDelete(7))
+            assertThat(viewModel.showDeleteDialog.value).isEqualTo(novel)
+            cancelAndConsumeRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `confirmDelete after RequestDelete intent calls cover use case and clears dialog`() = runTest {
+        val novel = NovelEntity(id = 7, title = "In Flow", coverPath = null)
+        val novelsFlow = MutableStateFlow(listOf(novel))
+        every { novelDao.getAllNovels() } returns novelsFlow
+        viewModel = LibraryViewModel(
+            context = context,
+            savedStateHandle = savedState,
+            novelDao = novelDao,
+            chapterDao = chapterDao,
+            bookmarkDao = bookmarkDao,
+            backgroundImportManager = bgManager,
+            libraryPreferences = prefs,
+            characterManagementUseCase = charManagement,
+            coverManagementUseCase = coverManagement,
+            characterPhotoDao = charPhotoDao,
+            mvlempyrCharacterImporter = importer,
+            updateCheckScheduler = updateCheckScheduler,
+            webImportUseCase = webImportUseCase,
+            failedChapterDao = failedChapterDao,
+            retryChapterUseCase = retryChapterUseCase,
+            scanMissingChaptersUseCase = scanMissingChaptersUseCase,
+            chapterInserter = chapterInserter,
+            parserRegistry = parserRegistry,
+            mhtParser = mhtParser,
+            fileCharsetDetector = fileCharsetDetector,
+            io = Dispatchers.Unconfined
+        )
+        coEvery { coverManagement.deleteNovelCovers(7, null) } returns Result.success(Unit)
+
+        viewModel.novels.test {
+            awaitItem()
+            viewModel.onIntent(LibraryIntent.RequestDelete(7))
+            viewModel.confirmDelete()
+            assertThat(viewModel.showDeleteDialog.value).isNull()
+            coVerify { coverManagement.deleteNovelCovers(7, null) }
+            cancelAndConsumeRemainingEvents()
+        }
     }
 }

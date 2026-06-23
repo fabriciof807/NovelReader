@@ -64,6 +64,7 @@ fun ChaptersTab(
     onScanLocal: (Long, Int, Int) -> Unit = { _, _, _ -> },
     sourceUrlAvailable: Boolean = false,
     maxChapterNumber: Int = 0,
+    totalChapters: Int = 0,
     modifier: Modifier = Modifier
 ) {
     var pendingFilePickForFailed by remember { mutableStateOf<Long?>(null) }
@@ -96,7 +97,7 @@ fun ChaptersTab(
     if (showScanDialog) {
         ScanRangeDialog(
             initialFrom = 1,
-            initialTo = (maxChapterNumber + 5).coerceAtLeast(1),
+            initialTo = (maxOf(totalChapters, maxChapterNumber) + 10).coerceIn(1, 9999),
             onConfirm = { from, to ->
                 showScanDialog = false
                 onScanLocal(novelId, from, to)
@@ -148,7 +149,7 @@ fun ChaptersTab(
                         text = chapter.title,
                         style = MaterialTheme.typography.bodyLarge,
                         fontWeight = if (chapter.isRead) FontWeight.Normal else FontWeight.SemiBold,
-                        maxLines = 2,
+                        maxLines = 4,
                         overflow = TextOverflow.Ellipsis,
                         color = if (chapter.isRead)
                             MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
@@ -287,7 +288,7 @@ private fun FailedChapterRow(
                 text = failed.title,
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = FontWeight.Medium,
-                maxLines = 2,
+                maxLines = 4,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f)
             )
@@ -347,6 +348,9 @@ private fun ErrorTypeBadge(errorType: String) {
     val label = when (errorType) {
         FailedChapterErrorType.NETWORK -> stringResource(R.string.error_type_network)
         FailedChapterErrorType.PARSE -> stringResource(R.string.error_type_parse)
+        FailedChapterErrorType.IO -> stringResource(R.string.error_type_io)
+        FailedChapterErrorType.MISSING_NUMBER -> stringResource(R.string.error_type_missing_number)
+        FailedChapterErrorType.EMPTY_CONTENT -> stringResource(R.string.error_type_empty_content)
         else -> stringResource(R.string.error_type_io)
     }
     Box(

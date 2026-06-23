@@ -1,6 +1,7 @@
 package com.novelreader.ui.library
 
 import android.net.Uri
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
@@ -85,6 +86,11 @@ fun LibraryScreen(
     val failedChapters by viewModel.failedChapters.collectAsState()
     val viewMode by viewModel.viewMode.collectAsState()
     val context = LocalContext.current
+
+    BackHandler(enabled = selectedNovel != null) {
+        viewModel.onIntent(LibraryIntent.DeselectNovel)
+    }
+
     var showSortMenu by remember { mutableStateOf(false) }
     var isSearchActive by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
@@ -308,6 +314,7 @@ fun LibraryScreen(
                     },
                     sourceUrlAvailable = selectedNovel?.sourceUrl?.isNotBlank() == true,
                     maxChapterNumber = chapters.maxOfOrNull { it.orderIndex } ?: 0,
+                    totalChapters = selectedNovel?.totalChapters ?: 0,
                     onChapterClick = { chapterId ->
                         selectedNovel?.let { onChapterClick(it.id, chapterId) }
                     }

@@ -322,7 +322,7 @@ class LibraryViewModel @Inject constructor(
     fun requestDelete(novel: NovelEntity) { _showDeleteDialog.value = novel }
 
     private fun requestDeleteById(novelId: Long) {
-        val novel = _state.value.novels.find { it.id == novelId } ?: return
+        val novel = novels.value.find { it.id == novelId } ?: return
         _showDeleteDialog.value = novel
     }
 
@@ -351,14 +351,14 @@ class LibraryViewModel @Inject constructor(
     fun requestChangeCover(novel: NovelEntity) { _coverTargetNovel.value = novel }
 
     private fun requestChangeCoverById(novelId: Long) {
-        val novel = _state.value.novels.find { it.id == novelId } ?: return
+        val novel = novels.value.find { it.id == novelId } ?: return
         _coverTargetNovel.value = novel
     }
 
     fun requestCoverByUrl(novel: NovelEntity) { _showUrlDialog.value = novel }
 
     private fun requestCoverByUrlById(novelId: Long) {
-        val novel = _state.value.novels.find { it.id == novelId } ?: return
+        val novel = novels.value.find { it.id == novelId } ?: return
         _showUrlDialog.value = novel
     }
 
