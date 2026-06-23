@@ -2,7 +2,7 @@
 
 ## Overview
 
-NovelReader follows MVVM + Repository + UseCase + Hilt DI architecture with unidirectional data flow. The app is offline-first — all data is persisted locally using Room and DataStore.
+NovelReader follows MVVM + UseCase + Hilt DI architecture with unidirectional data flow. The app is offline-first — all data is persisted locally using Room and DataStore. There is **no repository layer** (removed in v2.2.0); callers inject DAOs directly.
 
 ## High-Level Architecture
 
@@ -12,7 +12,7 @@ NovelReader follows MVVM + Repository + UseCase + Hilt DI architecture with unid
 +-------------------+
          |
 +-------------------+
-|    ViewModels     |  @HiltViewModel, StateFlow, errorEvents (SharedFlow)
+|    ViewModels     |  @HiltViewModel, StateFlow, errorEvents (SharedFlow); MVI for Library
 +-------------------+
          |
 +-------------------+
@@ -20,11 +20,7 @@ NovelReader follows MVVM + Repository + UseCase + Hilt DI architecture with unid
 +-------------------+
          |
 +-------------------+
-|   Repositories    |  @Singleton, thin wrappers over DAOs
-+-------------------+
-         |
-+-------------------+
-|   Room Database   |  Entities, DAOs, FTS4, Migrations
+|   Room Database   |  Entities, DAOs, FTS4, Migrations (DAOs injected directly)
 +-------------------+
 ```
 
@@ -37,7 +33,7 @@ Single-Activity architecture with Jetpack Navigation Compose. Each screen is a `
 **Screens:**
 | Screen | ViewModel | Description |
 |---|---|---|
-| `LibraryScreen` | `LibraryViewModel` | Novel grid/list, chapters, characters tabs |
+| `LibraryScreen` | `LibraryViewModel` | Novel grid/list, chapters, characters tabs. MVI: `LibraryIntent` / `LibraryState` / `viewModel.onIntent(...)`. |
 | `ReaderScreen` | `ReaderViewModel` | WebView reader with bookmarks, search |
 | `ImportScreen` | `ImportViewModel` | Local file import via SAF |
 | `WebImportViewModel` | (shared) | Web chapter import flow |
@@ -61,6 +57,12 @@ Business logic classes annotated with `@Singleton`. Each use case handles a sing
 | `WebImportUseCase` | Fetch and parse chapters from web URLs |
 | `BackgroundImportManager` | Orchestrate background imports via WorkManager |
 | `ImportJobSpec` | Define import job parameters with batch chunking |
+| `ScanMissingChaptersUseCase` | Re-crawl source (web) or scan user range (local) for missing/empty chapters |
+| `RetryChapterUseCase` | Re-fetch a single failed chapter by URL |
+| `ChapterOrderNormalizer` | Re-orders chapters by extracted number after import |
+| `CoverManagementUseCase` | Save/delete novel covers and character photo folders |
+| `CharacterManagementUseCase` | CRUD for characters and character photos |
+| `ExportDataUseCase` | Export novels/chapters/bookmarks to JSON for backup |
 
 **ImportNovelUseCase flow:**
 1. Read content from URI (charset detection: BOM, meta charset, XML encoding)
@@ -82,7 +84,7 @@ Business logic classes annotated with `@Singleton`. Each use case handles a sing
 
 #### Room Database (`data/local/db/`)
 
-Version 7 with 6 entities, 5 DAOs, and FTS4 full-text search.
+Version 8 with 7 entities, 6 DAOs, and FTS4 full-text search.
 
 **Schema:**
 ```
@@ -90,6 +92,7 @@ novels (1) --< (N) chapters
 chapters (1) --< (N) bookmarks
 novels (1) --< (N) characters
 characters (1) --< (N) character_photos
+novels (1) --< (N) failed_chapters
 chapters_fts (FTS4 virtual table)
 ```
 
@@ -97,11 +100,12 @@ chapters_fts (FTS4 virtual table)
 
 | Entity | Table | Key Fields |
 |---|---|---|
-| `NovelEntity` | `novels` | id, title, author, coverPath, sourceFolder, sourceUrl, autoUpdate |
+| `NovelEntity` | `novels` | id, title, author, coverPath, sourceFolder, totalChapters, sourceUrl, lastCheckedAt, autoUpdate |
 | `ChapterEntity` | `chapters` | id, novelId (FK), title, fileName, orderIndex, content, isRead, lastScrollPosition |
 | `BookmarkEntity` | `bookmarks` | id, chapterId (FK), title, note, scrollPosition |
 | `CharacterEntity` | `characters` | id, novelId (FK), name, photoPath, notes, isFavorite |
 | `CharacterPhotoEntity` | `character_photos` | id, characterId (FK), photoPath, orderIndex |
+| `FailedChapterEntity` | `failed_chapters` | id, novelId (FK), title, fileName, url, sourceType, chapterNumber, errorType, errorMessage, attemptedAt |
 | `ChapterFts` | `chapters_fts` | FTS4 virtual table on title + content |
 
 **Migrations:**
@@ -113,6 +117,7 @@ chapters_fts (FTS4 virtual table)
 | 4 -> 5 | Add notes, isFavorite to characters |
 | 5 -> 6 | Create FTS4 virtual table |
 | 6 -> 7 | Add sourceUrl, lastCheckedAt, autoUpdate to novels |
+| 7 -> 8 | Add failed_chapters table + `errorType` (network/parse/io/missing_number/empty_content) |
 
 **DAOs:**
 | DAO | Key Operations |
@@ -122,6 +127,11 @@ chapters_fts (FTS4 virtual table)
 | `BookmarkDao` | CRUD, by chapter or all |
 | `CharacterDao` | CRUD, favorites-first sort, toggle favorite |
 | `CharacterPhotoDao` | CRUD, by character |
+| `FailedChapterDao` | CRUD, by novel, by `(novelId, fileName)` dedup; queried by `ChaptersTab` |
+
+All FKs use `onDelete = CASCADE`; deleting a novel cascades to chapters, bookmarks, characters, character_photos, and failed_chapters.
+
+The `FtsSearchService` (in `data/local/db/`) wraps FTS4 queries and applies FTS-syntax escaping on the search term.
 
 #### Preferences (`data/local/preferences/`)
 
@@ -163,9 +173,9 @@ interface NovelParser {
 **HTML Sanitization:**
 `HtmlSanitizer` removes dangerous elements (script, style, iframe, form), strips event handlers, removes `<a>` tags (unwrap), and cleans image sources.
 
-#### Repositories (`data/repository/`)
+#### Data access pattern
 
-Thin wrappers over DAOs. `ChapterRepository` adds `reNormalizeOrderIndices` (sort by extracted chapter number) and `searchInNovel` (FTS4 query builder).
+ViewModels and Use Cases inject DAOs directly. The repository layer was removed in v2.2.0 — deletion tests confirmed they were pure pass-throughs. Composition logic that previously lived in repositories (chapter re-ordering, FTS search) now lives in `ChapterOrderNormalizer` (a `@Singleton` use case) and `FtsSearchService` (a service in the `data/local/db/` package).
 
 #### Cover Storage (`data/storage/`)
 
@@ -209,7 +219,7 @@ Hilt modules provide all dependencies:
 
 | Module | Provides |
 |---|---|
-| `DatabaseModule` | Room database singleton, all 5 DAOs, migrations |
+| `DatabaseModule` | Room database singleton, all 6 DAOs, migrations (manual `Migration(start, end)` in `NovelDatabase.Companion`) |
 | `ParserModule` | Parsers via `@Binds @IntoSet` multibinding |
 | `StorageModule` | `CoverStorage` implementation |
 | `WorkModule` | WorkManager singleton |
@@ -229,11 +239,14 @@ Single-Activity with Jetpack Navigation Compose:
 | Route | Screen | Parameters |
 |---|---|---|
 | `library` | LibraryScreen | (start destination) |
+| `library?selectedNovelId={id}` | LibraryScreen | optional `selectedNovelId`; deep-link / notification tap |
 | `import` | ImportScreen | — |
 | `reader/{novelId}/{chapterId}` | ReaderScreen | searchQuery (optional) |
 | `favorites` | FavoritesScreen | — |
 | `settings` | SettingsScreen | — |
 | `about` | AboutScreen | — |
+
+Cross-component navigation (notification taps, future deep links) is delivered via `DeepLinkBus`, a `SharedFlow<DeepLinkAction>` injected into `MainActivity` (producer) and `NavGraph` (consumer). `MainActivity` reads `Intent` extras (`EXTRA_DEEP_LINK_ACTION`, `EXTRA_NOVEL_ID`) in `onCreate` / `onNewIntent` and emits to the bus.
 
 ## Theme (`ui/theme/`)
 

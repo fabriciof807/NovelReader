@@ -296,3 +296,4 @@ Dois caminhos:
 | Data | Mudança |
 |------|---------|
 | 20/06/2025 | Revisão inicial com 5 candidatos de deepening |
+| 23/06/2026 | v2.4.0 — 6 correções de bug em `LibraryScreen` / `LibraryViewModel` / `ChaptersTab` / `PersonagensTab` / `ScanMissingChaptersUseCase`. Resolve `LibraryViewModel` god-object risk identificado nesta revisão ao fixar `requestDeleteById`/`requestChangeCoverById`/`requestCoverByUrlById` (que liam o campo morto `_state.value.novels`) e ao adicionar `BackHandler` explícito em `LibraryScreen` para deseleção de novel. Detalhes em `docs/superpowers/specs/2026-06-23-issue-fixes-design.md` e `docs/superpowers/plans/2026-06-23-issue-fixes.md`. |

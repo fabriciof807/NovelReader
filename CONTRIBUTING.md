@@ -12,8 +12,8 @@ Thank you for considering contributing to NovelReader.
 ## Setup
 
 ```bash
-git clone https://github.com/your-username/android-book.git
-cd android-book
+git clone https://github.com/fabriciof807/NovelReader.git
+cd NovelReader
 ./gradlew :app:assembleDebug
 ```
 
@@ -29,7 +29,7 @@ cd android-book
 
 ## Code Style
 
-- Follow the [Kotlin官方 coding conventions](https://kotlinlang.org/docs/coding-conventions.html)
+- Follow the [Kotlin coding conventions](https://kotlinlang.org/docs/coding-conventions.html)
 - Use `ktfmt` or Android Studio's built-in formatter
 - No comments in code unless explicitly requested
 - Prefer `val` over `var`

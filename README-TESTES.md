@@ -20,18 +20,6 @@
 
 ## Running Specific Suites
 
-### DAOs (Instrumented)
-```bash
-./gradlew :app:connectedDebugAndroidTest \
-  -Pandroid.testInstrumentationRunnerArguments.class=com.novelreader.data.local.db.*
-```
-
-### Repositories (Unit - Robolectric)
-```bash
-./gradlew :app:testDebugUnitTest \
-  --tests "com.novelreader.data.repository.*"
-```
-
 ### Parsers (Unit)
 ```bash
 ./gradlew :app:testDebugUnitTest \
@@ -41,13 +29,21 @@
 ### ViewModels (Unit)
 ```bash
 ./gradlew :app:testDebugUnitTest \
-  --tests "com.novelreader.ui.favorites.FavoritesViewModelTest"
+  --tests "com.novelreader.ui.favorites.FavoritesViewModelTest" \
+  --tests "com.novelreader.ui.library.LibraryViewModelTest" \
+  --tests "com.novelreader.ui.reader.ReaderViewModelTest"
 ```
 
-### WebImportUseCase (Unit + MockWebServer)
+### Use Cases (Unit)
 ```bash
 ./gradlew :app:testDebugUnitTest \
-  --tests "com.novelreader.domain.usecase.WebImportUseCaseTest"
+  --tests "com.novelreader.domain.usecase.*"
+```
+
+### Workers (Unit)
+```bash
+./gradlew :app:testDebugUnitTest \
+  --tests "com.novelreader.data.worker.*"
 ```
 
 ### UI Screens (Instrumented - Compose + Espresso)
@@ -68,6 +64,12 @@
   --tests "com.novelreader.regression.EdgeCaseTest"
 ```
 
+### End-to-End (Unit)
+```bash
+./gradlew :app:testDebugUnitTest \
+  --tests "com.novelreader.e2e.EndToEndTest"
+```
+
 ### Edge Cases / Regression (Instrumented)
 ```bash
 ./gradlew :app:connectedDebugAndroidTest \
@@ -85,11 +87,11 @@ After running tests, open the reports in your browser:
 
 ### Unit Tests (`src/test/`)
 - Use Robolectric for Android context simulation
-- Use Room in-memory database for persistence tests
 - Use MockK for dependency mocking
-- Use Turbine for StateFlow testing
+- Use Turbine for StateFlow / SharedFlow testing
 - Use MockWebServer for HTTP integration tests
 - Run on JVM (no emulator required)
+- Coverage: parsers, ViewModels, use cases, workers, regression scenarios
 
 ### Instrumented Tests (`src/androidTest/`)
 - Run on device or emulator
@@ -97,26 +99,32 @@ After running tests, open the reports in your browser:
 - Use Compose Test Rule for UI tests
 - Use AndroidX Test for test orchestration
 - Verify real Android framework behavior
+- Coverage: DAOs, Compose UI screens, full E2E import + read flow
 
-## Test Coverage Summary
+## Test Coverage Summary (v2.4.0)
+
+Unit tests: **104** total. Instrumented tests: see `app/src/androidTest/`.
 
 | Area | Suite | Tests | Location |
 |---|---|---|---|
-| Chapter Repository | Unit | 12 | `test/.../data/repository/ChapterRepositoryTest.kt` |
-| Bookmark Repository | Unit | 8 | `test/.../data/repository/BookmarkRepositoryTest.kt` |
-| Character Repository | Unit | 10 | `test/.../data/repository/CharacterRepositoryTest.kt` |
-| Mht Parser | Unit | 5 | `test/.../data/parser/MhtParserTest.kt` |
-| WebImport UseCase | Unit | 10 | `test/.../domain/usecase/WebImportUseCaseTest.kt` |
+| Mht Parser | Unit | 7 | `test/.../data/parser/MhtParserTest.kt` |
+| FreeWebNovel Parser | Unit | 6 | `test/.../data/parser/FreeWebNovelParserTest.kt` |
+| ReadNovelFull Parser | Unit | 8 | `test/.../data/parser/ReadNovelFullParserTest.kt` |
+| Generic Fallback Parser | Unit | 6 | `test/.../data/parser/GenericFallbackParserTest.kt` |
+| Parser Registry | Unit | 5 | `test/.../data/parser/ParserRegistryTest.kt` |
+| HTML Sanitizer | Unit | 7 | `test/.../data/parser/HtmlSanitizerTest.kt` |
+| Chapter Number Extractor | Unit | 9 | `test/.../data/parser/ChapterNumberExtractorTest.kt` |
+| Library ViewModel | Unit | 10 | `test/.../ui/library/LibraryViewModelTest.kt` |
 | Favorites ViewModel | Unit | 6 | `test/.../ui/favorites/FavoritesViewModelTest.kt` |
+| Reader ViewModel | Unit | 4 | `test/.../ui/reader/ReaderViewModelTest.kt` |
+| WebImport UseCase | Unit | 3 | `test/.../domain/usecase/WebImportUseCaseTest.kt` |
+| Background Import Manager | Unit | 6 | `test/.../domain/usecase/BackgroundImportManagerTest.kt` |
+| Import Job Spec | Unit | 5 | `test/.../domain/usecase/ImportJobSpecTest.kt` |
+| Scan Missing Chapters UseCase | Unit | 2 | `test/.../domain/usecase/ScanMissingChaptersUseCaseTest.kt` |
+| Import Work Request Factory | Unit | 2 | `test/.../data/worker/ImportWorkRequestFactoryTest.kt` |
+| End-to-End (Unit) | Unit | 10 | `test/.../e2e/EndToEndTest.kt` |
 | Edge Cases / Regression | Unit | 8 | `test/.../regression/EdgeCaseTest.kt` |
-| Bookmark DAO | Instrumented | 8 | `androidTest/.../data/local/db/BookmarkDaoTest.kt` |
-| Character DAO | Instrumented | 10 | `androidTest/.../data/local/db/CharacterDaoTest.kt` |
-| Character Photo DAO | Instrumented | 6 | `androidTest/.../data/local/db/CharacterPhotoDaoTest.kt` |
-| E2E Flow | Instrumented | 6 | `androidTest/.../data/local/db/E2EFlowTest.kt` |
-| Library Screen UI | Instrumented | 3 | `androidTest/.../ui/library/LibraryScreenTest.kt` |
-| Favorites Screen UI | Instrumented | 3 | `androidTest/.../ui/favorites/FavoritesScreenTest.kt` |
-| Edge Cases / Regression | Instrumented | 4 | `androidTest/.../regression/EdgeCaseTest.kt` |
-| **Total** | | **~99** | |
+| **Unit total** | | **104** | |
 
 ## Notes
 
@@ -125,3 +133,4 @@ After running tests, open the reports in your browser:
 - English test data used throughout
 - FTS4 queries require exact match syntax (`"term"*`)
 - Some tests verify Resource strings via `ApplicationProvider` context
+- The repository layer was removed in v2.2.0; ViewModels and use cases inject DAOs directly (no `data.repository.*` test suite exists)

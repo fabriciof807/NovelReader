@@ -49,6 +49,9 @@ app/src/main/java/com/novelreader/
     navigation/NavGraph.kt -- 6 routes; library accepts optional selectedNovelId arg
     navigation/DeepLinkBus.kt -- SharedFlow connecting MainActivity intent handling to NavGraph
     library/               -- Library screen with tabs (novels, chapters, characters)
+      tabs/                  -- LibraryTab, ChaptersTab, PersonagensTab
+      components/            -- NovelCard, NovelListItem, CharacterCard, ScanRangeDialog, DeleteDialogs
+      mvi/                   -- LibraryIntent, LibraryState
     reader/                -- WebView-based reader with bookmarks, FTS search, settings
     import_novel/          -- Local file import screen
     webimport/             -- Web import ViewModel
@@ -101,9 +104,9 @@ A chapter can fail in three ways, all persisted as `FailedChapterEntity`:
 3. **Empty content** — Same scan flags chapters in the DB with `content.isBlank() || content.length < 200`. `errorType = empty_content`.
 
 Users see these in the `ChaptersTab` "Failed chapters" section (below the chapter list) and can:
-- Re-tentar via URL (web only)
-- Importar arquivo MHT (manual file picker)
-- Descartar (delete the entry)
+- Retry the URL (web only)
+- Import an MHT file (manual file picker)
+- Dismiss (delete the entry)
 
 ## Build Commands
 
@@ -171,13 +174,24 @@ Custom Material 3 colors in `ui/theme/Color.kt` and `ui/theme/Theme.kt`. Light t
 - **Instrumented tests**: Room in-memory DB, Compose Test Rule, Espresso
 - Parser tests use real HTML fixtures
 - ViewModel tests inject mocked DAOs/use cases
-- **Current count: 99 unit tests** (down from 135 after v2.2.0 inline of repository pass-through tests)
+- **Current count: 104 unit tests** (99 baseline + 5 added in v2.4.0)
 - **Always run `./gradlew :app:compileDebugKotlin :app:testDebugUnitTest` before pushing**
 
 ## Recent Sessions
 
 See git log and `handoff-*.md` files for session handoffs. The handoff file is intentionally gitignored — it documents the active state across AI sessions.
 
+Design specs and implementation plans produced by AI sessions live under `docs/superpowers/specs/` and `docs/superpowers/plans/`.
+
 ## Current Version
 
-v2.4.0 (versionCode 14). See [README.md](README.md) for the user-facing changelog and the full release history in `git log`.
+v2.4.0 (versionCode 14). See [README.md](README.md) (English) and [README_PT.md](README_PT.md) (Portuguese) for the user-facing documentation. Full release history in `git log`.
+
+### v2.4.0 highlights
+
+- Fix #1 — Delete confirm dialog now reachable; `RequestDelete` intent path fixed (was reading dead `_state.value.novels`).
+- Fix #2 — System back deselects the current novel via `BackHandler` instead of closing the app.
+- Fix #3 — Personagens-tab FABs no longer overlap the last character card (140dp bottom contentPadding).
+- Fix #4 — Wider default scan range using `novel.totalChapters`; local-scan `fileName` key pinned to `chapter_${n}` with a regression test.
+- Fix #6 — Chapter titles in the list now wrap up to 4 lines (was 2).
+- Fix #7 — Failed-chapter badge now renders correct labels for `missing_number` and `empty_content` (string resources already existed).
