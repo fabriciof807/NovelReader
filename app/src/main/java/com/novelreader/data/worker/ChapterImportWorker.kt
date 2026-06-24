@@ -17,6 +17,7 @@ import dagger.assisted.AssistedInject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.util.UUID
+import javax.inject.Inject
 
 @HiltWorker
 class ChapterImportWorker @AssistedInject constructor(
@@ -25,7 +26,8 @@ class ChapterImportWorker @AssistedInject constructor(
     private val webImportUseCase: WebImportUseCase,
     private val notificationHelper: ImportNotificationHelper,
     private val workCompletionObserver: WorkCompletionObserver,
-    private val chapterOrderNormalizer: ChapterOrderNormalizer
+    private val chapterOrderNormalizer: ChapterOrderNormalizer,
+    private val specFileStore: SpecFileStore
 ) : CoroutineWorker(appContext, params) {
 
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
@@ -63,6 +65,7 @@ class ChapterImportWorker @AssistedInject constructor(
         )
 
         workCompletionObserver.onJobCompleted(spec.id, result.isSuccess, errors.size)
+        specFileStore.delete(spec.id)
 
         if (result.isSuccess) {
             result.getOrNull()?.let { novelId ->
@@ -88,36 +91,13 @@ class ChapterImportWorker @AssistedInject constructor(
         return notificationHelper.createForegroundInfo(spec, 0, spec.links.size)
     }
 
-    private fun readSpec(): ImportJobSpec? {
-        val data = inputData
-        val idStr = data.getString(KEY_JOB_ID) ?: return null
-        val id = try { UUID.fromString(idStr) } catch (_: Exception) { return null }
-        val title = data.getString(KEY_TITLE) ?: return null
-        val links = data.getStringArray(KEY_LINKS)?.toList() ?: emptyList()
-        val numbers = data.getIntArray(KEY_NUMS)?.toList() ?: emptyList()
-        val cover = data.getString(KEY_COVER)?.takeIf { it.isNotBlank() }
-        val enqueuedAt = data.getLong(KEY_ENQUEUED_AT, 0L).let { if (it == 0L) System.currentTimeMillis() else it }
-        val splitCount = data.getInt(KEY_SPLIT_COUNT, 1)
-        val splitIndex = data.getInt(KEY_SPLIT_INDEX, 0)
-        val sourceUrl = data.getString(KEY_SOURCE_URL) ?: ""
-        return ImportJobSpec(
-            id = id,
-            novelTitle = title,
-            links = links,
-            chapterNumbers = numbers,
-            coverUrl = cover,
-            enqueuedAt = enqueuedAt,
-            splitCount = splitCount,
-            splitIndex = splitIndex,
-            sourceUrl = sourceUrl
-        )
+    internal fun readSpec(): ImportJobSpec? {
+        return SpecReader.readFromData(inputData, specFileStore)
     }
 
     companion object {
         const val KEY_JOB_ID = "job_id"
         const val KEY_TITLE = "title"
-        const val KEY_LINKS = "links"
-        const val KEY_NUMS = "nums"
         const val KEY_COVER = "cover"
         const val KEY_ENQUEUED_AT = "enqueued_at"
         const val KEY_SPLIT_COUNT = "split_count"

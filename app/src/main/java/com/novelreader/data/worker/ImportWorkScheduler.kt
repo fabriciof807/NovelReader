@@ -13,7 +13,8 @@ import javax.inject.Singleton
 class ImportWorkScheduler @Inject constructor(
     private val workManager: WorkManager,
     private val importPrefs: ImportPreferences,
-    private val completionObserver: WorkCompletionObserver
+    private val completionObserver: WorkCompletionObserver,
+    private val specFileStore: SpecFileStore
 ) {
     suspend fun schedule(spec: ImportJobSpec): UUID {
         importPrefs.enqueueJob(spec)
@@ -23,11 +24,13 @@ class ImportWorkScheduler @Inject constructor(
 
     suspend fun cancel(id: UUID) {
         importPrefs.removeJob(id)
+        specFileStore.delete(id)
         workManager.cancelWorkById(id)
     }
 
     suspend fun cancelAll() {
         importPrefs.clearQueue()
+        specFileStore.deleteAll()
         workManager.cancelAllWorkByTag(ChapterImportWorker.TAG_IMPORT)
     }
 }
@@ -38,8 +41,6 @@ object ImportWorkRequestFactory {
             workDataOf(
                 ChapterImportWorker.KEY_JOB_ID to spec.id.toString(),
                 ChapterImportWorker.KEY_TITLE to spec.novelTitle,
-                ChapterImportWorker.KEY_LINKS to spec.links.toTypedArray(),
-                ChapterImportWorker.KEY_NUMS to spec.chapterNumbers.toIntArray(),
                 ChapterImportWorker.KEY_COVER to (spec.coverUrl ?: ""),
                 ChapterImportWorker.KEY_ENQUEUED_AT to spec.enqueuedAt,
                 ChapterImportWorker.KEY_SPLIT_COUNT to spec.splitCount,

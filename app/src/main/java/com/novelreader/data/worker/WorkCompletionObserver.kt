@@ -23,7 +23,8 @@ interface ObserverCallbacks {
 @Singleton
 class WorkCompletionObserver @Inject constructor(
     private val workManager: WorkManager,
-    private val importPrefs: ImportPreferences
+    private val importPrefs: ImportPreferences,
+    private val specFileStore: SpecFileStore
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val schedulingMutex = Mutex()
@@ -103,6 +104,7 @@ class WorkCompletionObserver @Inject constructor(
                 if (active) return@withLock
 
                 val next = importPrefs.dequeueJob() ?: return@withLock
+                specFileStore.write(next)
                 val request = ImportWorkRequestFactory.build(next)
                 workManager.enqueueUniqueWork(
                     ChapterImportWorker.UNIQUE_ACTIVE,
