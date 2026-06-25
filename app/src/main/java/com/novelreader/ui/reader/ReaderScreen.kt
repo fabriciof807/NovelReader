@@ -95,6 +95,8 @@ fun ReaderScreen(
     val pendingSearchQueryState = remember { mutableStateOf(initialSearchQuery) }
     var pendingSearchQuery by pendingSearchQueryState
     var isPageLoaded by remember { mutableStateOf(false) }
+    val loadToken = remember { LoadToken() }
+    var inflightToken by remember { mutableStateOf<Int?>(null) }
     var showAddBookmarkDialog by remember { mutableStateOf(false) }
     var bookmarkToDelete by remember { mutableStateOf<Long?>(null) }
     var showChapterList by remember { mutableStateOf(false) }
@@ -118,6 +120,8 @@ fun ReaderScreen(
         state.chapter?.let { chapter ->
             webView?.let { wv ->
                 isPageLoaded = false
+                val issued = loadToken.next()
+                inflightToken = issued
                 val html = buildReaderHtml(
                     content = chapter.content,
                     config = state.config
@@ -466,23 +470,27 @@ fun ReaderScreen(
                         viewModel.updateLiveScroll(ratio)
                     },
                     onPageFinished = { wv, _ ->
-                        isPageLoaded = true
-                        wv.evaluateJavascript(applyConfigJs(state.config), null)
-                        wv.evaluateJavascript(applyBookmarksJs(state.bookmarks), null)
-                        val ratio = viewModel.getScrollRatio()
-                        val search = pendingSearchQuery
-                        if (search != null) {
-                            pendingSearchQuery = null
-                            wv.evaluateJavascript(buildJs(
-                                code = "window.scrollTo(0, 0);",
-                                params = emptyMap()
-                            ), null)
-                            wv.evaluateJavascript(
-                                searchHighlightJs(search, ratio),
-                                null
-                            )
-                        } else if (ratio > 0f) {
-                            wv.evaluateJavascript(scrollRestoreJs(ratio), null)
+                        val issued = inflightToken
+                        inflightToken = null
+                        if (issued != null && loadToken.shouldAccept(issued)) {
+                            isPageLoaded = true
+                            wv.evaluateJavascript(applyConfigJs(state.config), null)
+                            wv.evaluateJavascript(applyBookmarksJs(state.bookmarks), null)
+                            val ratio = viewModel.getScrollRatio()
+                            val search = pendingSearchQuery
+                            if (search != null) {
+                                pendingSearchQuery = null
+                                wv.evaluateJavascript(buildJs(
+                                    code = "window.scrollTo(0, 0);",
+                                    params = emptyMap()
+                                ), null)
+                                wv.evaluateJavascript(
+                                    searchHighlightJs(search, ratio),
+                                    null
+                                )
+                            } else if (ratio > 0f) {
+                                wv.evaluateJavascript(scrollRestoreJs(ratio), null)
+                            }
                         }
                     },
                     onWebViewReady = { webView = it },
