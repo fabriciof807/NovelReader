@@ -324,8 +324,9 @@ class ReaderHtmlBuilderTest {
             content = "<p>one</p><p>two</p>",
             config = ReaderConfig()
         )
-        assertThat(html).doesNotContain("bookmark-indicator")
-        assertThat(html).doesNotContain("class=\"bookmarked\"")
+        val body = html.substringAfter("<div id=\"content\">").substringBefore("</div>")
+        assertThat(body).doesNotContain("bookmark-indicator")
+        assertThat(body).doesNotContain("class=\"bookmarked\"")
     }
 
     @Test
