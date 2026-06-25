@@ -156,13 +156,7 @@ fun ReaderScreen(
             onBookmarkClick = { bookmark ->
                 viewModel.hideBookmarkDialog()
                 val ratio = (bookmark.scrollPosition / 1000f).coerceIn(0f, 1f)
-                webView?.evaluateJavascript(
-                    buildJs(
-                        code = "var max = document.body.scrollHeight - window.innerHeight; window.scrollTo(0, max * args.ratio);",
-                        params = mapOf("ratio" to ratio)
-                    ),
-                    null
-                )
+                webView?.evaluateJavascript(scrollRestoreJs(ratio), null)
                 viewModel.saveScrollPosition(ratio)
             }
         )
@@ -475,6 +469,7 @@ fun ReaderScreen(
                         isPageLoaded = true
                         wv.evaluateJavascript(applyConfigJs(state.config), null)
                         wv.evaluateJavascript(applyBookmarksJs(state.bookmarks), null)
+                        val ratio = viewModel.getScrollRatio()
                         val search = pendingSearchQuery
                         if (search != null) {
                             pendingSearchQuery = null
@@ -482,43 +477,12 @@ fun ReaderScreen(
                                 code = "window.scrollTo(0, 0);",
                                 params = emptyMap()
                             ), null)
-                            wv.evaluateJavascript(buildJs(
-                                code = """
-                                    setTimeout(function() {
-                                        (function(q) {
-                                            var c = document.getElementById('content');
-                                            if (!c) return;
-                                            var w = document.createTreeWalker(c, NodeFilter.SHOW_TEXT);
-                                            var n;
-                                            while (n = w.nextNode()) {
-                                                var i = n.nodeValue.toLowerCase().indexOf(q.toLowerCase());
-                                                if (i >= 0) {
-                                                    var r = document.createRange();
-                                                    r.setStart(n, i);
-                                                    r.setEnd(n, i + q.length);
-                                                    var m = document.createElement('mark');
-                                                    m.className = 'search-highlight';
-                                                    try {
-                                                        r.surroundContents(m);
-                                                        var top = m.getBoundingClientRect().top + window.scrollY - 80;
-                                                        window.scrollTo({ top: top, behavior: 'smooth' });
-                                                    } catch (e) {}
-                                                    return;
-                                                }
-                                            }
-                                        })(args.query);
-                                    }, 1000);
-                                """.trimIndent(),
-                                params = mapOf("query" to search)
-                            ), null)
-                        } else {
-                            val ratio = viewModel.getScrollRatio()
-                            if (ratio > 0f) {
-                                wv.evaluateJavascript(buildJs(
-                                    code = "var max = document.body.scrollHeight - window.innerHeight; window.scrollTo(0, max * args.ratio);",
-                                    params = mapOf("ratio" to ratio)
-                                ), null)
-                            }
+                            wv.evaluateJavascript(
+                                searchHighlightJs(search, ratio),
+                                null
+                            )
+                        } else if (ratio > 0f) {
+                            wv.evaluateJavascript(scrollRestoreJs(ratio), null)
                         }
                     },
                     onWebViewReady = { webView = it },

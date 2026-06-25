@@ -116,4 +116,16 @@ class ReaderHtmlBuilderTest {
         assertThat(js).contains("Math.min(1, Math.max(0,")
         assertThat(js).doesNotContain("window.scrollY / document.body.scrollHeight")
     }
+
+    @Test
+    fun `scrollRestoreJs waits for layout before restoring scroll position`() {
+        val js = scrollRestoreJs(0.5f)
+        assertThat(js).contains("requestAnimationFrame")
+    }
+
+    @Test
+    fun `searchHighlightJs restores scroll position when no match is found`() {
+        val js = searchHighlightJs(query = "nonexistent", restoreRatio = 0.3f)
+        assertThat(js).contains("args.restoreRatio")
+    }
 }
