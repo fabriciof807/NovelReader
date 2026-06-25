@@ -40,6 +40,24 @@ class ReaderHtmlBuilderTest {
     }
 
     @Test
+    fun `buildReaderHtml emits kebab-case CSS custom properties matching the theme`() {
+        val html = buildReaderHtml(
+            content = "<p>x</p>",
+            config = ReaderConfig(theme = "dark")
+        )
+        val root = html.substringAfter("<style>").substringBefore("</style>")
+            .substringAfter(":root {").substringBefore("}")
+        assertThat(root).contains("--bg-color: #1a1a2e;")
+        assertThat(root).contains("--text-color: #e0e0e0;")
+        assertThat(root).contains("--accent-color: #90caf9;")
+        assertThat(root).contains("--link-color: #64b5f6;")
+        assertThat(root).doesNotContain("--bgColor:")
+        assertThat(root).doesNotContain("--textColor:")
+        assertThat(root).doesNotContain("--accentColor:")
+        assertThat(root).doesNotContain("--linkColor:")
+    }
+
+    @Test
     fun `buildReaderHtml still emits the auto-scroll script when speed is positive`() {
         val html = buildReaderHtml(
             content = "<p>x</p>",

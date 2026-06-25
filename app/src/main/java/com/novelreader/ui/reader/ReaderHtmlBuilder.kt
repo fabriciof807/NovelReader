@@ -53,7 +53,10 @@ fun buildReaderHtml(
     val sanitized = Jsoup.clean(content, READER_SAFELIST)
     val finalContent = stripJunkContent(sanitized)
 
-    val themeCss = themeVars(config).entries.joinToString("\n            ") { (k, v) -> "--$k: $v;" }
+    val themeCss = themeVars(config).entries.joinToString("\n            ") { (k, v) ->
+        val cssVar = k.replace(Regex("([A-Z])")) { "-${it.value.lowercase()}" }
+        "--$cssVar: $v;"
+    }
     val css = """
         :root {
             $themeCss
