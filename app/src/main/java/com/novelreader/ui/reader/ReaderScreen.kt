@@ -69,7 +69,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.novelreader.R
+import com.novelreader.data.local.db.entity.BookmarkEntity
+import com.novelreader.data.local.preferences.ReaderConfig
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -90,6 +95,7 @@ fun ReaderScreen(
     var lastInitialSearchQuery by remember { mutableStateOf(initialSearchQuery) }
     val pendingSearchQueryState = remember { mutableStateOf(initialSearchQuery) }
     var pendingSearchQuery by pendingSearchQueryState
+    var isPageLoaded by remember { mutableStateOf(false) }
     var showAddBookmarkDialog by remember { mutableStateOf(false) }
     var bookmarkToDelete by remember { mutableStateOf<Long?>(null) }
     var showChapterList by remember { mutableStateOf(false) }
@@ -105,6 +111,28 @@ fun ReaderScreen(
         """.trimIndent()
     }
 
+    fun applyConfigJs(config: ReaderConfig): String {
+        val map = themeVars(config)
+        val payload = map + mapOf(
+            "fontFamily" to config.fontFamily,
+            "fontSize" to config.fontSize,
+            "lineHeight" to config.lineHeight,
+            "autoScrollSpeed" to config.autoScrollSpeed
+        )
+        return buildJs(
+            code = "applyConfig(JSON.parse(args));",
+            params = mapOf("args" to payload)
+        )
+    }
+
+    fun applyBookmarksJs(bookmarks: List<BookmarkEntity>): String {
+        val positions = bookmarks.map { it.scrollPosition }
+        return buildJs(
+            code = "applyBookmarks(JSON.parse(args));",
+            params = mapOf("args" to positions)
+        )
+    }
+
     if (initialSearchQuery != lastInitialSearchQuery) {
         lastInitialSearchQuery = initialSearchQuery
         pendingSearchQuery = initialSearchQuery
@@ -117,72 +145,30 @@ fun ReaderScreen(
     }
 
     fun saveScroll() {
-        webView?.evaluateJavascript(
-            buildJs("return (window.scrollY / document.body.scrollHeight).toString();"),
-            ValueCallback { value ->
-                val ratio = value?.trim('"')?.toFloatOrNull() ?: return@ValueCallback
-                viewModel.saveScrollPosition(ratio)
-            }
-        )
+        viewModel.saveScrollPosition()
     }
 
-    LaunchedEffect(state.chapter, state.reloadVersion, webView) {
+    LaunchedEffect(state.chapter, webView) {
         state.chapter?.let { chapter ->
             webView?.let { wv ->
+                isPageLoaded = false
                 val html = buildReaderHtml(
                     content = chapter.content,
-                    config = state.config,
-                    bookmarksScrollPositions = state.bookmarks.map { it.scrollPosition }
+                    config = state.config
                 )
-                val restoreRatio = if (pendingSearchQuery != null) 0f else viewModel.getScrollRatio()
                 wv.loadDataWithBaseURL(null, html, "text/html", "UTF-8", null)
-                if (restoreRatio > 0f) {
-                    wv.evaluateJavascript(
-                        buildJs(
-                            code = "document.addEventListener('DOMContentLoaded', function() { setTimeout(function() { window.scrollTo(0, document.body.scrollHeight * args.ratio); }, 200); });",
-                            params = mapOf("ratio" to restoreRatio)
-                        ),
-                        null
-                    )
-                }
-                val search = pendingSearchQuery
-                if (search != null) {
-                    pendingSearchQuery = null
-                    wv.evaluateJavascript(
-                        buildJs(
-                            code = """
-                                try {
-                                    setTimeout(function() {
-                                        (function(q) {
-                                            var c = document.getElementById('content');
-                                            if (!c) return;
-                                            var w = document.createTreeWalker(c, NodeFilter.SHOW_TEXT);
-                                            var n;
-                                            while (n = w.nextNode()) {
-                                                var i = n.nodeValue.toLowerCase().indexOf(q.toLowerCase());
-                                                if (i >= 0) {
-                                                    var r = document.createRange();
-                                                    r.setStart(n, i);
-                                                    r.setEnd(n, i + q.length);
-                                                    var m = document.createElement('mark');
-                                                    m.className = 'search-highlight';
-                                                    r.surroundContents(m);
-                                                    var top = m.getBoundingClientRect().top + window.scrollY - 80;
-                                                    window.scrollTo({ top: top, behavior: 'smooth' });
-                                                    return;
-                                                }
-                                            }
-                                        })(args.query);
-                                    }, 1000);
-                                } catch (e) {}
-                            """.trimIndent(),
-                            params = mapOf("query" to search)
-                        ),
-                        null
-                    )
-                }
             }
         }
+    }
+
+    LaunchedEffect(state.config, webView) {
+        if (!isPageLoaded) return@LaunchedEffect
+        webView?.evaluateJavascript(applyConfigJs(state.config), null)
+    }
+
+    LaunchedEffect(state.bookmarks, webView) {
+        if (!isPageLoaded) return@LaunchedEffect
+        webView?.evaluateJavascript(applyBookmarksJs(state.bookmarks), null)
     }
 
     bookmarkToDelete?.let {
@@ -206,7 +192,7 @@ fun ReaderScreen(
                 val ratio = bookmark.scrollPosition / 1000f
                 webView?.evaluateJavascript(
                     buildJs(
-                        code = "window.scrollTo(0, document.body.scrollHeight * args.ratio);",
+                        code = "var max = document.body.scrollHeight - window.innerHeight; window.scrollTo(0, max * args.ratio);",
                         params = mapOf("ratio" to ratio)
                     ),
                     null
@@ -515,8 +501,60 @@ fun ReaderScreen(
             } else {
                 ReaderWebView(
                     onTextSelected = { viewModel.onTextSelected(it) },
-                    onScrollChanged = { scrollRatio = it },
-                    onPageFinished = { _, _ -> },
+                    onScrollChanged = { ratio ->
+                        scrollRatio = ratio
+                        viewModel.updateLiveScroll(ratio)
+                    },
+                    onPageFinished = { wv, _ ->
+                        isPageLoaded = true
+                        wv.evaluateJavascript(applyConfigJs(state.config), null)
+                        wv.evaluateJavascript(applyBookmarksJs(state.bookmarks), null)
+                        val search = pendingSearchQuery
+                        if (search != null) {
+                            pendingSearchQuery = null
+                            wv.evaluateJavascript(buildJs(
+                                code = "window.scrollTo(0, 0);",
+                                params = emptyMap()
+                            ), null)
+                            wv.evaluateJavascript(buildJs(
+                                code = """
+                                    setTimeout(function() {
+                                        (function(q) {
+                                            var c = document.getElementById('content');
+                                            if (!c) return;
+                                            var w = document.createTreeWalker(c, NodeFilter.SHOW_TEXT);
+                                            var n;
+                                            while (n = w.nextNode()) {
+                                                var i = n.nodeValue.toLowerCase().indexOf(q.toLowerCase());
+                                                if (i >= 0) {
+                                                    var r = document.createRange();
+                                                    r.setStart(n, i);
+                                                    r.setEnd(n, i + q.length);
+                                                    var m = document.createElement('mark');
+                                                    m.className = 'search-highlight';
+                                                    try {
+                                                        r.surroundContents(m);
+                                                        var top = m.getBoundingClientRect().top + window.scrollY - 80;
+                                                        window.scrollTo({ top: top, behavior: 'smooth' });
+                                                    } catch (e) {}
+                                                    return;
+                                                }
+                                            }
+                                        })(args.query);
+                                    }, 1000);
+                                """.trimIndent(),
+                                params = mapOf("query" to search)
+                            ), null)
+                        } else {
+                            val ratio = viewModel.getScrollRatio()
+                            if (ratio > 0f) {
+                                wv.evaluateJavascript(buildJs(
+                                    code = "var max = document.body.scrollHeight - window.innerHeight; window.scrollTo(0, max * args.ratio);",
+                                    params = mapOf("ratio" to ratio)
+                                ), null)
+                            }
+                        }
+                    },
                     onWebViewReady = { webView = it },
                     onTap = { isControlsVisible = !isControlsVisible },
                     onSwipe = { direction ->
@@ -560,8 +598,23 @@ fun ReaderScreen(
         }
     }
 
-    DisposableEffect(Unit) {
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_PAUSE -> {
+                    viewModel.saveScrollPosition()
+                    webView?.onPause()
+                }
+                Lifecycle.Event.ON_RESUME -> {
+                    webView?.onResume()
+                }
+                else -> {}
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
         onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
             webView?.destroy()
         }
     }

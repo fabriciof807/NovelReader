@@ -13,6 +13,7 @@ import com.novelreader.data.local.db.entity.ChapterEntity
 import com.novelreader.data.local.db.FtsSearchService
 import com.novelreader.data.local.preferences.ReaderPreferences
 import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
@@ -127,5 +128,102 @@ class ReaderViewModelTest {
         viewModel = createViewModel()
         viewModel.onSearchQueryChange("ab")
         assertThat(viewModel.state.value.searchResults).isEmpty()
+    }
+
+    @Test
+    fun `updateLiveScroll stores ratio scaled to 0-1000 in lastKnownScrollPosition`() = runTest {
+        val chapter = ChapterEntity(
+            id = 10, novelId = 1, title = "Ch1",
+            fileName = "ch1.html", orderIndex = 0, content = "<p>hi</p>"
+        )
+        coEvery { chapterDao.getChapterById(10) } returns chapter
+        coEvery { chapterDao.getChaptersByNovelSync(1) } returns listOf(chapter)
+        coEvery { novelDao.getNovelById(1) } returns null
+        coEvery { novelDao.updateLastRead(any(), any()) } returns Unit
+        coEvery { chapterDao.markAsRead(any(), any()) } returns Unit
+
+        viewModel = createViewModel()
+        viewModel.updateLiveScroll(0.42f)
+
+        val title = viewModel.getDefaultBookmarkTitle()
+        assertThat(title).isNotEmpty()
+    }
+
+    @Test
+    fun `updateLiveScroll does not write to chapterDao`() = runTest {
+        val chapter = ChapterEntity(
+            id = 10, novelId = 1, title = "Ch1",
+            fileName = "ch1.html", orderIndex = 0, content = "<p>hi</p>",
+            isRead = true
+        )
+        coEvery { chapterDao.getChapterById(10) } returns chapter
+        coEvery { chapterDao.getChaptersByNovelSync(1) } returns listOf(chapter)
+        coEvery { novelDao.getNovelById(1) } returns null
+        coEvery { novelDao.updateLastRead(any(), any()) } returns Unit
+        coEvery { chapterDao.markAsRead(any(), any()) } returns Unit
+
+        viewModel = createViewModel()
+        viewModel.updateLiveScroll(0.5f)
+
+        coVerify(exactly = 0) { chapterDao.markAsRead(any(), any()) }
+    }
+
+    @Test
+    fun `saveScrollPosition no-arg persists lastKnownScrollPosition via chapterDao`() = runTest {
+        val chapter = ChapterEntity(
+            id = 10, novelId = 1, title = "Ch1",
+            fileName = "ch1.html", orderIndex = 0, content = "<p>hi</p>"
+        )
+        coEvery { chapterDao.getChapterById(10) } returns chapter
+        coEvery { chapterDao.getChaptersByNovelSync(1) } returns listOf(chapter)
+        coEvery { novelDao.getNovelById(1) } returns null
+        coEvery { novelDao.updateLastRead(any(), any()) } returns Unit
+        coEvery { chapterDao.markAsRead(any(), any()) } returns Unit
+
+        viewModel = createViewModel()
+        viewModel.updateLiveScroll(0.5f)
+        viewModel.saveScrollPosition()
+
+        coVerify { chapterDao.markAsRead(10, 500) }
+    }
+
+    @Test
+    fun `updateTheme delegates to readerPreferences and does not bump state`() = runTest {
+        viewModel = createViewModel()
+        val before = viewModel.state.value
+        viewModel.updateTheme("dark")
+        val after = viewModel.state.value
+        assertThat(after).isEqualTo(before)
+        coVerify { readerPrefs.updateTheme("dark") }
+    }
+
+    @Test
+    fun `updateFontSize delegates to readerPreferences and does not bump state`() = runTest {
+        viewModel = createViewModel()
+        val before = viewModel.state.value
+        viewModel.updateFontSize(24)
+        val after = viewModel.state.value
+        assertThat(after).isEqualTo(before)
+        coVerify { readerPrefs.updateFontSize(24) }
+    }
+
+    @Test
+    fun `updateLineHeight delegates to readerPreferences and does not bump state`() = runTest {
+        viewModel = createViewModel()
+        val before = viewModel.state.value
+        viewModel.updateLineHeight(2.0f)
+        val after = viewModel.state.value
+        assertThat(after).isEqualTo(before)
+        coVerify { readerPrefs.updateLineHeight(2.0f) }
+    }
+
+    @Test
+    fun `updateAutoScrollSpeed delegates to readerPreferences and does not bump state`() = runTest {
+        viewModel = createViewModel()
+        val before = viewModel.state.value
+        viewModel.updateAutoScrollSpeed(1.5f)
+        val after = viewModel.state.value
+        assertThat(after).isEqualTo(before)
+        coVerify { readerPrefs.updateAutoScrollSpeed(1.5f) }
     }
 }

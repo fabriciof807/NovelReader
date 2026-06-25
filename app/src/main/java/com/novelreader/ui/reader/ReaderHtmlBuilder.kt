@@ -17,50 +17,44 @@ private val NAV_PATTERNS = listOf(
     Regex("nav(e|i)gat(e|ing).{0,20}(chapter|cap.tulo)", RegexOption.IGNORE_CASE),
 )
 
+fun themeVars(config: ReaderConfig): Map<String, String> = when (config.theme) {
+    "dark" -> mapOf(
+        "bgColor" to "#1a1a2e",
+        "textColor" to "#e0e0e0",
+        "accentColor" to "#90caf9",
+        "linkColor" to "#64b5f6"
+    )
+    "sepia" -> mapOf(
+        "bgColor" to "#f4e4c1",
+        "textColor" to "#5b4636",
+        "accentColor" to "#8d6e63",
+        "linkColor" to "#6d4c41"
+    )
+    "gray" -> mapOf(
+        "bgColor" to "#2d2d2d",
+        "textColor" to "#d0d0d0",
+        "accentColor" to "#90a4ae",
+        "linkColor" to "#81d4fa"
+    )
+    else -> mapOf(
+        "bgColor" to "#f5f0e8",
+        "textColor" to "#333333",
+        "accentColor" to "#1a237e",
+        "linkColor" to "#1565c0"
+    )
+}
+
 fun buildReaderHtml(
     content: String,
-    config: ReaderConfig,
-    bookmarksScrollPositions: List<Int> = emptyList()
+    config: ReaderConfig
 ): String {
-    val themeVars = when (config.theme) {
-        "dark" -> """
-            --bg-color: #1a1a2e;
-            --text-color: #e0e0e0;
-            --accent-color: #90caf9;
-            --link-color: #64b5f6;
-        """.trimIndent()
-        "sepia" -> """
-            --bg-color: #f4e4c1;
-            --text-color: #5b4636;
-            --accent-color: #8d6e63;
-            --link-color: #6d4c41;
-        """.trimIndent()
-        "gray" -> """
-            --bg-color: #2d2d2d;
-            --text-color: #d0d0d0;
-            --accent-color: #90a4ae;
-            --link-color: #81d4fa;
-        """.trimIndent()
-        else -> """
-            --bg-color: #f5f0e8;
-            --text-color: #333333;
-            --accent-color: #1a237e;
-            --link-color: #1565c0;
-        """.trimIndent()
-    }
-
     val sanitized = Jsoup.clean(content, READER_SAFELIST)
-    val cleaned = stripJunkContent(sanitized)
+    val finalContent = stripJunkContent(sanitized)
 
-    val finalContent = if (bookmarksScrollPositions.any { it > 0 }) {
-        insertBookmarkInContent(cleaned, bookmarksScrollPositions.filter { it > 0 })
-    } else {
-        cleaned
-    }
-
+    val themeCss = themeVars(config).entries.joinToString("\n            ") { (k, v) -> "--$k: $v;" }
     val css = """
         :root {
-            $themeVars
+            $themeCss
             --font-family: '${config.fontFamily}', Georgia, serif;
             --font-size: ${config.fontSize}px;
             --line-height: ${config.lineHeight};
@@ -133,8 +127,7 @@ fun buildReaderHtml(
         }
     """.trimIndent()
 
-    val autoScrollJs = if (config.autoScrollSpeed > 0f) {
-        """
+    val autoScrollJs = """
         var _asSpeed = ${config.autoScrollSpeed};
         var _asRunning = false, _asPaused = false, _asTimer = null;
         function _asStep() {
@@ -148,9 +141,8 @@ fun buildReaderHtml(
         function stopAutoScroll() { _asRunning = false; _asPaused = false; clearTimeout(_asTimer); }
         document.addEventListener('touchstart', function() { if (_asRunning && !_asPaused) { _asPaused = true; clearTimeout(_asTimer); } });
         document.addEventListener('touchend', function() { if (_asRunning && _asPaused) { clearTimeout(_asTimer); _asTimer = setTimeout(function(){ _asPaused = false; }, 2000); } });
-        setTimeout(startAutoScroll, 500);
-        """.trimIndent()
-    } else ""
+        ${if (config.autoScrollSpeed > 0f) "setTimeout(startAutoScroll, 500);" else ""}
+    """.trimIndent()
 
     return """
         <!DOCTYPE html>
@@ -194,6 +186,46 @@ fun buildReaderHtml(
                 });
             })();
 
+            function applyConfig(cfg) {
+                var root = document.documentElement.style;
+                root.setProperty('--bg-color', cfg.bgColor);
+                root.setProperty('--text-color', cfg.textColor);
+                root.setProperty('--accent-color', cfg.accentColor);
+                root.setProperty('--link-color', cfg.linkColor);
+                root.setProperty('--font-family', "'" + cfg.fontFamily + "', Georgia, serif");
+                root.setProperty('--font-size', cfg.fontSize + 'px');
+                root.setProperty('--line-height', cfg.lineHeight);
+                setAutoScrollSpeed(cfg.autoScrollSpeed);
+            }
+            function setAutoScrollSpeed(speed) {
+                _asSpeed = speed;
+                if (speed <= 0) { stopAutoScroll(); }
+                else if (!_asRunning) { startAutoScroll(); }
+            }
+            function applyBookmarks(positionsJson) {
+                var content = document.getElementById('content');
+                if (!content) return;
+                var paras = content.querySelectorAll('p');
+                if (!paras.length) return;
+                var existing = content.querySelectorAll('.bookmark-indicator');
+                for (var i = existing.length - 1; i >= 0; i--) existing[i].remove();
+                paras.forEach(function(p){ p.classList.remove('bookmarked'); });
+                var positions = JSON.parse(positionsJson);
+                var used = {};
+                positions.forEach(function(pos) {
+                    var idx = Math.floor((pos / 1000) * paras.length);
+                    if (idx < 0) idx = 0;
+                    if (idx >= paras.length) idx = paras.length - 1;
+                    if (used[idx]) return;
+                    used[idx] = true;
+                    var span = document.createElement('span');
+                    span.className = 'bookmark-indicator';
+                    span.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17 3H7c-1.1 0-2 .9-2 2v16l7-3 7 3V5c0-1.1-.9-2-2-2z"/></svg>';
+                    paras[idx].parentNode.insertBefore(span, paras[idx]);
+                    paras[idx].classList.add('bookmarked');
+                });
+            }
+
             $autoScrollJs
             </script>
         </head>
@@ -202,27 +234,6 @@ fun buildReaderHtml(
         </body>
         </html>
     """.trimIndent()
-}
-
-private fun insertBookmarkInContent(content: String, scrollPositions: List<Int>): String {
-    val doc = Jsoup.parseBodyFragment(content)
-    val paragraphs = doc.select("p")
-    if (paragraphs.isEmpty()) return content
-
-    val usedIndices = mutableSetOf<Int>()
-    for (scrollPos in scrollPositions.sorted()) {
-        val index = ((scrollPos / 1000f) * paragraphs.size).toInt()
-            .coerceIn(0, paragraphs.size - 1)
-        if (usedIndices.add(index)) {
-            val targetP = paragraphs[index]
-            targetP.before(
-                """<span class="bookmark-indicator"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17 3H7c-1.1 0-2 .9-2 2v16l7-3 7 3V5c0-1.1-.9-2-2-2z"/></svg></span>"""
-            )
-            targetP.addClass("bookmarked")
-        }
-    }
-
-    return doc.body().html()
 }
 
 private fun stripJunkContent(html: String): String {

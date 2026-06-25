@@ -41,7 +41,6 @@ data class ReaderState(
     val showBookmarkDialog: Boolean = false,
     val showSettings: Boolean = false,
     val config: ReaderConfig = ReaderConfig(),
-    val reloadVersion: Int = 0,
     val isSearchActive: Boolean = false,
     val searchQuery: String = "",
     val searchResults: List<ChapterEntity> = emptyList(),
@@ -132,10 +131,7 @@ class ReaderViewModel @Inject constructor(
         bookmarkCollectionJob?.cancel()
         bookmarkCollectionJob = viewModelScope.launch {
             bookmarkDao.getByChapter(chapterId).collect { list ->
-                _state.value = _state.value.copy(
-                    bookmarks = list,
-                    reloadVersion = _state.value.reloadVersion + 1
-                )
+                _state.value = _state.value.copy(bookmarks = list)
             }
         }
     }
@@ -149,6 +145,22 @@ class ReaderViewModel @Inject constructor(
     }
 
     private var lastKnownScrollPosition: Int = 0
+
+    fun updateLiveScroll(ratio: Float) {
+        lastKnownScrollPosition = (ratio * 1000).toInt()
+    }
+
+    fun saveScrollPosition() {
+        val chapter = currentChapter ?: return
+        val position = lastKnownScrollPosition
+        viewModelScope.launch {
+            try {
+                chapterDao.markAsRead(chapter.id, position)
+            } catch (e: Exception) {
+                _errorEvents.emit(e.message ?: e.toString())
+            }
+        }
+    }
 
     fun getDefaultBookmarkTitle(): String {
         val chapter = currentChapter ?: return ""
@@ -235,39 +247,19 @@ class ReaderViewModel @Inject constructor(
     }
 
     fun updateTheme(theme: String) {
-        viewModelScope.launch {
-            readerPreferences.updateTheme(theme)
-            _state.value = _state.value.copy(
-                reloadVersion = _state.value.reloadVersion + 1
-            )
-        }
+        viewModelScope.launch { readerPreferences.updateTheme(theme) }
     }
 
     fun updateFontSize(size: Int) {
-        viewModelScope.launch {
-            readerPreferences.updateFontSize(size)
-            _state.value = _state.value.copy(
-                reloadVersion = _state.value.reloadVersion + 1
-            )
-        }
+        viewModelScope.launch { readerPreferences.updateFontSize(size) }
     }
 
     fun updateLineHeight(height: Float) {
-        viewModelScope.launch {
-            readerPreferences.updateLineHeight(height)
-            _state.value = _state.value.copy(
-                reloadVersion = _state.value.reloadVersion + 1
-            )
-        }
+        viewModelScope.launch { readerPreferences.updateLineHeight(height) }
     }
 
     fun updateAutoScrollSpeed(speed: Float) {
-        viewModelScope.launch {
-            readerPreferences.updateAutoScrollSpeed(speed)
-            _state.value = _state.value.copy(
-                reloadVersion = _state.value.reloadVersion + 1
-            )
-        }
+        viewModelScope.launch { readerPreferences.updateAutoScrollSpeed(speed) }
     }
 
     private var searchJob: Job? = null
