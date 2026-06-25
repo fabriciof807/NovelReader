@@ -3,7 +3,6 @@ package com.novelreader.ui.reader
 import android.net.Uri
 import android.webkit.ValueCallback
 import android.webkit.WebView
-import org.json.JSONObject
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
@@ -99,39 +98,6 @@ fun ReaderScreen(
     var showAddBookmarkDialog by remember { mutableStateOf(false) }
     var bookmarkToDelete by remember { mutableStateOf<Long?>(null) }
     var showChapterList by remember { mutableStateOf(false) }
-
-    fun buildJs(code: String, params: Map<String, Any> = emptyMap()): String {
-        val json = JSONObject()
-        params.forEach { (k, v) -> json.put(k, v) }
-        val args = json.toString()
-        return """
-            (function(args) {
-                $code
-            })($args)
-        """.trimIndent()
-    }
-
-    fun applyConfigJs(config: ReaderConfig): String {
-        val map = themeVars(config)
-        val payload = map + mapOf(
-            "fontFamily" to config.fontFamily,
-            "fontSize" to config.fontSize,
-            "lineHeight" to config.lineHeight,
-            "autoScrollSpeed" to config.autoScrollSpeed
-        )
-        return buildJs(
-            code = "applyConfig(JSON.parse(args));",
-            params = mapOf("args" to payload)
-        )
-    }
-
-    fun applyBookmarksJs(bookmarks: List<BookmarkEntity>): String {
-        val positions = bookmarks.map { it.scrollPosition }
-        return buildJs(
-            code = "applyBookmarks(JSON.parse(args));",
-            params = mapOf("args" to positions)
-        )
-    }
 
     if (initialSearchQuery != lastInitialSearchQuery) {
         lastInitialSearchQuery = initialSearchQuery
