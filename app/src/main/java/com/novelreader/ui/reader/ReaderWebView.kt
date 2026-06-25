@@ -95,6 +95,9 @@ fun ReaderWebView(
                     override fun onPageFinished(view: WebView?, url: String?) {
                         super.onPageFinished(view, url)
                         view?.let { wv ->
+                            // Invoked asynchronously on the WebView's thread; the
+                            // composable's lambda captures Compose State<T> and
+                            // relies on its stable identity to read current values.
                             onPageFinished(wv, 0f)
                         }
                     }

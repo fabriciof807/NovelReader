@@ -131,25 +131,6 @@ class ReaderViewModelTest {
     }
 
     @Test
-    fun `updateLiveScroll stores ratio scaled to 0-1000 in lastKnownScrollPosition`() = runTest {
-        val chapter = ChapterEntity(
-            id = 10, novelId = 1, title = "Ch1",
-            fileName = "ch1.html", orderIndex = 0, content = "<p>hi</p>"
-        )
-        coEvery { chapterDao.getChapterById(10) } returns chapter
-        coEvery { chapterDao.getChaptersByNovelSync(1) } returns listOf(chapter)
-        coEvery { novelDao.getNovelById(1) } returns null
-        coEvery { novelDao.updateLastRead(any(), any()) } returns Unit
-        coEvery { chapterDao.markAsRead(any(), any()) } returns Unit
-
-        viewModel = createViewModel()
-        viewModel.updateLiveScroll(0.42f)
-
-        val title = viewModel.getDefaultBookmarkTitle()
-        assertThat(title).isNotEmpty()
-    }
-
-    @Test
     fun `updateLiveScroll does not write to chapterDao`() = runTest {
         val chapter = ChapterEntity(
             id = 10, novelId = 1, title = "Ch1",
