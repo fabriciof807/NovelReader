@@ -219,7 +219,11 @@ fun SettingsScreen(
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 HorizontalDivider()
-                LazyColumn(modifier = Modifier.fillMaxWidth()) {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
+                ) {
                     items(preview.novels, key = { it.title }) { entry ->
                         val checked = entry.title in selectedImportTitles
                         Row(
