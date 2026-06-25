@@ -23,3 +23,30 @@ landing-page/dist/
 
 # Security audit tool
 piolium/
+
+# Session handoffs (AI agent handoff documents — gitignored, never staged)
+handoff-*.md
+
+# Secrets and credentials (defense in depth — never commit these)
+/secrets/
+/credentials/
+.env
+.env.*
+*.pem
+*.key
+*.jks
+*.p12
+*.pfx
+key.properties
+**/key.properties
+google-services.json
+firebase-credentials.json
+.npmrc
+.pypirc
+.id_rsa
+.id_dsa
+.id_ecdsa
+.id_ed25519
+service-account*.json
+*-credentials.json
+*-service-account.json

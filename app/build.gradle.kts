@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.ksp)
@@ -19,6 +21,20 @@ android {
         buildConfigField("String", "MVLEMPYR_API_URL", "\"https://chap.heliosarchive.online/wp-json/wp/v2/mvl-characters?per_page=15000\"")
     }
 
+    signingConfigs {
+        create("release") {
+            val keyProps = rootProject.file("key.properties")
+            if (keyProps.exists()) {
+                val p = Properties()
+                keyProps.inputStream().use { p.load(it) }
+                storeFile = p["storeFile"]?.let { file(it as String) }
+                storePassword = p["storePassword"] as String?
+                keyAlias = p["keyAlias"] as String?
+                keyPassword = p["keyPassword"] as String?
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = true
@@ -27,6 +43,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            signingConfig = signingConfigs.getByName("release")
         }
     }
 
