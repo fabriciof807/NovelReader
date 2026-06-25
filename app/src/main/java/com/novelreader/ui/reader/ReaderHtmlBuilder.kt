@@ -2,6 +2,7 @@ package com.novelreader.ui.reader
 
 import com.novelreader.data.local.db.entity.BookmarkEntity
 import com.novelreader.data.local.preferences.ReaderConfig
+import org.json.JSONArray
 import org.json.JSONObject
 import org.jsoup.Jsoup
 import org.jsoup.safety.Safelist
@@ -285,14 +286,25 @@ private fun stripJunkContent(html: String): String {
 }
 
 fun buildJs(code: String, params: Map<String, Any> = emptyMap()): String {
-    val json = JSONObject()
-    params.forEach { (k, v) -> json.put(k, v) }
-    val args = json.toString()
+    val args = params.entries.joinToString(",") { (k, v) -> "\"$k\":${jsonLiteral(v)}" }
+    val argsLiteral = if (args.isEmpty()) "{}" else "{$args}"
     return """
         (function(args) {
             $code
-        })($args)
+        })($argsLiteral)
     """.trimIndent()
+}
+
+private fun jsonLiteral(value: Any?): String = when (value) {
+    null -> "null"
+    is JSONObject -> value.toString()
+    is JSONArray -> value.toString()
+    is String -> "\"${value.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t")}\""
+    is Number, is Boolean -> value.toString()
+    is Map<*, *> -> JSONObject(value).toString()
+    is Iterable<*> -> JSONArray(value).toString()
+    is Array<*> -> JSONArray(value).toString()
+    else -> "\"${value.toString().replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t")}\""
 }
 
 fun applyConfigJs(config: ReaderConfig): String {
@@ -304,7 +316,7 @@ fun applyConfigJs(config: ReaderConfig): String {
         "autoScrollSpeed" to config.autoScrollSpeed
     )
     return buildJs(
-        code = "applyConfig(JSON.parse(args));",
+        code = "applyConfig(args.args);",
         params = mapOf("args" to payload)
     )
 }
@@ -312,7 +324,7 @@ fun applyConfigJs(config: ReaderConfig): String {
 fun applyBookmarksJs(bookmarks: List<BookmarkEntity>): String {
     val positions = bookmarks.map { it.scrollPosition }
     return buildJs(
-        code = "applyBookmarks(JSON.parse(args));",
-        params = mapOf("args" to positions)
+        code = "applyBookmarks(args.args);",
+        params = mapOf("args" to JSONArray(positions).toString())
     )
 }

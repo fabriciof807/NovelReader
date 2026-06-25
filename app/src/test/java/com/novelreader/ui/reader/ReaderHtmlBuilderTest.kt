@@ -1,9 +1,15 @@
 package com.novelreader.ui.reader
 
 import com.google.common.truth.Truth.assertThat
+import com.novelreader.data.local.db.entity.BookmarkEntity
 import com.novelreader.data.local.preferences.ReaderConfig
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [33])
 class ReaderHtmlBuilderTest {
 
     @Test
@@ -77,5 +83,29 @@ class ReaderHtmlBuilderTest {
         assertThat(html).contains("function startAutoScroll(")
         assertThat(html).contains("function stopAutoScroll(")
         assertThat(html).contains("_asSpeed")
+    }
+
+    @Test
+    fun `applyConfigJs passes the config object to applyConfig without JSON parse`() {
+        val js = applyConfigJs(ReaderConfig(theme = "dark"))
+        assertThat(js).contains("applyConfig(args.args);")
+        assertThat(js).doesNotContain("JSON.parse(args)")
+        assertThat(js).contains("\"fontFamily\":\"serif\"")
+        assertThat(js).contains("\"bgColor\":\"#1a1a2e\"")
+        assertThat(js).contains("\"autoScrollSpeed\":0")
+    }
+
+    @Test
+    fun `applyBookmarksJs passes scroll positions as a JSON string to applyBookmarks`() {
+        val js = applyBookmarksJs(
+            listOf(
+                BookmarkEntity(id = 1, chapterId = 1, title = "a", scrollPosition = 120),
+                BookmarkEntity(id = 2, chapterId = 1, title = "b", scrollPosition = 350),
+                BookmarkEntity(id = 3, chapterId = 1, title = "c", scrollPosition = 500)
+            )
+        )
+        assertThat(js).contains("applyBookmarks(args.args);")
+        assertThat(js).doesNotContain("JSON.parse(args)")
+        assertThat(js).contains("\"[120,350,500]\"")
     }
 }
