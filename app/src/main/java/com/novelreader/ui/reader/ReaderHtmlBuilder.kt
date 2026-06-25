@@ -328,3 +328,9 @@ fun applyBookmarksJs(bookmarks: List<BookmarkEntity>): String {
         params = mapOf("args" to JSONArray(positions).toString())
     )
 }
+
+fun bookmarkCaptureRatioJs(): String = buildJs(
+    "var max = document.body.scrollHeight - window.innerHeight;" +
+        " var ratio = max > 0 ? Math.min(1, Math.max(0, window.scrollY / max)) : 0;" +
+        " return ratio.toString();"
+)

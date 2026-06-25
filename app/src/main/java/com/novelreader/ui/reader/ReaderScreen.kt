@@ -155,7 +155,7 @@ fun ReaderScreen(
             onDelete = { id -> bookmarkToDelete = id },
             onBookmarkClick = { bookmark ->
                 viewModel.hideBookmarkDialog()
-                val ratio = bookmark.scrollPosition / 1000f
+                val ratio = (bookmark.scrollPosition / 1000f).coerceIn(0f, 1f)
                 webView?.evaluateJavascript(
                     buildJs(
                         code = "var max = document.body.scrollHeight - window.innerHeight; window.scrollTo(0, max * args.ratio);",
@@ -367,7 +367,7 @@ fun ReaderScreen(
 
                             IconButton(onClick = {
                                 webView?.evaluateJavascript(
-                                    buildJs("return (window.scrollY / document.body.scrollHeight).toString();"),
+                                    bookmarkCaptureRatioJs(),
                                     ValueCallback { value ->
                                         val ratio = value?.trim('"')?.toFloatOrNull() ?: 0f
                                         viewModel.saveScrollPosition(ratio)

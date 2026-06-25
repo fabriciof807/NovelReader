@@ -108,4 +108,12 @@ class ReaderHtmlBuilderTest {
         assertThat(js).doesNotContain("JSON.parse(args)")
         assertThat(js).contains("\"[120,350,500]\"")
     }
+
+    @Test
+    fun `bookmarkCaptureRatioJs uses viewport-aware clamped scroll ratio`() {
+        val js = bookmarkCaptureRatioJs()
+        assertThat(js).contains("document.body.scrollHeight - window.innerHeight")
+        assertThat(js).contains("Math.min(1, Math.max(0,")
+        assertThat(js).doesNotContain("window.scrollY / document.body.scrollHeight")
+    }
 }
