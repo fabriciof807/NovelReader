@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -34,6 +35,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -89,6 +91,8 @@ fun LibraryTab(
             progress >= 1f && it.totalChapters > 0
         }
     }
+
+    val listState = rememberSaveable(saver = LazyListState.Saver) { LazyListState() }
 
     Column(modifier = modifier.fillMaxSize()) {
         ImportProgressBanner(
@@ -162,6 +166,7 @@ fun LibraryTab(
             }
         } else {
             LazyColumn(
+                state = listState,
                 contentPadding = PaddingValues(vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp),
                 modifier = Modifier.weight(1f).fillMaxWidth()
