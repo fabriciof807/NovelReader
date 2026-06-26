@@ -50,6 +50,8 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import org.json.JSONArray
+import org.json.JSONObject
 import javax.inject.Inject
 
 enum class SortOrder { TITLE, CREATED_AT, LAST_READ }
@@ -66,7 +68,7 @@ data class LibraryStats(
 @HiltViewModel
 class LibraryViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
-    savedStateHandle: SavedStateHandle,
+    private val savedStateHandle: SavedStateHandle,
     private val novelDao: NovelDao,
     private val chapterDao: ChapterDao,
     private val bookmarkDao: com.novelreader.data.local.db.dao.BookmarkDao,
@@ -186,6 +188,58 @@ class LibraryViewModel @Inject constructor(
             novel.id to progress
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
+
+    data class ChaptersScrollState(
+        val firstVisibleItemIndex: Int,
+        val firstVisibleItemScrollOffset: Int
+    )
+
+    private val chaptersScrollKey = "chapters_scroll"
+
+    val chaptersScrollByNovel: StateFlow<Map<Long, ChaptersScrollState>> =
+        savedStateHandle.getStateFlow<String?>(chaptersScrollKey, null)
+            .map { json -> decodeChaptersScroll(json) }
+            .stateIn(viewModelScope, SharingStarted.Eagerly, decodeChaptersScroll(savedStateHandle.get<String?>(chaptersScrollKey)))
+
+    fun setChaptersScroll(novelId: Long, index: Int, offset: Int) {
+        val current = chaptersScrollByNovel.value.toMutableMap()
+        current[novelId] = ChaptersScrollState(index, offset)
+        savedStateHandle[chaptersScrollKey] = encodeChaptersScroll(current)
+    }
+
+    fun getChaptersScroll(novelId: Long): ChaptersScrollState? =
+        chaptersScrollByNovel.value[novelId]
+
+    private fun encodeChaptersScroll(map: Map<Long, ChaptersScrollState>): String {
+        val obj = JSONObject()
+        for ((id, state) in map) {
+            val arr = JSONArray()
+            arr.put(state.firstVisibleItemIndex)
+            arr.put(state.firstVisibleItemScrollOffset)
+            obj.put(id.toString(), arr)
+        }
+        return obj.toString()
+    }
+
+    private fun decodeChaptersScroll(json: String?): Map<Long, ChaptersScrollState> {
+        if (json.isNullOrEmpty()) return emptyMap()
+        return try {
+            val obj = JSONObject(json)
+            val result = mutableMapOf<Long, ChaptersScrollState>()
+            val keys = obj.keys()
+            while (keys.hasNext()) {
+                val idStr = keys.next()
+                val id = idStr.toLongOrNull() ?: continue
+                val arr = obj.optJSONArray(idStr) ?: continue
+                if (arr.length() == 2) {
+                    result[id] = ChaptersScrollState(arr.getInt(0), arr.getInt(1))
+                }
+            }
+            result
+        } catch (_: Exception) {
+            emptyMap()
+        }
+    }
 
     init {
         viewModelScope.launch {

@@ -317,6 +317,10 @@ fun LibraryScreen(
                     sourceUrlAvailable = selectedNovel?.sourceUrl?.isNotBlank() == true,
                     maxChapterNumber = chapters.maxOfOrNull { it.orderIndex } ?: 0,
                     totalChapters = selectedNovel?.totalChapters ?: 0,
+                    initialScroll = viewModel.getChaptersScroll(selectedNovel?.id ?: 0L),
+                    onScroll = { idx, off ->
+                        selectedNovel?.id?.let { viewModel.setChaptersScroll(it, idx, off) }
+                    },
                     onChapterClick = { chapterId ->
                         selectedNovel?.let { onChapterClick(it.id, chapterId) }
                     }

@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -30,10 +31,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -45,9 +48,13 @@ import com.novelreader.data.local.db.entity.ChapterEntity
 import com.novelreader.data.local.db.entity.FailedChapterEntity
 import com.novelreader.data.local.db.entity.FailedChapterErrorType
 import com.novelreader.ui.library.ChapterSortOrder
+import com.novelreader.ui.library.LibraryViewModel
 import com.novelreader.ui.library.components.ScanRangeDialog
 import android.net.Uri
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.debounce
 
+@OptIn(FlowPreview::class)
 @Composable
 fun ChaptersTab(
     novelId: Long = 0L,
@@ -65,10 +72,25 @@ fun ChaptersTab(
     sourceUrlAvailable: Boolean = false,
     maxChapterNumber: Int = 0,
     totalChapters: Int = 0,
+    initialScroll: LibraryViewModel.ChaptersScrollState? = null,
+    onScroll: (Int, Int) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier
 ) {
     var pendingFilePickForFailed by remember { mutableStateOf<Long?>(null) }
     var showScanDialog by remember { mutableStateOf(false) }
+    val listState = remember(novelId) {
+        LazyListState(
+            firstVisibleItemIndex = initialScroll?.firstVisibleItemIndex ?: 0,
+            firstVisibleItemScrollOffset = initialScroll?.firstVisibleItemScrollOffset ?: 0
+        )
+    }
+    LaunchedEffect(listState) {
+        snapshotFlow {
+            listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset
+        }
+            .debounce(300)
+            .collect { (idx, off) -> onScroll(idx, off) }
+    }
     val filePicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
     ) { uri: Uri? ->
@@ -107,6 +129,7 @@ fun ChaptersTab(
     }
 
     LazyColumn(
+        state = listState,
         modifier = modifier.fillMaxSize()
     ) {
         if (chapters.isNotEmpty()) {
