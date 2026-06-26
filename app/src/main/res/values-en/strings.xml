@@ -264,4 +264,10 @@
     <!-- Personagens tab FAB labels -->
     <string name="personagens_add_label">Add</string>
     <string name="personagens_import_label">Import</string>
+
+    <!-- Library empty state -->
+    <string name="library_empty_title">Add your first novel</string>
+    <string name="library_empty_body">Import a local file or download from the web</string>
+    <string name="library_empty_import_local">Local file</string>
+    <string name="library_empty_import_web">From the web</string>
 </resources>

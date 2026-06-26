@@ -2,11 +2,9 @@ package com.novelreader.ui.library.tabs
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -49,6 +47,7 @@ import com.novelreader.ui.library.LibraryStats
 import com.novelreader.ui.library.NovelFilter
 import com.novelreader.ui.library.ViewMode
 import com.novelreader.ui.library.components.ImportProgressBanner
+import com.novelreader.ui.library.components.LibraryEmptyState
 import com.novelreader.ui.library.components.NovelCard
 import com.novelreader.ui.library.components.NovelListItem
 
@@ -72,6 +71,8 @@ fun LibraryTab(
     onRequestCoverByUrl: (NovelEntity) -> Unit,
     onContinueReading: (NovelEntity) -> Unit,
     onCancelImport: () -> Unit,
+    onImportLocal: () -> Unit = {},
+    onImportWeb: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val searchFiltered = if (searchQuery.isBlank()) novels
@@ -116,28 +117,18 @@ fun LibraryTab(
                 label = { Text(stringResource(R.string.filter_completed)) }
             )
         }
-        if (chipFiltered.isEmpty()) {
-            Box(
-                modifier = Modifier.weight(1f).fillMaxWidth(),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        text = if (searchQuery.isNotBlank()) stringResource(R.string.no_results)
-                               else stringResource(R.string.no_novels),
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                    )
-                    if (searchQuery.isBlank()) {
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            stringResource(R.string.tap_to_import),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
-                        )
-                    }
-                }
-            }
+        if (novels.isEmpty()) {
+            LibraryEmptyState(
+                onImportLocal = onImportLocal,
+                onImportWeb = onImportWeb,
+                modifier = Modifier.weight(1f).fillMaxWidth()
+            )
+        } else if (chipFiltered.isEmpty()) {
+            LibraryEmptyState(
+                onImportLocal = onImportLocal,
+                onImportWeb = onImportWeb,
+                modifier = Modifier.weight(1f).fillMaxWidth()
+            )
         } else if (viewMode == ViewMode.GRID) {
             LazyVerticalGrid(
                 columns = GridCells.Adaptive(160.dp),

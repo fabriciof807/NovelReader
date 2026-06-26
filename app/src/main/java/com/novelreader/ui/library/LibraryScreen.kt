@@ -294,7 +294,9 @@ fun LibraryScreen(
                     onContinueReading = { novel ->
                         novel.lastChapterId?.let { onChapterClick(novel.id, it) }
                     },
-                    onCancelImport = { viewModel.onIntent(LibraryIntent.CancelBackgroundImport) }
+                    onCancelImport = { viewModel.onIntent(LibraryIntent.CancelBackgroundImport) },
+                    onImportLocal = { onImportClick() },
+                    onImportWeb = { onImportClick() }
                 )
                 1 -> ChaptersTab(
                     novelId = selectedNovel?.id ?: 0L,
