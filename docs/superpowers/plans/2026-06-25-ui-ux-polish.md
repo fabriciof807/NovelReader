@@ -233,7 +233,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [33], qualifiers = "w400dp-h800dp")
+@Config(sdk = [33], qualifiers = "w400dp-h800dp+pt-rBR")
 class PersonagensTabFabTest {
 
     @get:Rule
@@ -270,6 +270,8 @@ Add the import for `assertIsDisplayed`:
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.onNodeWithText
 ```
+
+The `+pt-rBR` locale qualifier forces Robolectric to resolve `R.string.*` against the default `values/strings.xml` (Portuguese) rather than `values-en/strings.xml`. Without it, Robolectric's default English locale makes the test look for "Add" and "Import" and never finds the Portuguese labels.
 
 - [ ] **Step 3: Run the test to verify it fails**
 
@@ -309,30 +311,34 @@ with:
                         importUrl = ""
                         showImportDialog = true
                     },
-                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                    icon = {
-                        Icon(
-                            Icons.Default.Public,
-                            contentDescription = null
-                        )
-                    },
-                    text = { Text(stringResource(R.string.personagens_import_label)) }
-                )
-            }
-            ExtendedFloatingActionButton(
-                onClick = { showAddDialog = true },
-                icon = {
+                    containerColor = MaterialTheme.colorScheme.secondaryContainer
+                ) {
                     Icon(
-                        Icons.Default.Add,
+                        Icons.Default.Public,
                         contentDescription = null
                     )
-                },
-                text = { Text(stringResource(R.string.personagens_add_label)) }
-            )
+                    Spacer(Modifier.width(8.dp))
+                    Text(stringResource(R.string.personagens_import_label))
+                }
+            }
+            ExtendedFloatingActionButton(
+                onClick = { showAddDialog = true }
+            ) {
+                Icon(
+                    Icons.Default.Add,
+                    contentDescription = null
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(stringResource(R.string.personagens_add_label))
+            }
 ```
 
-Add the import for `ExtendedFloatingActionButton` near the other material3 imports:
+**Important:** use the content-slot overload (a single `@Composable RowScope.() -> Unit` lambda), NOT the `text=`/`icon=` named-params overload. The named-params overload wraps `text()` in `Modifier.clearAndSetSemantics {}` (a Material 3 1.3.1 quirk), which strips the text from the semantics tree and makes `onNodeWithText` unable to find it.
+
+Add the imports for `ExtendedFloatingActionButton` and `Spacer.width` near the other material3 imports:
 ```kotlin
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.ExtendedFloatingActionButton
 ```
 
