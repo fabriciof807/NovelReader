@@ -32,6 +32,7 @@ import coil.compose.AsyncImage
 import com.novelreader.R
 import com.novelreader.data.local.db.entity.NovelEntity
 import com.novelreader.domain.usecase.BackgroundImportState
+import com.novelreader.util.formatRelativeTime
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -154,8 +155,9 @@ fun NovelCard(
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                 )
                 if (novel.lastChapterId != null && onContinueClick != null) {
+                    val rel = novel.lastReadAt?.let { formatRelativeTime(it) }
                     Text(
-                        text = stringResource(R.string.reading),
+                        text = if (rel != null) stringResource(R.string.library_reading_with_time, rel) else stringResource(R.string.reading),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.secondary,
                         fontWeight = FontWeight.Bold,
