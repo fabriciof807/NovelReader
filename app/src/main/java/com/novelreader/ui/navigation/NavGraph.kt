@@ -3,10 +3,14 @@ package com.novelreader.ui.navigation
 import android.net.Uri
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.navArgument
 import com.novelreader.ui.about.AboutScreen
 import com.novelreader.ui.favorites.FavoritesScreen
@@ -43,6 +47,10 @@ fun NovelReaderNavGraph(
     navController: NavHostController,
     deepLinkBus: DeepLinkBus
 ) {
+    val haptic = LocalHapticFeedback.current
+    val currentBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentRoute = currentBackStackEntry?.destination?.route
+
     LaunchedEffect(Unit) {
         deepLinkBus.events.collect { action ->
             when (action) {
@@ -52,6 +60,12 @@ fun NovelReaderNavGraph(
                     }
                 }
             }
+        }
+    }
+
+    LaunchedEffect(currentRoute) {
+        if (currentRoute != null && !currentRoute.startsWith(Routes.LIBRARY)) {
+            haptic?.performHapticFeedback(HapticFeedbackType.LongPress)
         }
     }
 

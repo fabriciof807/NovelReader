@@ -47,7 +47,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -90,6 +92,8 @@ fun PersonagensTab(
     var expandedPhotoIndex by remember { mutableStateOf(0) }
     var pendingPhotoCharacterId by remember { mutableStateOf<Long?>(null) }
     var searchQuery by remember { mutableStateOf("") }
+
+    val haptic = LocalHapticFeedback.current
 
     val addPhotoPicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetMultipleContents()
@@ -240,6 +244,7 @@ fun PersonagensTab(
             if (onImportCharacters != null) {
                 ExtendedFloatingActionButton(
                     onClick = {
+                        haptic?.performHapticFeedback(HapticFeedbackType.LongPress)
                         importUrl = ""
                         showImportDialog = true
                     },
@@ -254,7 +259,10 @@ fun PersonagensTab(
                 }
             }
             ExtendedFloatingActionButton(
-                onClick = { showAddDialog = true }
+                onClick = {
+                    haptic?.performHapticFeedback(HapticFeedbackType.LongPress)
+                    showAddDialog = true
+                }
             ) {
                 Icon(
                     Icons.Default.Add,

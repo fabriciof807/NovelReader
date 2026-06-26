@@ -63,6 +63,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -100,6 +102,8 @@ fun ReaderScreen(
     var showAddBookmarkDialog by remember { mutableStateOf(false) }
     var bookmarkToDelete by remember { mutableStateOf<Long?>(null) }
     var showChapterList by remember { mutableStateOf(false) }
+
+    val haptic = LocalHapticFeedback.current
 
     if (initialSearchQuery != lastInitialSearchQuery) {
         lastInitialSearchQuery = initialSearchQuery
@@ -155,7 +159,10 @@ fun ReaderScreen(
         BookmarkManagerDialog(
             bookmarks = state.bookmarks,
             onDismiss = { viewModel.hideBookmarkDialog() },
-            onAddNew = { showAddBookmarkDialog = true },
+            onAddNew = {
+                haptic?.performHapticFeedback(HapticFeedbackType.LongPress)
+                showAddBookmarkDialog = true
+            },
             onDelete = { id -> bookmarkToDelete = id },
             onBookmarkClick = { bookmark ->
                 viewModel.hideBookmarkDialog()
