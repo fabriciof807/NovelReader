@@ -1,11 +1,14 @@
 package com.novelreader.ui.navigation
 
 import android.net.Uri
+import androidx.compose.animation.AnimatedContentTransitionScope
+import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -73,7 +76,7 @@ fun NovelReaderNavGraph(
         navController = navController,
         startDestination = Routes.LIBRARY
     ) {
-        composable(
+        animatedComposable(
             route = Routes.LIBRARY_WITH_SELECTION,
             arguments = listOf(
                 navArgument(LibraryViewModel.ARG_SELECTED_NOVEL_ID) {
@@ -98,7 +101,7 @@ fun NovelReaderNavGraph(
             )
         }
 
-        composable(Routes.IMPORT) {
+        animatedComposable(Routes.IMPORT) {
             ImportScreen(
                 onBack = { navController.popBackStack() },
                 onImportComplete = {
@@ -107,15 +110,15 @@ fun NovelReaderNavGraph(
             )
         }
 
-        composable(Routes.READER,
+        animatedComposable(Routes.READER,
             arguments = listOf(
                 navArgument("novelId") { type = NavType.LongType },
                 navArgument("chapterId") { type = NavType.LongType },
                 navArgument("searchQuery") { type = NavType.StringType; defaultValue = "" }
             )
         ) { backStackEntry ->
-            val novelId = backStackEntry.arguments?.getLong("novelId", -1L)?.takeIf { it != -1L } ?: return@composable
-            val chapterId = backStackEntry.arguments?.getLong("chapterId", -1L)?.takeIf { it != -1L } ?: return@composable
+            val novelId = backStackEntry.arguments?.getLong("novelId", -1L)?.takeIf { it != -1L } ?: return@animatedComposable
+            val chapterId = backStackEntry.arguments?.getLong("chapterId", -1L)?.takeIf { it != -1L } ?: return@animatedComposable
             val searchQuery = backStackEntry.arguments?.getString("searchQuery")
                 ?.takeIf { it.isNotBlank() }
             ReaderScreen(
@@ -129,7 +132,7 @@ fun NovelReaderNavGraph(
             )
         }
 
-        composable(Routes.FAVORITES) {
+        animatedComposable(Routes.FAVORITES) {
             FavoritesScreen(
                 onChapterClick = { novelId, chapterId ->
                     navController.navigate(Routes.reader(novelId, chapterId))
@@ -138,15 +141,30 @@ fun NovelReaderNavGraph(
             )
         }
 
-        composable(Routes.SETTINGS) {
+        animatedComposable(Routes.SETTINGS) {
             SettingsScreen(
                 onBack = { navController.popBackStack() },
                 onAboutClick = { navController.navigate(Routes.ABOUT) }
             )
         }
 
-        composable(Routes.ABOUT) {
+        animatedComposable(Routes.ABOUT) {
             AboutScreen(onBack = { navController.popBackStack() })
         }
     }
+}
+
+private fun NavGraphBuilder.animatedComposable(
+    route: String,
+    arguments: List<androidx.navigation.NamedNavArgument> = emptyList(),
+    content: @Composable (androidx.navigation.NavBackStackEntry) -> Unit
+) {
+    composable(
+        route = route,
+        arguments = arguments,
+        enterTransition = { slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Start, tween(220)) },
+        exitTransition = { slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Start, tween(220)) },
+        popEnterTransition = { slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.End, tween(220)) },
+        popExitTransition = { slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.End, tween(220)) }
+    ) { entry -> content(entry) }
 }
