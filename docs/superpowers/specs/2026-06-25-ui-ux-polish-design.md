@@ -30,7 +30,10 @@ Sixteen file changes, all inside the existing MVVM + Compose + Hilt + DataStore 
 ### State changes
 
 - `AppPreferences`: new `dynamicColorEnabled: Flow<Boolean>` + `updateDynamicColorEnabled(Boolean)`. Default `true`.
-- `LibraryViewModel`: new `ChaptersScrollState(val firstVisibleItemIndex: Int, val firstVisibleItemScrollOffset: Int)` data class; new `chaptersScrollByNovel: StateFlow<Map<Long, ChaptersScrollState>>` backed by `SavedStateHandle` under the key `"chapters_scroll"` (JSON-encoded). New methods `setChaptersScroll(novelId, index, offset)` and `getChaptersScroll(novelId)`. JSON encoding uses `kotlinx.serialization` (already a transitive dep via Hilt/Compose); if unavailable at runtime, fall back to two separate `intPreferencesKey`s per novel.
+- `LibraryViewModel`: new `ChaptersScrollState(val firstVisibleItemIndex: Int, val firstVisibleItemScrollOffset: Int)` data class; new `chaptersScrollByNovel: StateFlow<Map<Long, ChaptersScrollState>>` backed by `SavedStateHandle`. Two implementation options (decided at ticket time, prefer A):
+  - **A — `org.json.JSONObject`** (Android-built-in, no new dep): encode the map as a single JSON string under one `stringPreferencesKey("chapters_scroll")`. Per-novel entries are 16-20 bytes; even 100 novels ≈ 2 KB.
+  - **B — N keys, 2 per novel**: `stringPreferencesKey("chapters_scroll_index_$id")` and `stringPreferencesKey("chapters_scroll_offset_$id")`. Simpler to reason about, but pollutes the keyspace and ignores novelId range assumptions.
+  New methods `setChaptersScroll(novelId, index, offset)` and `getChaptersScroll(novelId)`.
 - `SettingsViewModel`: new `isImporting: StateFlow<Boolean>` set to `true` for the duration of `importSelected(titles)` and reset in `finally`. The "Importar X" button in the preview sheet reads it to swap the label for a `CircularProgressIndicator`.
 - `SettingsViewModel` (preview helpers): new `selectAllImportTitles()` and `deselectAllImportTitles()` functions called by the new header row's two `TextButton`s.
 
@@ -130,16 +133,16 @@ Sixteen file changes, all inside the existing MVVM + Compose + Hilt + DataStore 
 - **Files:** `app/build.gradle.kts` — `versionCode = 16`, `versionName = "2.4.2"`. Update both READMEs (`README.md` and `README_PT.md`) with a "v2.4.2" entry in the version history section (mirror the v2.4.0 / v2.4.1 entries).
 - **Strings:** none.
 
-### 14. `docs: fix AGENTS.md i18n convention note` (housekeeping)
-- **Files:** `AGENTS.md` — correct the line that says pt-BR lives in `values-pt-rBR/strings.xml` to say "pt-BR in `values/strings.xml` (default), en in `values-en/strings.xml`". This is a one-line correction. Out of the v2.4.2 release notes; commits separately so it is not entangled with feature work.
+### 14. `docs: fix AGENTS.md i18n convention note` (housekeeping, shipped alongside v2.4.2 but a separate commit)
+- **Files:** `AGENTS.md` — correct the line that says pt-BR lives in `values-pt-rBR/strings.xml` to say "pt-BR in `values/strings.xml` (default), en in `values-en/strings.xml`". One-line correction. Commits separately so it is not entangled with feature work.
 
 ---
 
 ## Testing strategy
 
-- **Unit tests (JVM, Robolectric):** ~8 new tests across `RelativeTimeTest`, `LibraryViewModelScrollTest`, `AppPreferencesDynamicColorTest`, `I18nCoverageTest`, `ComposeUiTestBaseSmokeTest`. All use existing `testImplementation` deps (Robolectric, MockK, Truth, Turbine).
+- **Unit tests (JVM, Robolectric):** ~10 new test methods across `RelativeTimeTest` (6 cases), `LibraryViewModelScrollTest`, `AppPreferencesDynamicColorTest`, `I18nCoverageTest`, `ComposeUiTestBaseSmokeTest`. All use existing `testImplementation` deps (Robolectric, MockK, Truth, Turbine).
 - **Compose UI tests (JVM, Robolectric + `createComposeRule`):** ~4 new tests across `LibraryEmptyStateTest`, `PersonagensTabFabTest`, `LibraryTabScrollTest`, `ChaptersTabScrollTest`. All use the new `ComposeUiTestBase`.
-- **Total expected:** 138 + 12 ≈ 150 tests passing.
+- **Total expected:** 138 + 14 ≈ 152 tests passing.
 - **CI command** (per `AGENTS.md`): `./gradlew :app:compileDebugKotlin :app:testDebugUnitTest` must pass before any claim of completion.
 
 ---
