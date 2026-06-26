@@ -1378,48 +1378,48 @@ Create `app/src/test/java/com/novelreader/i18n/I18nCoverageTest.kt`:
 ```kotlin
 package com.novelreader.i18n
 
-import android.content.res.Resources
 import androidx.test.core.app.ApplicationProvider
 import com.google.common.truth.Truth.assertThat
+import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import java.util.Locale
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [33])
 class I18nCoverageTest {
 
+    private lateinit var allStringNames: Set<String>
+    private lateinit var packageName: String
+
+    @Before
+    fun setUp() {
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        packageName = context.packageName
+        val rClass = Class.forName("com.novelreader.R\$string")
+        allStringNames = rClass.declaredFields
+            .filter { java.lang.reflect.Modifier.isStatic(it.modifiers) }
+            .map { it.name }
+            .toSet()
+    }
+
     @Test
     fun `every pt-BR string has an en counterpart`() {
         val context = ApplicationProvider.getApplicationContext<android.content.Context>()
-        val ptResources: Resources = context.resources
-        val ptPackage = ptResources.getResourcePackageName(R.string.app_name)
-
-        val ptFieldNames = collectStringFieldNames("com.novelreader.R$string\$")
-        val enResources: Resources = context.createPackageContext(
-            "com.novelreader",
-            0
-        ).resources.also { it.configuration.setLocale(java.util.Locale.ENGLISH) }
-
-        // (Implementation note: the simpler path is to use AssetManager.list() on
-        // res/values/strings.xml and res/values-en/strings.xml directly. The below
-        // is the production-safe version: load both XMLs via the R class.)
-        val ptKeys = ptFieldNames.toSet()
-        val enKeys = collectStringFieldNames("com.novelreader.R$string\$").toSet()
-        assertThat(enKeys).containsAtLeastElementsIn(ptKeys)
-    }
-
-    private fun collectStringFieldNames(internalPrefix: String): List<String> {
-        val rClass = Class.forName("com.novelreader.R\$string")
-        return rClass.declaredFields
-            .filter { java.lang.reflect.Modifier.isStatic(it.modifiers) }
-            .map { it.name }
+        val enResources = context.createPackageContext(packageName, 0).resources.also {
+            it.configuration.setLocale(Locale.ENGLISH)
+        }
+        val missing = allStringNames.filter { name ->
+            enResources.getIdentifier(name, "string", packageName) == 0
+        }
+        assertThat(missing).isEmpty()
     }
 }
 ```
 
-(Note: this test as written above is illustrative. The engineer should replace the body with a Resources-based check that loads both `values/strings.xml` and `values-en/strings.xml` via `Resources.getXml` or by comparing the parsed XML files. The R-class reflection approach is fragile; the cleaner alternative is to parse the two XMLs in `app/src/main/res/` directly using `Resources.getResourceEntryName` on both, or to read the XMLs at test time using `java.io.File`.)
+The reflection approach enumerates every `R.string.*` field (the merged list across all locales). Each name is then looked up in the en-locale Resources. A missing lookup (`id == 0`) means the en translation was never declared. Robolectric provides the `Context`; `Locale.ENGLISH` is set on a copy of the resources so we query the en values directory, not the default.
 
 - [ ] **Step 4: Run the test to verify it fails**
 
