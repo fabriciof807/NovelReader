@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.pager.HorizontalPager
@@ -28,6 +29,7 @@ import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -236,7 +238,7 @@ fun PersonagensTab(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             if (onImportCharacters != null) {
-                SmallFloatingActionButton(
+                ExtendedFloatingActionButton(
                     onClick = {
                         importUrl = ""
                         showImportDialog = true
@@ -245,12 +247,21 @@ fun PersonagensTab(
                 ) {
                     Icon(
                         Icons.Default.Public,
-                        contentDescription = stringResource(R.string.import_characters)
+                        contentDescription = null
                     )
+                    Spacer(Modifier.width(8.dp))
+                    Text(stringResource(R.string.personagens_import_label))
                 }
             }
-            FloatingActionButton(onClick = { showAddDialog = true }) {
-                Icon(Icons.Default.Add, contentDescription = stringResource(R.string.add))
+            ExtendedFloatingActionButton(
+                onClick = { showAddDialog = true }
+            ) {
+                Icon(
+                    Icons.Default.Add,
+                    contentDescription = null
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(stringResource(R.string.personagens_add_label))
             }
         }
     }

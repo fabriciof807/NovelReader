@@ -260,4 +260,8 @@
     <string name="import_preview_title">Import preview</string>
     <string name="import_preview_count">%1$d novels · %2$d bookmarks · %3$d characters</string>
     <string name="import_preview_import">Import %d selected</string>
+
+    <!-- Personagens tab FAB labels -->
+    <string name="personagens_add_label">Add</string>
+    <string name="personagens_import_label">Import</string>
 </resources>
