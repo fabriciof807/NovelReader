@@ -5,6 +5,7 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import com.google.common.truth.Truth.assertThat
 import com.novelreader.ui.theme.NovelReaderTheme
@@ -23,9 +24,10 @@ class LibraryTabScrollTest {
     val composeTestRule = createAndroidComposeRule<ComponentActivity>()
 
     @Test
-    fun `rememberSaveable LazyListState persists scroll index across activity recreation`() {
+    fun `rememberSaveable LazyListState persists scroll index across state restoration`() {
+        val restorationTester = StateRestorationTester(composeTestRule)
         var state: LazyListState? = null
-        composeTestRule.setContent {
+        restorationTester.setContent {
             NovelReaderTheme {
                 val s = rememberSaveable(saver = LazyListState.Saver) { LazyListState() }
                 state = s
@@ -36,8 +38,7 @@ class LibraryTabScrollTest {
         composeTestRule.waitForIdle()
         composeTestRule.runOnUiThread { assertThat(state!!.firstVisibleItemIndex).isEqualTo(15) }
 
-        composeTestRule.activity.recreate()
-        composeTestRule.waitForIdle()
+        restorationTester.emulateSavedInstanceStateRestore()
         composeTestRule.runOnUiThread { assertThat(state!!.firstVisibleItemIndex).isEqualTo(15) }
     }
 }
