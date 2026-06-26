@@ -105,6 +105,28 @@ For novels from sites not listed, the generic parser tries to extract the main c
 
 ---
 
+## Version history
+
+### v2.4.2 (2026-06-26)
+
+UI/UX polish and infrastructure:
+
+- **Reader**: chapter list in the bottom sheet now wraps to 4 lines (was 1)
+- **Library**: empty state with illustration and "Add your first novel" CTA
+- **Library**: "Reading" badge now shows relative time (e.g. "Lendo · há 2 h")
+- **Library** and **Chapters**: scroll position is remembered between visits (per-novel for the chapters tab)
+- **Personagens tab**: ExtendedFAB with labels for Add and Import actions
+- **A11y**: contentDescription audit of 42 icon-only buttons (0 functional changes needed)
+- **Haptics**: light haptic feedback on bookmark add, FAB tap, and tab switch
+- **i18n**: complete English translations (all pt-BR keys mirrored in `values-en`)
+- **Dynamic color**: opt-in toggle in Settings (Android 12+)
+- **Tab transitions**: 220ms slide between library, reader, and settings
+- **Test infrastructure**: Compose UI test base (Robolectric)
+
+No data migration required.
+
+---
+
 ## What's next
 
 See [`docs/ARCHITECTURE-REVIEW.md`](docs/ARCHITECTURE-REVIEW.md) for the history of architectural improvements and the `handoff-*.md` files (gitignored) for the current project state.

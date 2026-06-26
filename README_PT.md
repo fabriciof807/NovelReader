@@ -103,6 +103,28 @@ Para novels de sites não listados, o parser genérico tenta extrair o conteúdo
 
 ---
 
+## Histórico de versões
+
+### v2.4.2 (2026-06-26)
+
+Polimento de UI/UX e infraestrutura:
+
+- **Leitor**: lista de capítulos no bottom sheet agora quebra em até 4 linhas (antes 1)
+- **Biblioteca**: estado vazio com ilustração e CTA "Adicione sua primeira novel"
+- **Biblioteca**: badge "Lendo" agora mostra tempo relativo (ex. "Lendo · há 2 h")
+- **Biblioteca** e **Capítulos**: posição de scroll é lembrada entre visitas (por novel na aba de capítulos)
+- **Aba Personagens**: ExtendedFAB com rótulos para Adicionar e Importar
+- **A11y**: auditoria de `contentDescription` em 42 botões só com ícone (0 alterações funcionais)
+- **Hápticos**: feedback háptico leve ao adicionar bookmark, tocar FAB e trocar de aba
+- **i18n**: traduções completas para inglês (todas as chaves pt-BR espelhadas em `values-en`)
+- **Cor dinâmica**: toggle opt-in em Configurações (Android 12+)
+- **Transições de aba**: slide de 220ms entre biblioteca, leitor e configurações
+- **Infraestrutura de teste**: base de testes Compose UI (Robolectric)
+
+Sem migração de dados necessária.
+
+---
+
 ## Próximos passos
 
 Veja [`docs/ARCHITECTURE-REVIEW.md`](docs/ARCHITECTURE-REVIEW.md) para o histórico de melhorias arquiteturais e os arquivos `handoff-*.md` (gitignored) para o estado atual do projeto.
