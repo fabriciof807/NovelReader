@@ -52,6 +52,8 @@
     <string name="language">Idioma</string>
     <string name="portuguese">Português</string>
     <string name="english">Inglês</string>
+    <string name="settings_dynamic_color_title">Tema dinâmico (Android 12+)</string>
+    <string name="settings_dynamic_color_subtitle">Usa as cores do seu sistema</string>
 
     <!-- Import -->
     <string name="import_action">Importar</string>

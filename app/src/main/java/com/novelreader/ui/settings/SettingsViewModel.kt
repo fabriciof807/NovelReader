@@ -30,6 +30,9 @@ class SettingsViewModel @Inject constructor(
     val locale: StateFlow<String> = appPreferences.locale
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "pt")
 
+    val dynamicColorEnabled: StateFlow<Boolean> = appPreferences.dynamicColorEnabled
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+
     private val _exportedJson = MutableSharedFlow<String>(extraBufferCapacity = 1)
     val exportedJson: SharedFlow<String> = _exportedJson
 
@@ -57,6 +60,12 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             appPreferences.updateLocale(locale)
             activity.recreate()
+        }
+    }
+
+    fun updateDynamicColorEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            appPreferences.updateDynamicColorEnabled(enabled)
         }
     }
 

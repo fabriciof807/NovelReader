@@ -51,8 +51,12 @@ class MainActivity : ComponentActivity() {
         handleIntent(intent)
         setContent {
             val appTheme by appPreferences.appTheme.collectAsState(initial = "system")
+            val dynamicColor by appPreferences.dynamicColorEnabled.collectAsState(initial = true)
 
-            NovelReaderTheme(appTheme = appTheme) {
+            NovelReaderTheme(
+                appTheme = appTheme,
+                useDynamicColor = dynamicColor
+            ) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background

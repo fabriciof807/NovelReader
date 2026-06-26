@@ -1,5 +1,6 @@
 package com.novelreader.ui.settings
 
+import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
@@ -42,12 +43,14 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -83,6 +86,8 @@ fun SettingsScreen(
 ) {
     val appTheme by viewModel.appTheme.collectAsState()
     val locale by viewModel.locale.collectAsState()
+    val dynamicColorEnabled by viewModel.dynamicColorEnabled.collectAsState()
+    val isAndroid12OrLater = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val jsonRef = remember { mutableStateOf<String?>(null) }
@@ -337,6 +342,20 @@ fun SettingsScreen(
                     onClick = { viewModel.updateAppTheme("dark") }
                 )
             }
+
+            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+
+            ListItem(
+                headlineContent = { Text(stringResource(R.string.settings_dynamic_color_title)) },
+                supportingContent = { Text(stringResource(R.string.settings_dynamic_color_subtitle)) },
+                trailingContent = {
+                    Switch(
+                        checked = dynamicColorEnabled,
+                        onCheckedChange = { viewModel.updateDynamicColorEnabled(it) },
+                        enabled = isAndroid12OrLater
+                    )
+                }
+            )
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
