@@ -273,6 +273,8 @@ import androidx.compose.ui.test.onNodeWithText
 
 The `+pt-rBR` locale qualifier forces Robolectric to resolve `R.string.*` against the default `values/strings.xml` (Portuguese) rather than `values-en/strings.xml`. Without it, Robolectric's default English locale makes the test look for "Add" and "Import" and never finds the Portuguese labels.
 
+**Note on qualifier format:** the working form is `qualifiers = "pt-rBR-w400dp-h800dp"` (language/region must precede size qualifiers per Android's resource qualifier ordering rules). The `+pt-rBR` form from the initial brief is malformed.
+
 - [ ] **Step 3: Run the test to verify it fails**
 
 Run: `./gradlew :app:testDebugUnitTest --tests "com.novelreader.ui.library.tabs.PersonagensTabFabTest"`
@@ -417,7 +419,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [33], qualifiers = "w400dp-h800dp")
+@Config(sdk = [33], qualifiers = "pt-rBR-w400dp-h800dp")
 class LibraryEmptyStateTest {
 
     @get:Rule
