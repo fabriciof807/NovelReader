@@ -243,7 +243,7 @@ fun ReaderScreen(
                                 color = if (chapter.isRead && !isCurrent)
                                     MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                                 else MaterialTheme.colorScheme.onSurface,
-                                maxLines = 1,
+                                maxLines = 4,
                                 overflow = TextOverflow.Ellipsis,
                                 modifier = Modifier.weight(1f)
                             )
