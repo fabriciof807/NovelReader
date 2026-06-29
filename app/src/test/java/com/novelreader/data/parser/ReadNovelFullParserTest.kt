@@ -90,4 +90,17 @@ class ReadNovelFullParserTest {
         val parsed = parser.parse(doc, "x.html")
         assertThat(parsed.chapterTitle).isEqualTo("Chapter 1 - Title")
     }
+
+    @Test fun `parses chapter title with em-dash separator stripping novel name`() {
+        val html = """
+            <html><head><title>Martial Peak — Chapter 5 — The Trial</title></head><body>
+            <h3 class="title" itemprop="name">Martial Peak</h3>
+            <div id="chr-content"><p>content</p></div>
+            </body></html>
+        """.trimIndent()
+        val doc = Jsoup.parse(html)
+        val parsed = parser.parse(doc, "chapter_5.html")
+        assertThat(parsed.novelTitle).isEqualTo("Martial Peak")
+        assertThat(parsed.chapterTitle).isEqualTo("Chapter 5 — The Trial")
+    }
 }

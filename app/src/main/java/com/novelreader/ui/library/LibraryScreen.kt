@@ -300,6 +300,7 @@ fun LibraryScreen(
                 )
                 1 -> ChaptersTab(
                     novelId = selectedNovel?.id ?: 0L,
+                    novelTitle = selectedNovel?.title,
                     chapters = chapters,
                     bookmarkCounts = bookmarkCounts,
                     sortOrder = chapterSortOrder,

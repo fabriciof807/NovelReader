@@ -35,6 +35,7 @@ class FreeWebNovelParserTest {
         """.trimIndent()
         val doc = Jsoup.parse(html)
         val parsed = parser.parse(doc, "chapter_1.html")
+        // canonical 'Novel - Chapter N | SiteName' pattern: strip site suffix, keep chapter part
         assertThat(parsed.chapterTitle).isEqualTo("Chapter 1")
     }
 
@@ -57,5 +58,29 @@ class FreeWebNovelParserTest {
         val parsed = parser.parse(doc, "x.html")
         assertThat(parsed.content).contains("Para A")
         assertThat(parsed.content).contains("Para B")
+    }
+
+    @Test fun `parses chapter title with en-dash separator stripping novel name`() {
+        val html = """
+            <html><head><title>Cultivation Novel – Chapter 5 – The Trial</title></head><body>
+            <div class="chapter-content"><p>content</p></div>
+            </body></html>
+        """.trimIndent()
+        val doc = Jsoup.parse(html)
+        val parsed = parser.parse(doc, "chapter_5.html")
+        assertThat(parsed.novelTitle).isEqualTo("Cultivation Novel")
+        assertThat(parsed.chapterTitle).isEqualTo("Chapter 5 – The Trial")
+    }
+
+    @Test fun `parses chapter title with pipe separator stripping novel name`() {
+        val html = """
+            <html><head><title>Cultivation Novel | Chapter 5 | The Trial</title></head><body>
+            <div class="chapter-content"><p>content</p></div>
+            </body></html>
+        """.trimIndent()
+        val doc = Jsoup.parse(html)
+        val parsed = parser.parse(doc, "chapter_5.html")
+        assertThat(parsed.novelTitle).isEqualTo("Cultivation Novel")
+        assertThat(parsed.chapterTitle).isEqualTo("Chapter 5")
     }
 }

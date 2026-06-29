@@ -2,7 +2,7 @@ package com.novelreader.data.parser
 
 object TitleExtractor {
 
-    private val SEPARATORS = listOf(" | ", " – ", " - ", " — ", " :: ", " « ")
+    private val SEPARATORS = listOf(" | ", " – ", " - ", " — ", " :: ", " « ", ": ")
 
     fun extractNovelTitle(fullTitle: String?): String? {
         if (fullTitle.isNullOrBlank()) return null
@@ -72,5 +72,41 @@ object TitleExtractor {
             .replace(Regex("""\s*[-–—|•·:]\s*(read|ler|online|free|gratis).*$""", RegexOption.IGNORE_CASE), "")
             .trim()
         return cleaned.ifBlank { title }
+    }
+
+    fun cleanChapterTitleForDisplay(title: String, novelTitle: String?): String {
+        if (novelTitle.isNullOrBlank()) return title
+        if (!title.startsWith(novelTitle, ignoreCase = true)) return title
+        val after = title.substring(novelTitle.length)
+        for (sep in SEPARATORS) {
+            if (after.startsWith(sep)) {
+                return after.substring(sep.length).trimStart()
+            }
+        }
+        return title
+    }
+
+    fun extractChapterTitleFromTag(titleTag: String, novelTitle: String?): String? {
+        if (titleTag.isBlank()) return null
+        val title = titleTag.trim()
+
+        val withoutNovel = if (!novelTitle.isNullOrBlank() &&
+            title.startsWith(novelTitle, ignoreCase = true)
+        ) {
+            val after = title.substring(novelTitle.length)
+            var stripped: String? = null
+            for (sep in SEPARATORS) {
+                if (after.startsWith(sep)) {
+                    stripped = after.substring(sep.length).trimStart()
+                    break
+                }
+            }
+            stripped ?: title
+        } else {
+            title
+        }
+
+        val pipeIdx = withoutNovel.indexOf(" | ")
+        return if (pipeIdx > 0) withoutNovel.substring(0, pipeIdx).trim() else withoutNovel
     }
 }

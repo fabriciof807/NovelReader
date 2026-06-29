@@ -31,43 +31,42 @@ class ReadNovelFullParser @Inject constructor() : AbstractNovelParser() {
 
         val ogTitle = doc.selectFirst("meta[property=og:title]")
         if (ogTitle != null) {
-            val content = ogTitle.attr("content").trim()
-            val parts = content.split(Regex("\\s*[-–]\\s*"))
-            if (parts.size >= 2 && !parts[0].contains("Chapter", ignoreCase = true)) {
-                return parts[0].trim()
-            }
+            val extracted = TitleExtractor.extractNovelTitle(ogTitle.attr("content").trim())
+            if (extracted != null) return extracted
         }
 
         val titleTag = doc.title().trim()
         if (titleTag.isNotEmpty()) {
-            val dashParts = titleTag.split(Regex("\\s*[-–]\\s*"))
-            if (dashParts.size >= 2 && !dashParts[0].contains("Chapter", ignoreCase = true)) {
-                return dashParts[0].trim()
-            }
+            val extracted = TitleExtractor.extractNovelTitle(titleTag)
+            if (extracted != null) return extracted
+            return titleTag
         }
 
         return fromFileName(fileName)
     }
 
     private fun parseChapterTitle(doc: Document, fileName: String): String {
+        val novelTitleGuess = parseNovelTitle(doc, fileName)
         val chrText = doc.selectFirst("span.chr-text")
-        if (chrText != null) return chrText.text().trim()
+        if (chrText != null) {
+            val cleaned = TitleExtractor.cleanChapterTitleForDisplay(chrText.text().trim(), novelTitleGuess)
+            return cleaned
+        }
 
         val h2 = doc.selectFirst("h2")
         if (h2 != null) {
             val text = h2.text().trim()
-            if (text.contains("Chapter", ignoreCase = true)) return text
+            if (text.contains("Chapter", ignoreCase = true)) {
+                return TitleExtractor.cleanChapterTitleForDisplay(text, novelTitleGuess)
+            }
         }
 
         val titleTag = doc.title().trim()
         if (titleTag.isNotEmpty()) {
-            val parts = titleTag.split(Regex("\\s*[-–]\\s*"))
-            if (parts.size >= 2) {
-                val afterNovel = parts.drop(1).joinToString(" - ")
-                val pipeIndex = afterNovel.indexOf(" | ")
-                return if (pipeIndex > 0) afterNovel.substring(0, pipeIndex).trim()
-                else afterNovel.trim()
-            }
+            val fromTag = TitleExtractor.extractChapterTitleFromTag(titleTag, novelTitleGuess)
+            if (fromTag != null) return fromTag
+            val extracted = TitleExtractor.extractChapterTitle(titleTag, novelTitleGuess)
+            if (extracted != null) return extracted
         }
 
         return fromFileName(fileName)

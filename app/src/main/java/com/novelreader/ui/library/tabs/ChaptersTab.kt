@@ -58,6 +58,7 @@ import kotlinx.coroutines.flow.debounce
 @Composable
 fun ChaptersTab(
     novelId: Long = 0L,
+    novelTitle: String? = null,
     chapters: List<ChapterEntity>,
     bookmarkCounts: Map<Long, Int>,
     onChapterClick: (Long) -> Unit,
@@ -169,7 +170,7 @@ fun ChaptersTab(
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text(
-                        text = chapter.title,
+                        text = com.novelreader.data.parser.TitleExtractor.cleanChapterTitleForDisplay(chapter.title, novelTitle),
                         style = MaterialTheme.typography.bodyLarge,
                         fontWeight = if (chapter.isRead) FontWeight.Normal else FontWeight.SemiBold,
                         maxLines = 4,

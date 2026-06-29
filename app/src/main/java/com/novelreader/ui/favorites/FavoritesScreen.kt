@@ -41,6 +41,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.novelreader.R
+import com.novelreader.data.parser.TitleExtractor
 import com.novelreader.util.formatRelativeTime
 import java.text.DateFormat
 import java.util.Date
@@ -153,7 +154,10 @@ fun FavoritesScreen(
                         }
                         BookmarkItem(
                             title = item.bookmark.title,
-                            chapterTitle = item.chapter?.title ?: "",
+                            chapterTitle = TitleExtractor.cleanChapterTitleForDisplay(
+                                item.chapter?.title ?: "",
+                                item.novel?.title
+                            ),
                             note = item.bookmark.note,
                             createdAt = item.bookmark.createdAt,
                             onClick = {

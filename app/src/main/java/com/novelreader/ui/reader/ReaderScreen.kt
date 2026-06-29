@@ -285,7 +285,7 @@ fun ReaderScreen(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = chapter.title,
+                                    text = com.novelreader.data.parser.TitleExtractor.cleanChapterTitleForDisplay(chapter.title, state.novel?.title),
                                     style = MaterialTheme.typography.bodyMedium,
                                     fontWeight = if (isCurrent || !chapter.isRead) FontWeight.SemiBold else FontWeight.Normal,
                                     color = if (chapter.isRead && !isCurrent)
@@ -327,7 +327,10 @@ fun ReaderScreen(
                             )
                         } else {
                             Text(
-                                state.chapter?.title ?: "",
+                                com.novelreader.data.parser.TitleExtractor.cleanChapterTitleForDisplay(
+                                    state.chapter?.title ?: "",
+                                    state.novel?.title
+                                ),
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )

@@ -25,13 +25,9 @@ class FreeWebNovelParser @Inject constructor() : AbstractNovelParser() {
     private fun parseNovelTitle(doc: Document, fileName: String): String {
         val titleTag = doc.title().trim()
         if (titleTag.isNotEmpty()) {
-            val parts = titleTag.split(Regex("\\s*-\\s*"))
-            if (parts.size >= 2 && !parts[0].contains("Chapter", ignoreCase = true)) {
-                return parts[0].trim()
-            }
-            val pipeIndex = titleTag.indexOf(" | ")
-            return if (pipeIndex > 0) titleTag.substring(0, pipeIndex).trim()
-            else titleTag
+            val extracted = TitleExtractor.extractNovelTitle(titleTag)
+            if (extracted != null) return extracted
+            return titleTag
         }
 
         val h1 = doc.selectFirst("h1")
@@ -44,23 +40,29 @@ class FreeWebNovelParser @Inject constructor() : AbstractNovelParser() {
     }
 
     private fun parseChapterTitle(doc: Document, fileName: String): String {
+        val novelTitleGuess = parseNovelTitle(doc, fileName)
         val titleTag = doc.title().trim()
         if (titleTag.isNotEmpty()) {
-            val dashParts = titleTag.split(Regex("\\s*-\\s*"))
-            if (dashParts.size >= 2) {
-                val afterNovel = dashParts.drop(1).joinToString(" - ")
-                val pipeIndex = afterNovel.indexOf(" | ")
-                return if (pipeIndex > 0) afterNovel.substring(0, pipeIndex).trim()
-                else afterNovel.trim()
-            }
+            val fromTag = TitleExtractor.extractChapterTitleFromTag(titleTag, novelTitleGuess)
+            if (fromTag != null) return fromTag
+            val extracted = TitleExtractor.extractChapterTitle(titleTag, novelTitleGuess)
+            if (extracted != null) return extracted
         }
 
         val h2 = doc.selectFirst("h2")
-        if (h2 != null) return h2.text().trim()
+        if (h2 != null) {
+            val cleaned = TitleExtractor.cleanChapterTitleForDisplay(h2.text().trim(), novelTitleGuess)
+            if (cleaned != h2.text().trim()) return cleaned
+            if (cleaned.isNotEmpty()) return cleaned
+        }
 
         val h1 = doc.selectFirst("h1")
-        if (h1 != null && !h1.text().contains(fileName.substringBeforeLast(".").take(20), ignoreCase = true)) {
-            return h1.text().trim()
+        if (h1 != null) {
+            val text = h1.text().trim()
+            if (!text.contains(fileName.substringBeforeLast(".").take(20), ignoreCase = true)) {
+                val cleaned = TitleExtractor.cleanChapterTitleForDisplay(text, novelTitleGuess)
+                return cleaned
+            }
         }
 
         return fromFileName(fileName)
