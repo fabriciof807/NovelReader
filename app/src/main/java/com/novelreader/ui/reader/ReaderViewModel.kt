@@ -262,6 +262,10 @@ class ReaderViewModel @Inject constructor(
         viewModelScope.launch { readerPreferences.updateAutoScrollSpeed(speed) }
     }
 
+    fun updateKeepScreenOn(value: Boolean) {
+        viewModelScope.launch { readerPreferences.updateKeepScreenOn(value) }
+    }
+
     private var searchJob: Job? = null
 
     fun activateSearch() {

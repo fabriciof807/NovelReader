@@ -3,6 +3,7 @@ package com.novelreader.data.local.preferences
 import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
@@ -20,7 +21,8 @@ data class ReaderConfig(
     val fontFamily: String = "serif",
     val lineHeight: Float = 1.8f,
     val theme: String = "light",
-    val autoScrollSpeed: Float = 0f
+    val autoScrollSpeed: Float = 0f,
+    val keepScreenOn: Boolean = true
 )
 
 @Singleton
@@ -33,6 +35,7 @@ class ReaderPreferences @Inject constructor(
         val LINE_HEIGHT = stringPreferencesKey("line_height")
         val THEME = stringPreferencesKey("theme")
         val AUTO_SCROLL_SPEED = stringPreferencesKey("auto_scroll_speed")
+        val KEEP_SCREEN_ON = booleanPreferencesKey("keep_screen_on")
     }
 
     val config: Flow<ReaderConfig> = context.dataStore.data.map { prefs ->
@@ -41,7 +44,8 @@ class ReaderPreferences @Inject constructor(
             fontFamily = prefs[Keys.FONT_FAMILY] ?: "serif",
             lineHeight = prefs[Keys.LINE_HEIGHT]?.toFloatOrNull() ?: 1.8f,
             theme = prefs[Keys.THEME] ?: "light",
-            autoScrollSpeed = prefs[Keys.AUTO_SCROLL_SPEED]?.toFloatOrNull() ?: 0f
+            autoScrollSpeed = prefs[Keys.AUTO_SCROLL_SPEED]?.toFloatOrNull() ?: 0f,
+            keepScreenOn = prefs[Keys.KEEP_SCREEN_ON] ?: true
         )
     }
 
@@ -59,5 +63,9 @@ class ReaderPreferences @Inject constructor(
 
     suspend fun updateTheme(theme: String) {
         context.dataStore.edit { it[Keys.THEME] = theme }
+    }
+
+    suspend fun updateKeepScreenOn(value: Boolean) {
+        context.dataStore.edit { it[Keys.KEEP_SCREEN_ON] = value }
     }
 }

@@ -207,4 +207,11 @@ class ReaderViewModelTest {
         assertThat(after).isEqualTo(before)
         coVerify { readerPrefs.updateAutoScrollSpeed(1.5f) }
     }
+
+    @Test
+    fun `updateKeepScreenOn calls readerPreferences updateKeepScreenOn`() = runTest {
+        viewModel = createViewModel()
+        viewModel.updateKeepScreenOn(false)
+        coVerify { readerPrefs.updateKeepScreenOn(false) }
+    }
 }
