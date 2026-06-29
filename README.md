@@ -107,7 +107,7 @@ For novels from sites not listed, the generic parser tries to extract the main c
 
 ## Version history
 
-### v2.4.2 (2026-06-26)
+### v2.4.3 (2026-06-26)
 
 UI/UX polish and infrastructure:
 

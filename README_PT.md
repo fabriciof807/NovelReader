@@ -105,7 +105,7 @@ Para novels de sites não listados, o parser genérico tenta extrair o conteúdo
 
 ## Histórico de versões
 
-### v2.4.2 (2026-06-26)
+### v2.4.3 (2026-06-26)
 
 Polimento de UI/UX e infraestrutura:
 
