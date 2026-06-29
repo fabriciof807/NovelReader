@@ -274,4 +274,9 @@
     <string name="library_empty_body">Import a local file or download from the web</string>
     <string name="library_empty_import_local">Local file</string>
     <string name="library_empty_import_web">From the web</string>
+
+    <!-- Chapter list search -->
+    <string name="chapter_list_search_hint">Search chapter...</string>
+    <string name="chapters_count_filtered">%1$d of %2$d chapters</string>
+    <string name="chapter_list_no_matches">No chapters found</string>
 </resources>

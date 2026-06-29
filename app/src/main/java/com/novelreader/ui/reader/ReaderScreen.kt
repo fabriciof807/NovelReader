@@ -103,6 +103,7 @@ fun ReaderScreen(
     var showAddBookmarkDialog by remember { mutableStateOf(false) }
     var bookmarkToDelete by remember { mutableStateOf<Long?>(null) }
     var showChapterList by remember { mutableStateOf(false) }
+    var chapterSearchQuery by remember { mutableStateOf("") }
 
     val haptic = LocalHapticFeedback.current
     val view = LocalView.current
@@ -221,48 +222,82 @@ fun ReaderScreen(
 
     if (showChapterList && state.allChapters.isNotEmpty()) {
         val chapterListSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        val filtered = remember(chapterSearchQuery, state.allChapters) {
+            filterChaptersByQuery(state.allChapters, chapterSearchQuery)
+        }
         ModalBottomSheet(
-            onDismissRequest = { showChapterList = false },
+            onDismissRequest = {
+                chapterSearchQuery = ""
+                showChapterList = false
+            },
             sheetState = chapterListSheetState
         ) {
             Column(modifier = Modifier.fillMaxWidth()) {
+                OutlinedTextField(
+                    value = chapterSearchQuery,
+                    onValueChange = { chapterSearchQuery = it },
+                    placeholder = { Text(stringResource(R.string.chapter_list_search_hint)) },
+                    singleLine = true,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                )
                 Text(
-                    text = stringResource(R.string.chapters_count, state.allChapters.size),
+                    text = if (chapterSearchQuery.isNotBlank())
+                        stringResource(R.string.chapters_count_filtered, filtered.size, state.allChapters.size)
+                    else
+                        stringResource(R.string.chapters_count, state.allChapters.size),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                 )
-                LazyColumn(modifier = Modifier.fillMaxWidth()) {
-                    items(state.allChapters, key = { it.id }) { chapter ->
-                        val isCurrent = chapter.id == state.chapter?.id
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    saveScroll()
-                                    viewModel.loadChapter(chapter.id)
-                                    showChapterList = false
-                                }
-                                .background(
-                                    if (isCurrent) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
-                                    else Color.Transparent
+                if (chapterSearchQuery.isNotBlank() && filtered.isEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 32.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = stringResource(R.string.chapter_list_no_matches),
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                        )
+                    }
+                } else {
+                    LazyColumn(modifier = Modifier.fillMaxWidth()) {
+                        items(filtered, key = { it.id }) { chapter ->
+                            val isCurrent = chapter.id == state.chapter?.id
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        saveScroll()
+                                        viewModel.loadChapter(chapter.id)
+                                        chapterSearchQuery = ""
+                                        showChapterList = false
+                                    }
+                                    .background(
+                                        if (isCurrent) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+                                        else Color.Transparent
+                                    )
+                                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = chapter.title,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = if (isCurrent || !chapter.isRead) FontWeight.SemiBold else FontWeight.Normal,
+                                    color = if (chapter.isRead && !isCurrent)
+                                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                                    else MaterialTheme.colorScheme.onSurface,
+                                    maxLines = 4,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.weight(1f)
                                 )
-                                .padding(horizontal = 16.dp, vertical = 12.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = chapter.title,
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = if (isCurrent || !chapter.isRead) FontWeight.SemiBold else FontWeight.Normal,
-                                color = if (chapter.isRead && !isCurrent)
-                                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                                else MaterialTheme.colorScheme.onSurface,
-                                maxLines = 4,
-                                overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier.weight(1f)
-                            )
+                            }
+                            HorizontalDivider()
                         }
-                        HorizontalDivider()
                     }
                 }
                 Spacer(modifier = Modifier.height(16.dp))
