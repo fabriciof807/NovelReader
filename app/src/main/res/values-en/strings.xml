@@ -119,6 +119,7 @@
 
     <!-- Bookmark delete confirmation -->
     <string name="delete_bookmark_confirm">Are you sure you want to remove this bookmark?</string>
+    <string name="favorites_search_hint">Search favorites...</string>
 
     <!-- Search -->
     <string name="search">Search</string>

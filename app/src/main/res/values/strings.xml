@@ -119,6 +119,7 @@
 
     <!-- Bookmark delete confirmation -->
     <string name="delete_bookmark_confirm">Tem certeza que deseja remover este favorito?</string>
+    <string name="favorites_search_hint">Buscar favoritos...</string>
 
     <!-- Search -->
     <string name="search">Buscar</string>

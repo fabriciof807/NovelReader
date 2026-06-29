@@ -22,6 +22,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -40,6 +41,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.novelreader.R
+import com.novelreader.util.formatRelativeTime
+import java.text.DateFormat
+import java.util.Date
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -84,68 +89,82 @@ fun FavoritesScreen(
             )
         }
     ) { padding ->
-        if (items.isEmpty()) {
-            Column(
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+        ) {
+            OutlinedTextField(
+                value = viewModel.searchQuery.collectAsState().value,
+                onValueChange = viewModel::setSearchQuery,
+                placeholder = { Text(stringResource(R.string.favorites_search_hint)) },
+                singleLine = true,
                 modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-                    .padding(32.dp),
-                horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally
-            ) {
-                Spacer(modifier = Modifier.height(80.dp))
-                Icon(
-                    Icons.Default.Bookmark,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
-                    modifier = Modifier.size(64.dp)
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(
-                    stringResource(R.string.no_favorites),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    stringResource(R.string.add_favorites_hint),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
-                )
-            }
-        } else {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-            ) {
-                itemsIndexed(items, key = { _, item -> item.bookmark.id }) { index, item ->
-                    val isFirstForNovel = index == 0 || items[index - 1].novel?.id != item.novel?.id
-                    if (isFirstForNovel) {
-                        item.novel?.let { novel ->
-                            Text(
-                                text = novel.title,
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.Bold,
-                                modifier = Modifier.padding(
-                                    start = 16.dp,
-                                    top = 12.dp,
-                                    bottom = 4.dp
-                                )
-                            )
-                        }
-                    }
-                    BookmarkItem(
-                        title = item.bookmark.title,
-                        chapterTitle = item.chapter?.title ?: "",
-                        note = item.bookmark.note,
-                        onClick = {
-                            item.chapter?.let { chapter ->
-                                onChapterClick(chapter.novelId, chapter.id)
-                            }
-                        },
-                        onDelete = { bookmarkToDelete = item.bookmark.id }
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+            )
+            if (items.isEmpty()) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(32.dp),
+                    horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally
+                ) {
+                    Spacer(modifier = Modifier.height(80.dp))
+                    Icon(
+                        Icons.Default.Bookmark,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
+                        modifier = Modifier.size(64.dp)
                     )
-                    HorizontalDivider()
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        stringResource(R.string.no_favorites),
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        stringResource(R.string.add_favorites_hint),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+                    )
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                ) {
+                    itemsIndexed(items, key = { _, item -> item.bookmark.id }) { index, item ->
+                        val isFirstForNovel = index == 0 || items[index - 1].novel?.id != item.novel?.id
+                        if (isFirstForNovel) {
+                            item.novel?.let { novel ->
+                                Text(
+                                    text = novel.title,
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.padding(
+                                        start = 16.dp,
+                                        top = 12.dp,
+                                        bottom = 4.dp
+                                    )
+                                )
+                            }
+                        }
+                        BookmarkItem(
+                            title = item.bookmark.title,
+                            chapterTitle = item.chapter?.title ?: "",
+                            note = item.bookmark.note,
+                            createdAt = item.bookmark.createdAt,
+                            onClick = {
+                                item.chapter?.let { chapter ->
+                                    onChapterClick(chapter.novelId, chapter.id)
+                                }
+                            },
+                            onDelete = { bookmarkToDelete = item.bookmark.id }
+                        )
+                        HorizontalDivider()
+                    }
                 }
             }
         }
@@ -157,6 +176,7 @@ private fun BookmarkItem(
     title: String,
     chapterTitle: String,
     note: String?,
+    createdAt: Long,
     onClick: () -> Unit,
     onDelete: () -> Unit
 ) {
@@ -193,6 +213,15 @@ private fun BookmarkItem(
                     )
                 }
             }
+            Text(
+                text = formatRelativeTime(createdAt) ?: DateFormat
+                    .getDateInstance(DateFormat.SHORT, Locale.getDefault())
+                    .format(Date(createdAt)),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
         }
         Spacer(modifier = Modifier.width(4.dp))
         IconButton(onClick = onDelete) {

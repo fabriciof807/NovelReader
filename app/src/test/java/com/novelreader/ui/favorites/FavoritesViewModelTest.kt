@@ -155,4 +155,123 @@ class FavoritesViewModelTest {
             cancelAndConsumeRemainingEvents()
         }
     }
+
+    private val bookmarkNoChapter = BookmarkEntity(
+        id = 101, chapterId = 999L, title = "Orphan note", page = 0, note = "standalone"
+    )
+
+    @Test
+    fun setSearchQuery_blankQuery_returnsAll() = runTest {
+        every { bookmarkDao.getAll() } returns flowOf(listOf(bookmark))
+        coEvery { chapterDao.getChaptersByIds(listOf(10L)) } returns listOf(chapter)
+        coEvery { novelDao.getNovelsByIds(listOf(1L)) } returns listOf(novel)
+
+        viewModel = FavoritesViewModel(novelDao, chapterDao, bookmarkDao)
+        viewModel.setSearchQuery("nonexistent")
+        viewModel.setSearchQuery("")
+
+        viewModel.displayItems.test {
+            val items = awaitItem()
+            assertThat(items).hasSize(1)
+            assertThat(items[0].bookmark.id).isEqualTo(100L)
+            cancelAndConsumeRemainingEvents()
+        }
+    }
+
+    @Test
+    fun setSearchQuery_matchesBookmarkTitle() = runTest {
+        every { bookmarkDao.getAll() } returns flowOf(listOf(bookmark))
+        coEvery { chapterDao.getChaptersByIds(listOf(10L)) } returns listOf(chapter)
+        coEvery { novelDao.getNovelsByIds(listOf(1L)) } returns listOf(novel)
+
+        viewModel = FavoritesViewModel(novelDao, chapterDao, bookmarkDao)
+        viewModel.setSearchQuery("Great")
+
+        viewModel.displayItems.test {
+            val items = awaitItem()
+            assertThat(items).hasSize(1)
+            assertThat(items[0].bookmark.id).isEqualTo(100L)
+            cancelAndConsumeRemainingEvents()
+        }
+    }
+
+    @Test
+    fun setSearchQuery_matchesChapterTitle() = runTest {
+        every { bookmarkDao.getAll() } returns flowOf(listOf(bookmark))
+        coEvery { chapterDao.getChaptersByIds(listOf(10L)) } returns listOf(chapter)
+        coEvery { novelDao.getNovelsByIds(listOf(1L)) } returns listOf(novel)
+
+        viewModel = FavoritesViewModel(novelDao, chapterDao, bookmarkDao)
+        viewModel.setSearchQuery("Beginning")
+
+        viewModel.displayItems.test {
+            val items = awaitItem()
+            assertThat(items).hasSize(1)
+            cancelAndConsumeRemainingEvents()
+        }
+    }
+
+    @Test
+    fun setSearchQuery_matchesNote() = runTest {
+        every { bookmarkDao.getAll() } returns flowOf(listOf(bookmark))
+        coEvery { chapterDao.getChaptersByIds(listOf(10L)) } returns listOf(chapter)
+        coEvery { novelDao.getNovelsByIds(listOf(1L)) } returns listOf(novel)
+
+        viewModel = FavoritesViewModel(novelDao, chapterDao, bookmarkDao)
+        viewModel.setSearchQuery("Amazing")
+
+        viewModel.displayItems.test {
+            val items = awaitItem()
+            assertThat(items).hasSize(1)
+            cancelAndConsumeRemainingEvents()
+        }
+    }
+
+    @Test
+    fun setSearchQuery_isCaseInsensitive() = runTest {
+        every { bookmarkDao.getAll() } returns flowOf(listOf(bookmark))
+        coEvery { chapterDao.getChaptersByIds(listOf(10L)) } returns listOf(chapter)
+        coEvery { novelDao.getNovelsByIds(listOf(1L)) } returns listOf(novel)
+
+        viewModel = FavoritesViewModel(novelDao, chapterDao, bookmarkDao)
+        viewModel.setSearchQuery("GREAT")
+
+        viewModel.displayItems.test {
+            val items = awaitItem()
+            assertThat(items).hasSize(1)
+            cancelAndConsumeRemainingEvents()
+        }
+    }
+
+    @Test
+    fun setSearchQuery_nonMatching_returnsEmpty() = runTest {
+        every { bookmarkDao.getAll() } returns flowOf(listOf(bookmark))
+        coEvery { chapterDao.getChaptersByIds(listOf(10L)) } returns listOf(chapter)
+        coEvery { novelDao.getNovelsByIds(listOf(1L)) } returns listOf(novel)
+
+        viewModel = FavoritesViewModel(novelDao, chapterDao, bookmarkDao)
+        viewModel.setSearchQuery("zzz-no-match")
+
+        viewModel.displayItems.test {
+            val items = awaitItem()
+            assertThat(items).isEmpty()
+            cancelAndConsumeRemainingEvents()
+        }
+    }
+
+    @Test
+    fun setSearchQuery_nullChapter_stillMatchesOnBookmarkTitle() = runTest {
+        every { bookmarkDao.getAll() } returns flowOf(listOf(bookmarkNoChapter))
+        coEvery { chapterDao.getChaptersByIds(listOf(999L)) } returns emptyList()
+
+        viewModel = FavoritesViewModel(novelDao, chapterDao, bookmarkDao)
+        viewModel.setSearchQuery("Orphan")
+
+        viewModel.displayItems.test {
+            val items = awaitItem()
+            assertThat(items).hasSize(1)
+            assertThat(items[0].chapter).isNull()
+            cancelAndConsumeRemainingEvents()
+        }
+    }
 }
