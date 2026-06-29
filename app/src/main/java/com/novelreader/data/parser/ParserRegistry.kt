@@ -1,6 +1,5 @@
 package com.novelreader.data.parser
 
-import android.net.Uri
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
 import javax.inject.Inject
@@ -14,12 +13,20 @@ class ParserRegistry @Inject constructor(
 ) {
 
     fun getParserForUrl(url: String): NovelParser {
-        val domain = Uri.parse(url).host ?: ""
+        val domain = hostOf(url)
         return findParserForDomain(domain) ?: fallbackParser
     }
 
     fun getParserForDomain(domain: String): NovelParser {
         return findParserForDomain(domain) ?: fallbackParser
+    }
+
+    private fun hostOf(url: String): String {
+        return try {
+            java.net.URI(url).host.orEmpty()
+        } catch (_: Exception) {
+            ""
+        }
     }
 
     private fun findParserForDomain(domain: String): NovelParser? {
@@ -77,7 +84,11 @@ class ParserRegistry @Inject constructor(
         for (link in links) {
             val href = link.attr("abs:href")
             if (href.isNotEmpty()) {
-                val host = Uri.parse(href).host
+                val host = try {
+                    java.net.URI(href).host
+                } catch (_: Exception) {
+                    null
+                }
                 if (host != null && findParserForDomain(host) != null) {
                     return host
                 }

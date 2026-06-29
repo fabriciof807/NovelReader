@@ -1,13 +1,16 @@
 package com.novelreader.domain.usecase.webimport
 
-import android.net.Uri
+import android.util.Log
+import com.novelreader.BuildConfig
 import com.novelreader.domain.usecase.ChapterLink
 import com.novelreader.data.parser.ChapterNumberExtractor
 import com.novelreader.data.parser.TitleExtractor
 import com.novelreader.util.StringUtils
 import kotlinx.coroutines.delay
+import org.jsoup.HttpStatusException
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
+import java.net.URI
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -17,26 +20,46 @@ data class CrawlResult(
     val novelTitle: String?
 )
 
-private val USER_AGENT = "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.6422.113 Mobile Safari/537.36"
 private const val MAX_PAGES = 50
-private const val PAGE_DELAY_MS = 500L
+private const val PAGE_DELAY_MS = 1_500L
+private const val DIAGNOSTIC_TAG = "WebFetchProbe"
+private const val BODY_SNIPPET_MAX = 256
 
 @Singleton
-class ChapterCrawler @Inject constructor() {
+class ChapterCrawler @Inject constructor(
+    private val httpClient: HttpClient
+) {
+    @androidx.annotation.VisibleForTesting
+    constructor(httpClient: HttpClient, requireHttps: Boolean) : this(httpClient) {
+        this.requireHttps = requireHttps
+    }
+
+    private var requireHttps: Boolean = true
 
     suspend fun crawlChapterList(homeUrl: String): CrawlResult {
-        val homeDomain = Uri.parse(homeUrl).host ?: ""
+        val homeDomain = hostOf(homeUrl)
         val allLinks = mutableListOf<ChapterLink>()
+        val attemptedUrls = mutableListOf<String>()
         var currentUrl: String? = homeUrl
         var coverUrl: String? = null
         var novelTitle: String? = null
         var pageCount = 0
+        var lastFetchedStatus: Int = 0
+        var lastFetchedBody: String = ""
+        var lastFetchedFinalUrl: String? = null
+        var paginationState: ChapterPaginationState? = null
 
         while (currentUrl != null && pageCount < MAX_PAGES) {
-            val doc = fetchPage(currentUrl)
+            val fetched = fetchPage(currentUrl)
+            attemptedUrls.add(currentUrl)
+            lastFetchedStatus = fetched.statusCode
+            lastFetchedBody = fetched.body
+            lastFetchedFinalUrl = fetched.finalUrl
+            val doc = fetched.document
             if (pageCount == 0) {
                 coverUrl = extractCoverUrl(doc, homeUrl)
                 novelTitle = extractNovelTitle(doc)
+                paginationState = extractChapterPaginationState(doc)
             }
             allLinks.addAll(extractChapterLinks(doc, currentUrl, homeDomain))
             currentUrl = findNextPageUrl(doc, currentUrl)
@@ -44,17 +67,103 @@ class ChapterCrawler @Inject constructor() {
             if (currentUrl != null) delay(PAGE_DELAY_MS)
         }
 
+        if (paginationState != null && paginationState.totalPage > 1) {
+            for (page in 2..paginationState.totalPage) {
+                val ajaxUrl = buildChapterPaginationUrl(currentUrl ?: homeUrl, page, paginationState.pageSize)
+                if (ajaxUrl == null) break
+                val resp = httpClient.get(
+                    url = ajaxUrl,
+                    referrer = homeUrl,
+                    extraHeaders = mapOf("X-Requested-With" to "XMLHttpRequest")
+                )
+                attemptedUrls.add(ajaxUrl)
+                lastFetchedStatus = resp.statusCode
+                lastFetchedBody = resp.body
+                val parsed = parseChapterPaginationJson(resp.body)
+                if (parsed == null) {
+                    if (BuildConfig.DEBUG) {
+                        Log.w(DIAGNOSTIC_TAG, "chapterPagination JSON parse failed for $ajaxUrl")
+                    }
+                    break
+                }
+                val fragment = Jsoup.parseBodyFragment(parsed.html)
+                allLinks.addAll(extractChapterLinks(fragment, homeUrl, homeDomain))
+                delay(PAGE_DELAY_MS)
+            }
+        }
+
         val links = allLinks.distinctBy { it.url }
+        if (BuildConfig.DEBUG) {
+            Log.w(
+                DIAGNOSTIC_TAG,
+                "chapterList: homeUrl=$homeUrl totalFound=${links.size} attemptedUrls=${attemptedUrls.size} " +
+                    "expectedTotal=${paginationState?.totalChapters ?: -1} totalPages=${paginationState?.totalPage ?: -1}"
+            )
+        }
+        if (BuildConfig.DEBUG && links.isEmpty() && attemptedUrls.isNotEmpty()) {
+            val diag = extractZeroLinksDiagnostic(
+                callSite = "crawler",
+                homeUrl = homeUrl,
+                finalUrl = lastFetchedFinalUrl,
+                statusCode = lastFetchedStatus,
+                body = lastFetchedBody,
+                attemptedUrls = attemptedUrls.toList()
+            )
+            Log.w(DIAGNOSTIC_TAG, formatZeroLinksDiagnostic(diag))
+        }
         return CrawlResult(links = links, coverUrl = coverUrl, novelTitle = novelTitle)
     }
 
-    private fun fetchPage(url: String): Document {
-        if (!url.startsWith("https://")) throw SecurityException("Apenas HTTPS permitido")
-        return Jsoup.connect(url)
-            .userAgent(USER_AGENT)
-            .timeout(30_000)
-            .followRedirects(true)
-            .get()
+    private fun buildChapterPaginationUrl(currentUrl: String, page: Int, pageSize: Int): String? {
+        return try {
+            val uri = URI(currentUrl)
+            val query = uri.rawQuery.orEmpty()
+            val separator = if (query.isEmpty()) "?" else "&"
+            val params = "ajax=chapters&page=$page&pageSize=$pageSize"
+            val fragment = if (uri.rawFragment != null) "#${uri.rawFragment}" else ""
+            "${uri.scheme}://${uri.authority}${uri.path.orEmpty()}$separator$params$fragment"
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    private data class FetchedPage(
+        val document: Document,
+        val statusCode: Int,
+        val body: String,
+        val finalUrl: String?
+    )
+
+    private suspend fun fetchPage(url: String): FetchedPage {
+        if (requireHttps && !url.startsWith("https://")) throw SecurityException("Apenas HTTPS permitido")
+        val response = httpClient.get(url)
+        val statusCode = response.statusCode
+        if (statusCode in 200..299) {
+            return FetchedPage(
+                document = Jsoup.parse(response.body, url),
+                statusCode = statusCode,
+                body = response.body,
+                finalUrl = response.finalUrl
+            )
+        }
+        if (BuildConfig.DEBUG) {
+            val diag = extractWebFetchDiagnostic(
+                throwable = HttpStatusException("HTTP error fetching URL", statusCode, url),
+                callSite = "crawler",
+                serverHeader = response.headers["Server"],
+                cfRayHeader = response.headers["cf-ray"],
+                setCookieHeader = response.headers["Set-Cookie"],
+                bodySnippet = response.body.take(BODY_SNIPPET_MAX)
+            )
+            Log.w(DIAGNOSTIC_TAG, formatWebFetchDiagnostic(diag))
+        }
+        if (isCloudflareChallenge(statusCode, response.body, response.headers)) {
+            throw CloudflareChallengeRequiredException(
+                url = url,
+                evidence = response.body.take(BODY_SNIPPET_MAX)
+            )
+        }
+        throw HttpStatusException("HTTP error fetching URL", statusCode, url)
     }
 
     private fun findNextPageUrl(doc: Document, currentUrl: String): String? {
@@ -94,7 +203,7 @@ class ChapterCrawler @Inject constructor() {
             if (href.isBlank() || href == "#" || href.startsWith("javascript:") || href.startsWith("mailto:")) continue
             if (text.isBlank()) continue
 
-            val linkDomain = Uri.parse(href).host
+            val linkDomain = hostOfOrNull(href)
             if (linkDomain != null && linkDomain != homeDomain && !href.startsWith("/")) continue
 
             val normalizedHref = if (href.startsWith("/")) {
@@ -127,7 +236,7 @@ class ChapterCrawler @Inject constructor() {
                 if (href.isBlank() || href == "#" || href.startsWith("javascript:") || href.startsWith("mailto:")) continue
                 if (text.isBlank()) continue
 
-                val linkDomain = Uri.parse(href).host
+                val linkDomain = hostOfOrNull(href)
                 if (linkDomain != null && linkDomain != homeDomain && !href.startsWith("/")) continue
 
                 val normalizedHref = if (href.startsWith("/")) {
@@ -191,6 +300,10 @@ class ChapterCrawler @Inject constructor() {
         val baseUrl = base.trimEnd('/')
         return if (url.startsWith("/")) "$baseUrl$url" else "$baseUrl/$url"
     }
+
+    private fun hostOf(url: String): String = try { URI(url).host.orEmpty() } catch (_: Exception) { "" }
+
+    private fun hostOfOrNull(url: String): String? = try { URI(url).host } catch (_: Exception) { null }
 
     private fun extractNovelTitle(doc: Document): String? {
         val ogTitle = doc.select("meta[property=og:title]").first()?.attr("content")?.trim()

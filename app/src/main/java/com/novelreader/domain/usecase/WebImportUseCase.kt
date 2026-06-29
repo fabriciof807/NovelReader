@@ -13,6 +13,7 @@ import com.novelreader.domain.usecase.webimport.ImportedChapter
 import com.novelreader.domain.usecase.webimport.NovelImporter
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import java.io.File
 import javax.inject.Inject
@@ -28,6 +29,10 @@ class WebImportUseCase @Inject constructor(
     private val failedChapterDao: FailedChapterDao,
     @IoDispatcher private val io: CoroutineDispatcher
 ) {
+    companion object {
+        private const val CHAPTER_FETCH_PACING_MS = 2_000L
+    }
+
     suspend fun fetchChapterList(homeUrl: String): Result<FetchResult> = withContext(io) {
         try {
             val crawl = chapterCrawler.crawlChapterList(homeUrl)
@@ -67,6 +72,7 @@ class WebImportUseCase @Inject constructor(
             val importedChapters = mutableListOf<ImportedChapter>()
 
             for ((index, link) in sorted.withIndex()) {
+                if (index > 0) delay(CHAPTER_FETCH_PACING_MS)
                 val fileName = novelImporter.fileNameFromUrl(link.url, link.chapterNumber)
                 if (fileName in existingFileNames) {
                     successCount++

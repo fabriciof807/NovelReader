@@ -87,6 +87,11 @@ class MainActivity : ComponentActivity() {
                 intent.removeExtra(EXTRA_DEEP_LINK_ACTION)
                 intent.removeExtra(EXTRA_NOVEL_ID)
             }
+        } else if (action == ACTION_OPEN_CLOUDFLARE_SOLVER) {
+            val novelId = intent.getLongExtra(EXTRA_NOVEL_ID, -1L)
+            deepLinkBus.emit(DeepLinkAction.OpenCloudflareSolver(if (novelId > 0L) novelId else null))
+            intent.removeExtra(EXTRA_DEEP_LINK_ACTION)
+            intent.removeExtra(EXTRA_NOVEL_ID)
         }
     }
 
@@ -105,5 +110,6 @@ class MainActivity : ComponentActivity() {
         const val EXTRA_DEEP_LINK_ACTION = "deep_link_action"
         const val EXTRA_NOVEL_ID = "deep_link_novel_id"
         const val ACTION_OPEN_NOVEL = "open_novel"
+        const val ACTION_OPEN_CLOUDFLARE_SOLVER = "open_cloudflare_solver"
     }
 }

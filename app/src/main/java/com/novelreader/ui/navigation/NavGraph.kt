@@ -62,6 +62,11 @@ fun NovelReaderNavGraph(
                         launchSingleTop = true
                     }
                 }
+                is DeepLinkAction.OpenCloudflareSolver -> {
+                    navController.navigate(Routes.IMPORT) {
+                        launchSingleTop = true
+                    }
+                }
             }
         }
     }

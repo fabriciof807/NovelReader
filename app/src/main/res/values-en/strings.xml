@@ -116,6 +116,13 @@
     <string name="web_import_import_error">Import error</string>
     <string name="web_import_complete_with_errors">Import complete with %d error(s)</string>
     <string name="web_import_leave_background">Leave in background</string>
+    <string name="cloudflare_challenge_title">Site verification</string>
+    <string name="cloudflare_challenge_body">The site requires a one-time browser verification. Tap below to open the verification window.</string>
+    <string name="cloudflare_challenge_action">Verify connection</string>
+    <string name="cloudflare_challenge_cancel">Cancel</string>
+    <string name="cloudflare_challenge_waiting">The site is verifying your browser. Please wait a few seconds…</string>
+    <string name="cloudflare_reverify_notif_title">Verification expired — %s</string>
+    <string name="cloudflare_reverify_notif_body">Tap to verify and continue receiving new chapters.</string>
 
     <!-- Bookmark delete confirmation -->
     <string name="delete_bookmark_confirm">Are you sure you want to remove this bookmark?</string>
@@ -274,7 +281,7 @@
     <string name="library_empty_title">Add your first novel</string>
     <string name="library_empty_body">Import a local file or download from the web</string>
     <string name="library_empty_import_local">Local file</string>
-    <string name="library_empty_import_web">From the web</string>
+    <string name="library_empty_import_web">From web</string>
 
     <!-- Chapter list search -->
     <string name="chapter_list_search_hint">Search chapter...</string>

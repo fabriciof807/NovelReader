@@ -9,6 +9,7 @@ import javax.inject.Singleton
 
 sealed class DeepLinkAction {
     data class ViewNovel(val novelId: Long) : DeepLinkAction()
+    data class OpenCloudflareSolver(val novelId: Long?) : DeepLinkAction()
 }
 
 @Singleton

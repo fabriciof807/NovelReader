@@ -1,0 +1,104 @@
+package com.novelreader.domain.usecase.webimport
+
+import com.google.common.truth.Truth.assertThat
+import kotlinx.coroutines.runBlocking
+import okhttp3.OkHttpClient
+import okhttp3.mockwebserver.MockResponse
+import okhttp3.mockwebserver.MockWebServer
+import org.junit.After
+import org.junit.Before
+import org.junit.Test
+import java.util.concurrent.TimeUnit
+
+class HttpClientTest {
+
+    private lateinit var server: MockWebServer
+    private lateinit var client: HttpClient
+
+    @Before
+    fun setUp() {
+        server = MockWebServer()
+        server.start()
+        val okClient = OkHttpClient.Builder()
+            .connectTimeout(30, TimeUnit.SECONDS)
+            .readTimeout(30, TimeUnit.SECONDS)
+            .followRedirects(true)
+            .followSslRedirects(true)
+            .build()
+        client = HttpClient(InMemoryCloudflareCookieStore(), okClient)
+    }
+
+    @After
+    fun tearDown() {
+        server.shutdown()
+    }
+
+    @Test
+    fun get_sendsModernChromeUserAgentAndSecFetchHeaders() = runBlocking {
+        server.enqueue(MockResponse().setBody("<html>ok</html>").setResponseCode(200))
+
+        client.get("http://127.0.0.1:${server.port}/page")
+
+        val request = server.takeRequest()
+        val ua = request.getHeader("User-Agent") ?: ""
+        assertThat(ua).contains("Chrome/131")
+        assertThat(ua).doesNotContain("Chrome/125")
+        assertThat(request.getHeader("Accept-Encoding")).contains("br")
+        assertThat(request.getHeader("Sec-Fetch-Site")).isNotNull()
+        assertThat(request.getHeader("Sec-Fetch-Mode")).isNotNull()
+        assertThat(request.getHeader("Sec-Fetch-Dest")).isNotNull()
+        assertThat(request.getHeader("Upgrade-Insecure-Requests")).isEqualTo("1")
+    }
+
+    @Test
+    fun get_returns4xxResponseWithoutThrowing() = runBlocking {
+        val body = "<!DOCTYPE html><html><title>Just a moment...</title></html>"
+        server.enqueue(MockResponse().setBody(body).setResponseCode(403))
+
+        val response = client.get("http://127.0.0.1:${server.port}/blocked")
+
+        assertThat(response.statusCode).isEqualTo(403)
+        assertThat(response.body).contains("Just a moment")
+    }
+
+    @Test
+    fun get_replaysCloudflareClearanceCookieFromStore() = runBlocking {
+        val store = InMemoryCloudflareCookieStore()
+        store.putCookies(
+            url = "http://127.0.0.1:${server.port}",
+            cookies = listOf(StoredCookie(name = "cf_clearance", value = "abc123", domain = "127.0.0.1", path = "/", expiresAt = System.currentTimeMillis() + 3_600_000L))
+        )
+        val clientWithStore = HttpClient(store, OkHttpClient.Builder()
+            .connectTimeout(30, TimeUnit.SECONDS)
+            .readTimeout(30, TimeUnit.SECONDS)
+            .followRedirects(true)
+            .followSslRedirects(true)
+            .build())
+        server.enqueue(MockResponse().setBody("ok").setResponseCode(200))
+
+        clientWithStore.get("http://127.0.0.1:${server.port}/page")
+
+        val request = server.takeRequest()
+        val cookieHeader = request.getHeader("Cookie") ?: ""
+        assertThat(cookieHeader).contains("cf_clearance=abc123")
+    }
+
+    @Test
+    fun get_decompressesBrotliEncodedBody() = runBlocking {
+        val original = "<html><body>Hello, brotli world!</body></html>"
+        val compressedHex = "1f2d0000c46d6c5dfb81e348bbb37b411044b001072e61f438e15d595f8a4b82717a4864b8efa8db9f863113714517"
+        val compressed = compressedHex.chunked(2).map { it.toInt(16).toByte() }.toByteArray()
+        val buffer = okio.Buffer().write(compressed)
+        server.enqueue(
+            MockResponse()
+                .setBody(buffer)
+                .addHeader("Content-Encoding", "br")
+                .setResponseCode(200)
+        )
+
+        val response = client.get("http://127.0.0.1:${server.port}/br")
+
+        assertThat(response.statusCode).isEqualTo(200)
+        assertThat(response.body).isEqualTo(original)
+    }
+}

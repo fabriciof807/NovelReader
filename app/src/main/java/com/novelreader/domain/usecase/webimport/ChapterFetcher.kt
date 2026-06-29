@@ -1,5 +1,7 @@
 package com.novelreader.domain.usecase.webimport
 
+import android.util.Log
+import com.novelreader.BuildConfig
 import com.novelreader.data.parser.HtmlSanitizer
 import com.novelreader.data.parser.ParserRegistry
 import kotlinx.coroutines.delay
@@ -15,12 +17,20 @@ data class FetchedChapter(
     val fileName: String
 )
 
-private val USER_AGENT = "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.6422.113 Mobile Safari/537.36"
+private const val DIAGNOSTIC_TAG = "WebFetchProbe"
+private const val BODY_SNIPPET_MAX = 256
 
 @Singleton
 class ChapterFetcher @Inject constructor(
-    private val parserRegistry: ParserRegistry
+    private val parserRegistry: ParserRegistry,
+    private val httpClient: HttpClient
 ) {
+    @androidx.annotation.VisibleForTesting
+    constructor(parserRegistry: ParserRegistry, httpClient: HttpClient, requireHttps: Boolean) : this(parserRegistry, httpClient) {
+        this.requireHttps = requireHttps
+    }
+
+    private var requireHttps: Boolean = true
     suspend fun fetch(url: String, fileName: String, chapterTitle: String): FetchedChapter {
         val chapterDoc = fetchWithRetry(url)
         val parser = parserRegistry.getParserForUrl(url)
@@ -38,25 +48,59 @@ class ChapterFetcher @Inject constructor(
     }
 
     private suspend fun fetchWithRetry(url: String, maxRetries: Int = 3): Document {
-        if (!url.startsWith("https://")) throw SecurityException("Apenas HTTPS permitido")
+        if (requireHttps && !url.startsWith("https://")) throw SecurityException("Apenas HTTPS permitido")
         var lastException: Exception? = null
         for (attempt in 1..maxRetries) {
             try {
                 if (attempt > 1) delay(attempt * 2000L)
-                return Jsoup.connect(url)
-                    .userAgent(USER_AGENT)
-                    .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
-                    .header("Accept-Language", "en-US,en;q=0.5")
-                    .referrer(url.substringBeforeLast("/"))
-                    .timeout(30_000)
-                    .followRedirects(true)
-                    .get()
+                val response = httpClient.get(url, referrer = url.substringBeforeLast("/"))
+                val statusCode = response.statusCode
+                if (statusCode in 200..299) {
+                    return Jsoup.parse(response.body, url)
+                }
+                if (isCloudflareChallenge(statusCode, response.body, response.headers)) {
+                    if (BuildConfig.DEBUG) {
+                        val diag = extractWebFetchDiagnostic(
+                            throwable = HttpStatusException("HTTP error fetching URL", statusCode, url),
+                            callSite = "fetcher",
+                            serverHeader = response.headers["Server"],
+                            cfRayHeader = response.headers["cf-ray"],
+                            setCookieHeader = response.headers["Set-Cookie"],
+                            bodySnippet = response.body.take(BODY_SNIPPET_MAX)
+                        )
+                        Log.w(DIAGNOSTIC_TAG, formatWebFetchDiagnostic(diag))
+                    }
+                    throw CloudflareChallengeRequiredException(
+                        url = url,
+                        evidence = response.body.take(BODY_SNIPPET_MAX)
+                    )
+                }
+                if (BuildConfig.DEBUG) {
+                    val diag = extractWebFetchDiagnostic(
+                        throwable = HttpStatusException("HTTP error fetching URL", statusCode, url),
+                        callSite = "fetcher",
+                        serverHeader = response.headers["Server"],
+                        cfRayHeader = response.headers["cf-ray"],
+                        setCookieHeader = response.headers["Set-Cookie"],
+                        bodySnippet = response.body.take(BODY_SNIPPET_MAX)
+                    )
+                    Log.w(DIAGNOSTIC_TAG, formatWebFetchDiagnostic(diag))
+                }
+                val hse = HttpStatusException("HTTP error fetching URL", statusCode, url)
+                lastException = hse
+                val retryDelay = nextRetryDelayMs(attempt, statusCode)
+                if (retryDelay > 0L) {
+                    delay(retryDelay)
+                } else {
+                    throw hse
+                }
+            } catch (e: CloudflareChallengeRequiredException) {
+                throw e
             } catch (e: HttpStatusException) {
                 lastException = e
-                if (e.statusCode == 429) {
-                    delay(attempt * 3000L)
-                } else if (e.statusCode in 500..599) {
-                    delay(attempt * 2000L)
+                val retryDelay = nextRetryDelayMs(attempt, e.statusCode)
+                if (retryDelay > 0L && attempt < maxRetries) {
+                    delay(retryDelay)
                 } else {
                     throw e
                 }

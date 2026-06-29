@@ -10,6 +10,7 @@ import com.novelreader.data.local.db.dao.NovelDao
 import com.novelreader.domain.usecase.ChapterLink
 import com.novelreader.domain.usecase.ImportJobSpec
 import com.novelreader.domain.usecase.WebImportUseCase
+import com.novelreader.domain.usecase.webimport.CloudflareChallengeRequiredException
 import com.novelreader.util.StringUtils
 import com.novelreader.di.qualifiers.IoDispatcher
 import dagger.assisted.Assisted
@@ -67,7 +68,14 @@ class ChapterUpdateCheckWorker @AssistedInject constructor(
 
                         novelDao.updateLastChecked(novel.id, System.currentTimeMillis())
                     },
-                    onFailure = { }
+                    onFailure = { e ->
+                        if (e is CloudflareChallengeRequiredException) {
+                            notificationHelper.postCloudflareReverifyNotification(
+                                novelId = novel.id,
+                                novelTitle = novel.title
+                            )
+                        }
+                    }
                 )
             }
 

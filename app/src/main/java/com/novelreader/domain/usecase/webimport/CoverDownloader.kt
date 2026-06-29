@@ -1,28 +1,27 @@
 package com.novelreader.domain.usecase.webimport
 
 import com.novelreader.data.local.db.dao.NovelDao
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.io.File
-import java.net.URL
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
 class CoverDownloader @Inject constructor(
-    private val novelDao: NovelDao
+    private val novelDao: NovelDao,
+    private val httpClient: HttpClient
 ) {
-    suspend fun downloadCover(novelId: Long, coverUrl: String, filesDir: File) {
+    suspend fun downloadCover(novelId: Long, coverUrl: String, filesDir: File) = withContext(Dispatchers.IO) {
         try {
-            if (!coverUrl.startsWith("https://")) return
+            if (!coverUrl.startsWith("https://")) return@withContext
+            val response = httpClient.get(coverUrl)
+            if (response.statusCode !in 200..299) return@withContext
             val dir = File(filesDir, "covers")
             dir.mkdirs()
             val dest = File(dir, "novel_$novelId.jpg")
-            val connection = URL(coverUrl).openConnection()
-            connection.connectTimeout = 10_000
-            connection.readTimeout = 10_000
-            connection.getInputStream().use { input ->
-                dest.outputStream().use { output ->
-                    input.copyTo(output)
-                }
+            dest.outputStream().use { output ->
+                output.write(response.body.toByteArray(Charsets.UTF_8))
             }
             if (dest.exists()) {
                 novelDao.updateCoverPath(novelId, dest.absolutePath)

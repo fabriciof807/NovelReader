@@ -1,10 +1,9 @@
 package com.novelreader.util
 
-import android.net.Uri
-
 object StringUtils {
     fun fileNameFromUrl(url: String, fallback: String = "chapter"): String {
-        val segments = Uri.parse(url).pathSegments
+        val path = try { java.net.URI(url).path.orEmpty() } catch (_: Exception) { "" }
+        val segments = path.split('/').filter { it.isNotEmpty() }
         val last = segments.lastOrNull() ?: return fallback
         return last.removeSuffix(".html").removeSuffix(".htm").removeSuffix(".php")
             .replace(Regex("[\\\\/:*?\"<>|\\x00-\\x1f]"), "_")

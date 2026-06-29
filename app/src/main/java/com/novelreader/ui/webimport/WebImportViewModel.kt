@@ -8,6 +8,9 @@ import com.novelreader.domain.usecase.ChapterLink
 import com.novelreader.domain.usecase.FetchResult
 import com.novelreader.domain.usecase.WebImportUseCase
 import com.novelreader.domain.usecase.BackgroundImportManager
+import com.novelreader.domain.usecase.webimport.CloudflareChallengeRequiredException
+import com.novelreader.domain.usecase.webimport.CloudflareCookieStore
+import com.novelreader.domain.usecase.webimport.StoredCookie
 import com.novelreader.R
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -19,6 +22,10 @@ import javax.inject.Inject
 data class WebImportError(
     val url: String,
     val message: String
+)
+
+data class CloudflareChallenge(
+    val url: String
 )
 
 data class WebImportState(
@@ -34,14 +41,16 @@ data class WebImportState(
     val errors: List<WebImportError> = emptyList(),
     val importedNovelId: Long? = null,
     val importComplete: Boolean = false,
-    val error: String? = null
+    val error: String? = null,
+    val cloudflareChallenge: CloudflareChallenge? = null
 )
 
 @HiltViewModel
 class WebImportViewModel @Inject constructor(
     application: Application,
     private val webImportUseCase: WebImportUseCase,
-    private val backgroundImportManager: BackgroundImportManager
+    private val backgroundImportManager: BackgroundImportManager,
+    private val cookieStore: CloudflareCookieStore
 ) : AndroidViewModel(application) {
 
     private val _state = MutableStateFlow(WebImportState())
@@ -80,7 +89,8 @@ class WebImportViewModel @Inject constructor(
             error = null,
             chapters = emptyList(),
             novelTitle = "",
-            selectedUrls = emptySet()
+            selectedUrls = emptySet(),
+            cloudflareChallenge = null
         )
 
         viewModelScope.launch {
@@ -99,13 +109,42 @@ class WebImportViewModel @Inject constructor(
                     )
                 },
                 onFailure = { e ->
-                    _state.value = _state.value.copy(
-                        isLoadingChapters = false,
-                        error = e.message ?: getApplication<Application>().getString(R.string.web_import_error_fetch)
-                    )
+                    if (e is CloudflareChallengeRequiredException) {
+                        _state.value = _state.value.copy(
+                            isLoadingChapters = false,
+                            cloudflareChallenge = CloudflareChallenge(url = e.url)
+                        )
+                    } else {
+                        _state.value = _state.value.copy(
+                            isLoadingChapters = false,
+                            error = e.message ?: getApplication<Application>().getString(R.string.web_import_error_fetch)
+                        )
+                    }
                 }
             )
         }
+    }
+
+    fun onCloudflareCookiesCollected(cookies: List<Pair<String, String>>) {
+        val challenge = _state.value.cloudflareChallenge ?: return
+        val stored = cookies.map { (name, value) ->
+            StoredCookie(
+                name = name,
+                value = value,
+                domain = java.net.URI(challenge.url).host.orEmpty(),
+                path = "/",
+                expiresAt = System.currentTimeMillis() + 24 * 60 * 60 * 1000L
+            )
+        }
+        viewModelScope.launch {
+            cookieStore.putCookies(challenge.url, stored)
+            _state.value = _state.value.copy(cloudflareChallenge = null)
+            fetchChapters()
+        }
+    }
+
+    fun onCloudflareChallengeCancelled() {
+        _state.value = _state.value.copy(cloudflareChallenge = null)
     }
 
     fun toggleChapter(url: String) {

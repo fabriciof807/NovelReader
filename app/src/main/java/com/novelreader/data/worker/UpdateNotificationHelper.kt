@@ -70,4 +70,35 @@ class UpdateNotificationHelper @Inject constructor(
         val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         manager.notify(NOTIFICATION_ID_BASE + novelId.toInt(), notification)
     }
+
+    fun postCloudflareReverifyNotification(novelId: Long, novelTitle: String) {
+        ensureChannel()
+
+        val title = context.getString(R.string.cloudflare_reverify_notif_title, novelTitle)
+        val text = context.getString(R.string.cloudflare_reverify_notif_body)
+
+        val intent = context.packageManager.getLaunchIntentForPackage(context.packageName)?.apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            putExtra(MainActivity.EXTRA_DEEP_LINK_ACTION, MainActivity.ACTION_OPEN_CLOUDFLARE_SOLVER)
+            putExtra(MainActivity.EXTRA_NOVEL_ID, novelId)
+        }
+        val pendingIntent = PendingIntent.getActivity(
+            context,
+            (NOTIFICATION_ID_BASE + 1000 + novelId).toInt(),
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val notification = NotificationCompat.Builder(context, CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_notification)
+            .setContentTitle(title)
+            .setContentText(text)
+            .setAutoCancel(true)
+            .setCategory(NotificationCompat.CATEGORY_STATUS)
+            .setContentIntent(pendingIntent)
+            .build()
+
+        val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        manager.notify(NOTIFICATION_ID_BASE + 1000 + novelId.toInt(), notification)
+    }
 }

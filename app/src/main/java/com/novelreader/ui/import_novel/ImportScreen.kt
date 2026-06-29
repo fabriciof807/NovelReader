@@ -55,6 +55,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.novelreader.R
+import com.novelreader.ui.webimport.CloudflareChallengeDialog
 import com.novelreader.ui.webimport.WebImportViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -420,6 +421,14 @@ private fun WebImportTab(
                     Text(stringResource(R.string.web_import_import_selected, state.selectedUrls.size))
                 }
             }
+        }
+
+        state.cloudflareChallenge?.let { challenge ->
+            CloudflareChallengeDialog(
+                url = challenge.url,
+                onCookiesCollected = viewModel::onCloudflareCookiesCollected,
+                onCancel = viewModel::onCloudflareChallengeCancelled
+            )
         }
     }
 }

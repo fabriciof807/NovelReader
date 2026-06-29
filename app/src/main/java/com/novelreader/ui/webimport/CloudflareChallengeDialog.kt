@@ -1,0 +1,118 @@
+package com.novelreader.ui.webimport
+
+import android.annotation.SuppressLint
+import android.view.ViewGroup
+import android.webkit.CookieManager
+import android.webkit.WebChromeClient
+import android.webkit.WebView
+import android.webkit.WebViewClient
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
+import com.novelreader.R
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+
+@SuppressLint("SetJavaScriptEnabled")
+@Composable
+fun CloudflareChallengeDialog(
+    url: String,
+    onCookiesCollected: (cookies: List<Pair<String, String>>) -> Unit,
+    onCancel: () -> Unit
+) {
+    var isVerifying by remember { mutableStateOf(true) }
+    val scope = rememberCoroutineScope()
+
+    AlertDialog(
+        onDismissRequest = onCancel,
+        title = { Text(stringResource(R.string.cloudflare_challenge_title)) },
+        text = {
+            Column {
+                Text(stringResource(R.string.cloudflare_challenge_body))
+                Spacer(Modifier.height(8.dp))
+                if (isVerifying) {
+                    Box(
+                        modifier = Modifier.fillMaxWidth().padding(8.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                            Spacer(Modifier.height(8.dp))
+                            Text(
+                                text = stringResource(R.string.cloudflare_challenge_waiting),
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                    }
+                }
+                AndroidView(
+                    factory = { context ->
+                        WebView(context).apply {
+                            layoutParams = ViewGroup.LayoutParams(
+                                ViewGroup.LayoutParams.MATCH_PARENT,
+                                400
+                            )
+                            settings.javaScriptEnabled = true
+                            settings.domStorageEnabled = true
+                            CookieManager.getInstance().setAcceptCookie(true)
+                            CookieManager.getInstance().setAcceptThirdPartyCookies(this, true)
+                            webChromeClient = WebChromeClient()
+                            webViewClient = object : WebViewClient() {
+                                override fun onPageFinished(view: WebView, loadedUrl: String) {
+                                    scope.launch {
+                                        delay(2000)
+                                        CookieManager.getInstance().flush()
+                                        val cookies = CookieManager.getInstance().getCookie(url)
+                                            ?.split(";")
+                                            ?.mapNotNull { entry ->
+                                                val parts = entry.trim().split("=", limit = 2)
+                                                if (parts.size == 2) parts[0] to parts[1] else null
+                                            } ?: emptyList()
+                                        if (loadedUrl.contains("freewebnovel.com") &&
+                                            !loadedUrl.contains("challenge") &&
+                                            !loadedUrl.contains("cf-")
+                                        ) {
+                                            isVerifying = false
+                                            onCookiesCollected(cookies)
+                                        }
+                                    }
+                                }
+                            }
+                            loadUrl(url)
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth().height(400.dp)
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onCancel) {
+                Text(stringResource(R.string.cloudflare_challenge_cancel))
+            }
+        }
+    )
+}

@@ -14,6 +14,8 @@ import com.novelreader.data.parser.ParserRegistry
 import com.novelreader.domain.usecase.webimport.ChapterCrawler
 import com.novelreader.domain.usecase.webimport.ChapterFetcher
 import com.novelreader.domain.usecase.webimport.CoverDownloader
+import com.novelreader.domain.usecase.webimport.HttpClient
+import com.novelreader.domain.usecase.webimport.InMemoryCloudflareCookieStore
 import com.novelreader.domain.usecase.webimport.NovelImporter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
@@ -48,13 +50,14 @@ class WebImportUseCaseTest {
             fallbackParser = GenericFallbackParser(),
             mhtParser = MhtParser()
         )
-        val coverDownloader = CoverDownloader(novelDao)
+        val httpClient = HttpClient(InMemoryCloudflareCookieStore())
+        val coverDownloader = CoverDownloader(novelDao, httpClient)
         val novelImporter = NovelImporter(novelDao, chapterDao, ChapterOrderNormalizer(chapterDao))
 
         useCase = WebImportUseCase(
             context = context,
-            chapterCrawler = ChapterCrawler(),
-            chapterFetcher = ChapterFetcher(parserRegistry),
+            chapterCrawler = ChapterCrawler(httpClient),
+            chapterFetcher = ChapterFetcher(parserRegistry, httpClient),
             coverDownloader = coverDownloader,
             novelImporter = novelImporter,
             failedChapterDao = failedChapterDao,

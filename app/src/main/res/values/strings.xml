@@ -116,6 +116,13 @@
     <string name="web_import_import_error">Erro na importação</string>
     <string name="web_import_complete_with_errors">Importação concluída com %d erro(s)</string>
     <string name="web_import_leave_background">Deixar em 2º plano</string>
+    <string name="cloudflare_challenge_title">Verificação do site</string>
+    <string name="cloudflare_challenge_body">O site exige uma verificação única de navegador. Toque abaixo para abrir a janela de verificação.</string>
+    <string name="cloudflare_challenge_action">Verificar conexão</string>
+    <string name="cloudflare_challenge_cancel">Cancelar</string>
+    <string name="cloudflare_challenge_waiting">O site está verificando o seu navegador. Aguarde alguns segundos…</string>
+    <string name="cloudflare_reverify_notif_title">Verificação expirada — %s</string>
+    <string name="cloudflare_reverify_notif_body">Toque para verificar e continuar recebendo novos capítulos.</string>
 
     <!-- Bookmark delete confirmation -->
     <string name="delete_bookmark_confirm">Tem certeza que deseja remover este favorito?</string>

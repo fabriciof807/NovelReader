@@ -116,6 +116,8 @@ dependencies {
     implementation(libs.hilt.navigation.compose)
 
     implementation(libs.jsoup)
+    implementation(libs.okhttp)
+    implementation(libs.brotli.dec)
 
     implementation(libs.coil.compose)
 
