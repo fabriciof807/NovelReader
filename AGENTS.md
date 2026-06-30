@@ -185,7 +185,13 @@ Design specs and implementation plans produced by AI sessions live under `docs/s
 
 ## Current Version
 
-v2.5.1 (versionCode 19). See [README.md](README.md) (English) and [README_PT.md](README_PT.md) (Portuguese) for the user-facing documentation. Full release history in `git log`.
+v2.5.2 (versionCode 20). See [README.md](README.md) (English) and [README_PT.md](README_PT.md) (Portuguese) for the user-facing documentation. Full release history in `git log`.
+
+### v2.5.2 highlights
+
+- Fix: `ChapterFetcher` no longer falls back to `chapterDoc.body().html()` when the parser returns empty content. That fallback was capturing the entire 404 page body into stored chapter rows (the "Novel list Your Library..." footer the user reported) and overriding the chapter title with the site suffix.
+- Fix: `WebImportUseCase` now detects stale/404 content (empty, < 200 chars, or contains "Page not found"/"Not Found"/"404" markers) and refetches the chapter instead of skipping on fileName dedup. Users with v2.5.0/v2.5.1 broken chapters get a clean re-import on the next run.
+- 272+ unit tests passing.
 
 ### v2.5.1 highlights
 
