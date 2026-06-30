@@ -324,6 +324,9 @@ class LibraryViewModel @Inject constructor(
     fun selectNovel(novel: NovelEntity) {
         _selectedNovel.value = novel
         _selectedTab.value = 1
+        viewModelScope.launch {
+            novelDao.setHasUpdates(novel.id, false)
+        }
         loadChapters(novel.id)
     }
 
