@@ -29,4 +29,10 @@ object StringUtils {
             .trim()
             .ifEmpty { fallback }
     }
+
+    fun hostMatchesDomain(host: String, expected: String): Boolean {
+        val h = host.lowercase().removePrefix("www.")
+        val e = expected.lowercase().removePrefix("www.")
+        return h == e || h.endsWith(".${e}")
+    }
 }

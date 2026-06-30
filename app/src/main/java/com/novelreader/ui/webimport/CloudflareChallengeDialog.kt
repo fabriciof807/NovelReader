@@ -1,6 +1,7 @@
 package com.novelreader.ui.webimport
 
 import android.annotation.SuppressLint
+import android.net.Uri
 import android.view.ViewGroup
 import android.webkit.CookieManager
 import android.webkit.WebChromeClient
@@ -34,6 +35,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.novelreader.R
+import com.novelreader.util.StringUtils
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -41,6 +43,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun CloudflareChallengeDialog(
     url: String,
+    expectedHost: String,
     onCookiesCollected: (cookies: List<Pair<String, String>>) -> Unit,
     onCancel: () -> Unit
 ) {
@@ -92,7 +95,7 @@ fun CloudflareChallengeDialog(
                                                 val parts = entry.trim().split("=", limit = 2)
                                                 if (parts.size == 2) parts[0] to parts[1] else null
                                             } ?: emptyList()
-                                        if (loadedUrl.contains("freewebnovel.com") &&
+                                        if (StringUtils.hostMatchesDomain(Uri.parse(loadedUrl).host ?: "", expectedHost) &&
                                             !loadedUrl.contains("challenge") &&
                                             !loadedUrl.contains("cf-")
                                         ) {
