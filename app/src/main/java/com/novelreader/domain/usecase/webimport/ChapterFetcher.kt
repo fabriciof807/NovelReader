@@ -2,7 +2,6 @@ package com.novelreader.domain.usecase.webimport
 
 import android.util.Log
 import com.novelreader.BuildConfig
-import com.novelreader.data.parser.HtmlSanitizer
 import com.novelreader.data.parser.ParserRegistry
 import kotlinx.coroutines.delay
 import org.jsoup.HttpStatusException
@@ -39,12 +38,8 @@ class ChapterFetcher @Inject constructor(
         val resultTitle = parsed.chapterTitle.ifBlank {
             chapterTitle.ifBlank { fileName }
         }
-        val content = if (parsed.content.isBlank()) {
-            val bodyText = chapterDoc.body().html()
-            HtmlSanitizer.sanitizeHtml(bodyText)
-        } else parsed.content
 
-        return FetchedChapter(title = resultTitle, content = content, fileName = fileName)
+        return FetchedChapter(title = resultTitle, content = parsed.content, fileName = fileName)
     }
 
     private suspend fun fetchWithRetry(url: String, maxRetries: Int = 3): Document {

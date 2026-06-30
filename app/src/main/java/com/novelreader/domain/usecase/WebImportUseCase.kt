@@ -71,9 +71,15 @@ class WebImportUseCase @Inject constructor(
             val (novelId, existingFileNames) = novelImporter.ensureNovel(novelTitle, sourceUrl, domain, targetNovelId)
 
             val existingChapters = chapterDao.getChaptersByNovelSync(novelId)
+            val existingByFileName: Map<String, com.novelreader.data.local.db.entity.ChapterEntity> =
+                existingChapters.associateBy { it.fileName }
             val existingNumbers: Set<Int> = existingChapters
-                .filter { it.content.isNotBlank() }
+                .filter { it.content.isNotBlank() && !looksLikeStaleContent(it.content) }
                 .mapNotNull { c -> ChapterNumberExtractor.extract(c.title, c.fileName).takeIf { it != Int.MAX_VALUE } }
+                .toSet()
+            val staleFileNames: Set<String> = existingChapters
+                .filter { it.content.isBlank() || looksLikeStaleContent(it.content) }
+                .map { it.fileName }
                 .toSet()
 
             if (coverUrl != null && filesDir != null &&
@@ -91,7 +97,7 @@ class WebImportUseCase @Inject constructor(
                 val fileName = novelImporter.fileNameFromUrl(link.url, link.chapterNumber)
                 val chapterNumber = link.chapterNumber
 
-                if (fileName in existingFileNames) {
+                if (fileName in existingFileNames && fileName !in staleFileNames) {
                     successCount++
                     onProgress?.invoke(successCount, sorted.size)
                     continue
@@ -104,6 +110,10 @@ class WebImportUseCase @Inject constructor(
 
                 try {
                     val fetched = chapterFetcher.fetch(link.url, fileName, link.title)
+                    if (fileName in existingFileNames) {
+                        chapterDao.deleteByNovelIdAndFileName(novelId, fileName)
+                        existingFileNames.remove(fileName)
+                    }
                     existingFileNames.add(fileName)
                     importedChapters.add(
                         ImportedChapter(
@@ -147,4 +157,22 @@ class WebImportUseCase @Inject constructor(
             Result.failure(e)
         }
     }
+}
+
+private val STALE_CONTENT_MARKERS = listOf(
+    "Page not found",
+    "Not Found",
+    "404 page not found",
+    "404 Not Found",
+    "The address you accessed is incorrect"
+)
+
+internal fun looksLikeStaleContent(content: String): Boolean {
+    if (content.isBlank()) return true
+    if (content.length < 200) return true
+    val lower = content.lowercase()
+    for (marker in STALE_CONTENT_MARKERS) {
+        if (lower.contains(marker.lowercase())) return true
+    }
+    return false
 }

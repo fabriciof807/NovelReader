@@ -40,4 +40,7 @@ interface ChapterDao {
 
     @Query("DELETE FROM chapters WHERE novelId = :novelId")
     suspend fun deleteByNovelId(novelId: Long)
+
+    @Query("DELETE FROM chapters WHERE novelId = :novelId AND fileName = :fileName")
+    suspend fun deleteByNovelIdAndFileName(novelId: Long, fileName: String): Int
 }

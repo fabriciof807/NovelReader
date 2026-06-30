@@ -108,4 +108,26 @@ class WebImportUseCaseTest {
         val novel = novelDao.getNovelByTitle("Empty Novel")
         assertThat(novel).isNotNull()
     }
+
+    @Test
+    fun looksLikeStaleContent_detects404Footer() {
+        val footer = """
+            <h1>404 Page not found</h1>
+            <p>Novel list Your Library Latest Novels Latest Release Most Popular Completed Novels</p>
+            <p>Genres Action Adult Adventure Comedy Drama</p>
+            <p>Welcome to Freewebnovel</p>
+        """.trimIndent()
+        assertThat(looksLikeStaleContent(footer)).isTrue()
+    }
+
+    @Test
+    fun looksLikeStaleContent_acceptsRealContent() {
+        val real = "<p>This is a real chapter with plenty of actual text content that should not be considered stale.</p>".repeat(20)
+        assertThat(looksLikeStaleContent(real)).isFalse()
+    }
+
+    @Test
+    fun looksLikeStaleContent_detectsShortContent() {
+        assertThat(looksLikeStaleContent("too short")).isTrue()
+    }
 }
