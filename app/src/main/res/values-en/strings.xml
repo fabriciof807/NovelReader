@@ -33,6 +33,7 @@
     <string name="chapters_range_desc">%d → 1</string>
     <string name="reading">Continue</string>
     <string name="library_reading_with_time">Reading · %1$s</string>
+    <string name="library_new_chapters_badge">New chapters</string>
     <string name="sort">Sort</string>
     <string name="sort_title">Title</string>
     <string name="sort_date">Date added</string>
