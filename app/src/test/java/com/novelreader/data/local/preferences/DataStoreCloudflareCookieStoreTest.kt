@@ -24,9 +24,12 @@ class DataStoreCloudflareCookieStoreTest {
         store = DataStoreCloudflareCookieStore.create(context)
         runBlocking {
             store.clear("freewebnovel.com")
+            store.clear(".freewebnovel.com")
             store.clear("a.com")
             store.clear("b.com")
             store.clear("expired.com")
+            store.clear(".readfullnovel.com")
+            store.clear("readfullnovel.com")
         }
     }
 
@@ -67,5 +70,22 @@ class DataStoreCloudflareCookieStoreTest {
 
         assertThat(store.cookiesFor("https://a.com/x")).isEmpty()
         assertThat(store.cookiesFor("https://b.com/x")).hasSize(1)
+    }
+
+    @Test
+    fun cookiesForFindsCookiesWithLeadingDotDomainWhenLookupIsWwwVariant(): Unit = runBlocking {
+        val cookies = listOf(
+            StoredCookie(
+                name = "cf_clearance",
+                value = "abc",
+                domain = ".readfullnovel.com",
+                path = "/",
+                expiresAt = System.currentTimeMillis() + 3_600_000L
+            )
+        )
+        store.putCookies("https://readfullnovel.com/", cookies)
+
+        val read = store.cookiesFor("https://www.readfullnovel.com/anything")
+        assertThat(read.map { it.name to it.value }).containsExactly("cf_clearance" to "abc")
     }
 }

@@ -37,11 +37,24 @@ class DataStoreCloudflareCookieStore @Inject constructor(
 
     override suspend fun cookiesFor(url: String): List<StoredCookie> {
         val host = try { java.net.URI(url).host } catch (_: Exception) { null } ?: return emptyList()
+        val bare = host.removePrefix("www.")
+        val candidates = buildSet {
+            add(host)
+            add(bare)
+            if (!host.startsWith(".")) add(".$host")
+            if (!bare.startsWith(".")) add(".$bare")
+        }
         val prefs = dataStore.data.first()
         val now = System.currentTimeMillis()
-        val key = stringSetPreferencesKey(host)
-        val entries = prefs[key] ?: return emptyList()
-        return entries.mapNotNull { decode(it) }.filter { it.expiresAt > now }
+        val all = mutableListOf<StoredCookie>()
+        for (candidate in candidates) {
+            val entries = prefs[stringSetPreferencesKey(candidate)] ?: continue
+            for (raw in entries) {
+                val parsed = decode(raw) ?: continue
+                if (parsed.expiresAt > now) all += parsed
+            }
+        }
+        return all.distinctBy { it.name }
     }
 
     override suspend fun clear(domain: String) {
