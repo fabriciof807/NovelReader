@@ -58,6 +58,8 @@ class SpecFileStore @Inject constructor(
             obj.put("splitCount", spec.splitCount)
             obj.put("splitIndex", spec.splitIndex)
             obj.put("sourceUrl", spec.sourceUrl)
+            obj.put("domain", spec.domain)
+            if (spec.targetNovelId != null) obj.put("targetNovelId", spec.targetNovelId)
             val linksArr = JSONArray()
             val numsArr = JSONArray()
             spec.links.forEachIndexed { i, url ->
@@ -83,7 +85,9 @@ class SpecFileStore @Inject constructor(
                 val splitCount = obj.optInt("splitCount", 1)
                 val splitIndex = obj.optInt("splitIndex", 0)
                 val sourceUrl = obj.optString("sourceUrl", "")
-                ImportJobSpec(id, title, links, numbers, cover, enqueuedAt, splitCount, splitIndex, sourceUrl)
+                val domain = obj.optString("domain", "")
+                val targetNovelId = if (obj.has("targetNovelId")) obj.optLong("targetNovelId") else null
+                ImportJobSpec(id, title, links, numbers, cover, enqueuedAt, splitCount, splitIndex, sourceUrl, domain, targetNovelId)
             } catch (_: Exception) {
                 null
             }

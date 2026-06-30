@@ -11,7 +11,9 @@ data class ImportJobSpec(
     val enqueuedAt: Long,
     val splitCount: Int = 1,
     val splitIndex: Int = 0,
-    val sourceUrl: String = ""
+    val sourceUrl: String = "",
+    val domain: String = "",
+    val targetNovelId: Long? = null
 ) {
     companion object {
         const val BATCH_SIZE = 100
@@ -20,7 +22,9 @@ data class ImportJobSpec(
             novelTitle: String,
             links: List<ChapterLink>,
             coverUrl: String?,
-            sourceUrl: String = ""
+            sourceUrl: String = "",
+            domain: String = "",
+            targetNovelId: Long? = null
         ): List<ImportJobSpec> {
             val id = UUID.randomUUID()
             val enqueuedAt = System.currentTimeMillis()
@@ -34,7 +38,9 @@ data class ImportJobSpec(
                     enqueuedAt = enqueuedAt,
                     splitCount = (links.size + BATCH_SIZE - 1) / BATCH_SIZE,
                     splitIndex = index,
-                    sourceUrl = sourceUrl
+                    sourceUrl = sourceUrl,
+                    domain = domain,
+                    targetNovelId = targetNovelId
                 )
             }
         }

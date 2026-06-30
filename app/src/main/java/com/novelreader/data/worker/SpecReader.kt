@@ -15,8 +15,12 @@ object SpecReader {
         val splitCount = data.getInt(ChapterImportWorker.KEY_SPLIT_COUNT, 1)
         val splitIndex = data.getInt(ChapterImportWorker.KEY_SPLIT_INDEX, 0)
         val sourceUrl = data.getString(ChapterImportWorker.KEY_SOURCE_URL) ?: ""
+        val domain = data.getString(ChapterImportWorker.KEY_DOMAIN) ?: ""
+        val targetNovelId = data.getLong(ChapterImportWorker.KEY_TARGET_NOVEL_ID, -1L).takeIf { it >= 0 }
         val fromStore = store.read(id)
-        if (fromStore != null) return fromStore
+        if (fromStore != null) {
+            return fromStore.copy(domain = domain.ifEmpty { fromStore.domain }, targetNovelId = targetNovelId ?: fromStore.targetNovelId)
+        }
         return ImportJobSpec(
             id = id,
             novelTitle = title ?: "",
@@ -26,7 +30,9 @@ object SpecReader {
             enqueuedAt = enqueuedAt,
             splitCount = splitCount,
             splitIndex = splitIndex,
-            sourceUrl = sourceUrl
+            sourceUrl = sourceUrl,
+            domain = domain,
+            targetNovelId = targetNovelId
         )
     }
 }

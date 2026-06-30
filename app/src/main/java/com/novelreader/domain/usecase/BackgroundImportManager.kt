@@ -114,9 +114,11 @@ class BackgroundImportManager @Inject constructor(
         novelTitle: String,
         links: List<ChapterLink>,
         coverUrl: String? = null,
-        sourceUrl: String = ""
+        sourceUrl: String = "",
+        domain: String = "",
+        targetNovelId: Long? = null
     ) {
-        val specs = ImportJobSpec.create(novelTitle, links, coverUrl, sourceUrl)
+        val specs = ImportJobSpec.create(novelTitle, links, coverUrl, sourceUrl, domain, targetNovelId)
 
         if (_state.value.running) {
             specs.forEach { scheduler.schedule(it) }

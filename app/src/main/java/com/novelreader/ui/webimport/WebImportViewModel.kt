@@ -42,7 +42,8 @@ data class WebImportState(
     val importedNovelId: Long? = null,
     val importComplete: Boolean = false,
     val error: String? = null,
-    val cloudflareChallenge: CloudflareChallenge? = null
+    val cloudflareChallenge: CloudflareChallenge? = null,
+    val mergeTargetNovelId: Long? = null
 )
 
 @HiltViewModel
@@ -50,7 +51,8 @@ class WebImportViewModel @Inject constructor(
     application: Application,
     private val webImportUseCase: WebImportUseCase,
     private val backgroundImportManager: BackgroundImportManager,
-    private val cookieStore: CloudflareCookieStore
+    private val cookieStore: CloudflareCookieStore,
+    private val novelDao: com.novelreader.data.local.db.dao.NovelDao
 ) : AndroidViewModel(application) {
 
     private val _state = MutableStateFlow(WebImportState())
@@ -90,7 +92,8 @@ class WebImportViewModel @Inject constructor(
             chapters = emptyList(),
             novelTitle = "",
             selectedUrls = emptySet(),
-            cloudflareChallenge = null
+            cloudflareChallenge = null,
+            mergeTargetNovelId = null
         )
 
         viewModelScope.launch {
@@ -100,12 +103,14 @@ class WebImportViewModel @Inject constructor(
                     val allUrls = fetchResult.chapters.map { it.url }.toSet()
                     val title = fetchResult.novelTitle
                         ?: detectNovelTitle(fetchResult.chapters)
+                    val existing = if (title.isNotBlank()) novelDao.getNovelByTitleIgnoreCase(title) else null
                     _state.value = _state.value.copy(
                         isLoadingChapters = false,
                         chapters = fetchResult.chapters,
                         novelTitle = title,
                         coverUrl = fetchResult.coverUrl,
-                        selectedUrls = allUrls
+                        selectedUrls = allUrls,
+                        mergeTargetNovelId = existing?.id
                     )
                 },
                 onFailure = { e ->
@@ -171,6 +176,11 @@ class WebImportViewModel @Inject constructor(
             val first = selectedLinks.firstOrNull()
             if (first != null) detectNovelTitle(_state.value.chapters) else getApplication<Application>().getString(R.string.web_import_unknown_novel)
         }
+        val sourceUrl = _state.value.url
+        val domain = try {
+            java.net.URI(sourceUrl).host?.removePrefix("www.") ?: ""
+        } catch (_: Exception) { "" }
+        val targetNovelId = _state.value.mergeTargetNovelId
 
         _state.value = _state.value.copy(
             isImporting = true,
@@ -185,7 +195,9 @@ class WebImportViewModel @Inject constructor(
                 novelTitle = title,
                 links = selectedLinks,
                 coverUrl = _state.value.coverUrl,
-                sourceUrl = _state.value.url
+                sourceUrl = sourceUrl,
+                domain = domain,
+                targetNovelId = targetNovelId
             )
         }
     }

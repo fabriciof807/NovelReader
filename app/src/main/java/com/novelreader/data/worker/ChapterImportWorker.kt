@@ -50,6 +50,8 @@ class ChapterImportWorker @AssistedInject constructor(
             filesDir = applicationContext.filesDir,
             orderIndexOffset = orderIndexOffset,
             sourceUrl = spec.sourceUrl,
+            domain = spec.domain,
+            targetNovelId = spec.targetNovelId,
             onProgress = { processed, _ ->
                 val chapterNum = spec.chapterNumbers.getOrElse(processed.coerceAtMost(spec.chapterNumbers.lastIndex)) { 0 }
                 setProgressAsync(workDataOf(
@@ -108,6 +110,8 @@ class ChapterImportWorker @AssistedInject constructor(
         const val KEY_ERROR_TYPE = "error_type"
         const val KEY_ERROR_MSG = "error_message"
         const val KEY_SOURCE_URL = "source_url"
+        const val KEY_DOMAIN = "import_domain"
+        const val KEY_TARGET_NOVEL_ID = "import_target_novel_id"
         const val UNIQUE_ACTIVE = "chapter_import_active"
         const val TAG_IMPORT = "chapter_import"
     }
