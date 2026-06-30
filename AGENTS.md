@@ -185,7 +185,11 @@ Design specs and implementation plans produced by AI sessions live under `docs/s
 
 ## Current Version
 
-v2.5.0 (versionCode 18). See [README.md](README.md) (English) and [README_PT.md](README_PT.md) (Portuguese) for the user-facing documentation. Full release history in `git log`.
+v2.5.1 (versionCode 19). See [README.md](README.md) (English) and [README_PT.md](README_PT.md) (Portuguese) for the user-facing documentation. Full release history in `git log`.
+
+### v2.5.1 highlights
+
+- Fix freewebnovel.com chapter import regression: the site redesigned to a new URL layout (`/novel/<slug>/chapter-N` instead of `/<slug>/chapter-N.html`) and the AJAX chapter-archive endpoint now requires the `articlevisited=1` cookie that the home page sets. The new `FreeWebNovelParser` uses the current selectors (`h1.tit`, `<title>`, `div.chapter-start` / `div.chapter-end`); `HttpClient` persists Set-Cookie across requests via the existing `CloudflareCookieJar` so the AJAX calls carry the cookie. 269/269 unit tests pass.
 
 ### v2.5.0 highlights
 
