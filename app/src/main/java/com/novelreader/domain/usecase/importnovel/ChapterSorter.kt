@@ -24,6 +24,10 @@ class ChapterSorter @Inject constructor() {
         existingFileNames: Set<String>
     ): List<ChapterEntry> {
         val allEntries = mutableListOf<ChapterEntry>()
+        val existingNumbers: Set<Int> = existingChapters
+            .filter { it.content.isNotBlank() }
+            .mapNotNull { ch -> ChapterNumberExtractor.extract(ch.title, ch.fileName).takeIf { it != Int.MAX_VALUE } }
+            .toSet()
 
         for (ch in existingChapters) {
             allEntries.add(
@@ -41,6 +45,8 @@ class ChapterSorter @Inject constructor() {
         for (pf in parsedFiles) {
             if (pf.fileName in existingFileNames) continue
             if (!seenInBatch.add(pf.fileName)) continue
+            val n = ChapterNumberExtractor.extract(pf.parsed.chapterTitle, pf.fileName)
+            if (n != Int.MAX_VALUE && n in existingNumbers) continue
             allEntries.add(
                 ChapterEntry(
                     novelTitle = pf.parsed.novelTitle,
