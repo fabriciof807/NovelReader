@@ -15,6 +15,7 @@ import com.novelreader.domain.usecase.webimport.ChapterCrawler
 import com.novelreader.domain.usecase.webimport.ChapterFetcher
 import com.novelreader.domain.usecase.webimport.CoverDownloader
 import com.novelreader.domain.usecase.webimport.HttpClient
+import com.novelreader.domain.usecase.webimport.NovelListAugmenter
 import com.novelreader.domain.usecase.webimport.InMemoryCloudflareCookieStore
 import com.novelreader.domain.usecase.webimport.NovelImporter
 import kotlinx.coroutines.Dispatchers
@@ -56,7 +57,7 @@ class WebImportUseCaseTest {
 
         useCase = WebImportUseCase(
             context = context,
-            chapterCrawler = ChapterCrawler(httpClient),
+            chapterCrawler = ChapterCrawler(httpClient, emptySet<NovelListAugmenter>()),
             chapterFetcher = ChapterFetcher(parserRegistry, httpClient),
             coverDownloader = coverDownloader,
             novelImporter = novelImporter,
