@@ -18,5 +18,6 @@ data class NovelEntity(
     val createdAt: Long = System.currentTimeMillis(),
     val sourceUrl: String = "",
     val lastCheckedAt: Long = 0,
-    val autoUpdate: Boolean = false
+    val autoUpdate: Boolean = false,
+    val hasUpdates: Boolean = false
 )

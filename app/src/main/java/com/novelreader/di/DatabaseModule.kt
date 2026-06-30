@@ -9,6 +9,7 @@ import com.novelreader.data.local.db.dao.CharacterPhotoDao
 import com.novelreader.data.local.db.dao.ChapterDao
 import com.novelreader.data.local.db.dao.FailedChapterDao
 import com.novelreader.data.local.db.dao.NovelDao
+import com.novelreader.data.local.db.dao.NovelSourceDao
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -27,7 +28,16 @@ object DatabaseModule {
             context,
             NovelDatabase::class.java,
             "novel_reader.db"
-        ).addMigrations(NovelDatabase.MIGRATION_1_2, NovelDatabase.MIGRATION_2_3, NovelDatabase.MIGRATION_3_4, NovelDatabase.MIGRATION_4_5, NovelDatabase.MIGRATION_5_6, NovelDatabase.MIGRATION_6_7, NovelDatabase.MIGRATION_7_8).build()
+        ).addMigrations(
+            NovelDatabase.MIGRATION_1_2,
+            NovelDatabase.MIGRATION_2_3,
+            NovelDatabase.MIGRATION_3_4,
+            NovelDatabase.MIGRATION_4_5,
+            NovelDatabase.MIGRATION_5_6,
+            NovelDatabase.MIGRATION_6_7,
+            NovelDatabase.MIGRATION_7_8,
+            NovelDatabase.MIGRATION_8_9
+        ).build()
     }
 
     @Provides
@@ -47,4 +57,7 @@ object DatabaseModule {
 
     @Provides
     fun provideFailedChapterDao(database: NovelDatabase): FailedChapterDao = database.failedChapterDao()
+
+    @Provides
+    fun provideNovelSourceDao(database: NovelDatabase): NovelSourceDao = database.novelSourceDao()
 }

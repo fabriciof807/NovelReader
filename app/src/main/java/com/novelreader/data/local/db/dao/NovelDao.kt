@@ -19,6 +19,9 @@ interface NovelDao {
     @Query("SELECT * FROM novels WHERE title = :title LIMIT 1")
     suspend fun getNovelByTitle(title: String): NovelEntity?
 
+    @Query("SELECT * FROM novels WHERE title = :title COLLATE NOCASE LIMIT 1")
+    suspend fun getNovelByTitleIgnoreCase(title: String): NovelEntity?
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(novel: NovelEntity): Long
 
@@ -48,4 +51,7 @@ interface NovelDao {
 
     @Query("UPDATE novels SET autoUpdate = :enabled WHERE id = :novelId")
     suspend fun updateAutoUpdate(novelId: Long, enabled: Boolean)
+
+    @Query("UPDATE novels SET hasUpdates = :on WHERE id = :id")
+    suspend fun setHasUpdates(id: Long, on: Boolean)
 }
