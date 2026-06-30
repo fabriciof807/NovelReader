@@ -185,7 +185,18 @@ Design specs and implementation plans produced by AI sessions live under `docs/s
 
 ## Current Version
 
-v2.4.0 (versionCode 14). See [README.md](README.md) (English) and [README_PT.md](README_PT.md) (Portuguese) for the user-facing documentation. Full release history in `git log`.
+v2.5.0 (versionCode 18). See [README.md](README.md) (English) and [README_PT.md](README_PT.md) (Portuguese) for the user-facing documentation. Full release history in `git log`.
+
+### v2.5.0 highlights
+
+- readnovelfull.com now imports its full chapter list (200+ instead of 30) via per-domain `NovelListAugmenter` calling `/ajax/chapter-archive?novelId=N`.
+- `FreewebnovelListAugmenter` refactored from the inline `ChapterCrawler` block into a Hilt-multibound class (no behavior change).
+- Cross-site novel merge: import the same novel from multiple sites; chapters dedupe by chapter number; cover first-wins; one row per novel.
+- New `novel_sources` table (Room v8→v9) holds one row per (novel, source) with per-source `lastCheckedAt` and `autoUpdate`.
+- `ChapterUpdateCheckWorker` now iterates all `novel_sources` (multi-source auto-update).
+- Blue-dot badge on `NovelCard`/`NovelListItem` when a novel has new chapters since last open; cleared on open.
+- Generalised `CloudflareChallengeDialog` host check (parameter-driven) + `DataStoreCloudflareCookieStore` cross-host lookup.
+- 263 unit tests passing (was 205).
 
 ### v2.4.0 highlights
 
