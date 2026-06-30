@@ -63,6 +63,8 @@ class WebImportUseCaseTest {
             coverDownloader = coverDownloader,
             novelImporter = novelImporter,
             failedChapterDao = failedChapterDao,
+            novelDao = novelDao,
+            chapterDao = chapterDao,
             io = Dispatchers.Unconfined
         )
     }

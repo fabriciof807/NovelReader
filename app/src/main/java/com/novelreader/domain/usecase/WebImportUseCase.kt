@@ -2,9 +2,12 @@ package com.novelreader.domain.usecase
 
 import android.content.Context
 import com.novelreader.R
+import com.novelreader.data.local.db.dao.ChapterDao
 import com.novelreader.data.local.db.dao.FailedChapterDao
+import com.novelreader.data.local.db.dao.NovelDao
 import com.novelreader.data.local.db.entity.FailedChapterEntity
 import com.novelreader.data.local.db.entity.FailedChapterErrorType
+import com.novelreader.data.parser.ChapterNumberExtractor
 import com.novelreader.di.qualifiers.IoDispatcher
 import com.novelreader.domain.usecase.webimport.ChapterCrawler
 import com.novelreader.domain.usecase.webimport.ChapterFetcher
@@ -27,6 +30,8 @@ class WebImportUseCase @Inject constructor(
     private val coverDownloader: CoverDownloader,
     private val novelImporter: NovelImporter,
     private val failedChapterDao: FailedChapterDao,
+    private val novelDao: NovelDao,
+    private val chapterDao: ChapterDao,
     @IoDispatcher private val io: CoroutineDispatcher
 ) {
     companion object {
@@ -57,13 +62,23 @@ class WebImportUseCase @Inject constructor(
         filesDir: File? = null,
         orderIndexOffset: Int = 0,
         sourceUrl: String = "",
+        domain: String = "",
+        targetNovelId: Long? = null,
         onProgress: ((processed: Int, total: Int) -> Unit)? = null,
         onError: ((url: String, error: String) -> Unit)? = null
     ): Result<Long> = withContext(io) {
         try {
-            val (novelId, existingFileNames) = novelImporter.ensureNovel(novelTitle, sourceUrl)
+            val (novelId, existingFileNames) = novelImporter.ensureNovel(novelTitle, sourceUrl, domain, targetNovelId)
 
-            if (coverUrl != null && filesDir != null) {
+            val existingChapters = chapterDao.getChaptersByNovelSync(novelId)
+            val existingNumbers: Set<Int> = existingChapters
+                .filter { it.content.isNotBlank() }
+                .mapNotNull { c -> ChapterNumberExtractor.extract(c.title, c.fileName).takeIf { it != Int.MAX_VALUE } }
+                .toSet()
+
+            if (coverUrl != null && filesDir != null &&
+                (novelDao.getNovelById(novelId)?.coverPath.isNullOrEmpty())
+            ) {
                 coverDownloader.downloadCover(novelId, coverUrl, filesDir)
             }
 
@@ -74,7 +89,14 @@ class WebImportUseCase @Inject constructor(
             for ((index, link) in sorted.withIndex()) {
                 if (index > 0) delay(CHAPTER_FETCH_PACING_MS)
                 val fileName = novelImporter.fileNameFromUrl(link.url, link.chapterNumber)
+                val chapterNumber = link.chapterNumber
+
                 if (fileName in existingFileNames) {
+                    successCount++
+                    onProgress?.invoke(successCount, sorted.size)
+                    continue
+                }
+                if (chapterNumber != Int.MAX_VALUE && chapterNumber in existingNumbers) {
                     successCount++
                     onProgress?.invoke(successCount, sorted.size)
                     continue
@@ -104,7 +126,7 @@ class WebImportUseCase @Inject constructor(
                             fileName = fileName,
                             url = link.url,
                             sourceType = "WEB",
-                            chapterNumber = link.chapterNumber,
+                            chapterNumber = chapterNumber,
                             errorType = errorType,
                             errorMessage = errorMessage
                         )
@@ -113,7 +135,13 @@ class WebImportUseCase @Inject constructor(
                 onProgress?.invoke(successCount, sorted.size)
             }
 
-            novelImporter.insertChapters(novelId, importedChapters)
+            if (importedChapters.isNotEmpty()) {
+                novelImporter.insertChapters(novelId, importedChapters)
+                val wasExisting = existingChapters.isNotEmpty() || targetNovelId != null
+                if (wasExisting) {
+                    novelDao.setHasUpdates(novelId, true)
+                }
+            }
             Result.success(novelId)
         } catch (e: Exception) {
             Result.failure(e)
