@@ -34,6 +34,7 @@
     <string name="reading">Continuar</string>
     <string name="library_reading_with_time">Lendo · %1$s</string>
     <string name="library_new_chapters_badge">Novos capítulos</string>
+    <string name="import_merging_into_existing">Mesclando capítulos em \"%1$s\" existente</string>
     <string name="sort">Ordenar</string>
     <string name="sort_title">Título</string>
     <string name="sort_date">Data</string>

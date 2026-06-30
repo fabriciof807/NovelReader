@@ -282,6 +282,17 @@ private fun WebImportTab(
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.primary
                 )
+                Spacer(modifier = Modifier.height(4.dp))
+            }
+
+            if (state.novelTitle.isNotBlank() && state.mergeTargetNovelId != null) {
+                Text(
+                    text = stringResource(R.string.import_merging_into_existing, state.novelTitle),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+            } else if (state.novelTitle.isNotBlank()) {
                 Spacer(modifier = Modifier.height(8.dp))
             }
 
