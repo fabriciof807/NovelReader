@@ -2,8 +2,10 @@ package com.novelreader.domain.usecase.webimport
 
 import com.novelreader.data.local.db.dao.ChapterDao
 import com.novelreader.data.local.db.dao.NovelDao
+import com.novelreader.data.local.db.dao.NovelSourceDao
 import com.novelreader.data.local.db.entity.ChapterEntity
 import com.novelreader.data.local.db.entity.NovelEntity
+import com.novelreader.data.local.db.entity.NovelSourceEntity
 import com.novelreader.domain.usecase.ChapterOrderNormalizer
 import com.novelreader.util.StringUtils
 import javax.inject.Inject
@@ -20,13 +22,20 @@ data class ImportedChapter(
 class NovelImporter @Inject constructor(
     private val novelDao: NovelDao,
     private val chapterDao: ChapterDao,
-    private val chapterOrderNormalizer: ChapterOrderNormalizer
+    private val chapterOrderNormalizer: ChapterOrderNormalizer,
+    private val novelSourceDao: NovelSourceDao
 ) {
     suspend fun ensureNovel(
         novelTitle: String,
-        sourceUrl: String
+        sourceUrl: String,
+        domain: String = "",
+        targetNovelId: Long? = null
     ): Pair<Long, MutableSet<String>> {
-        var existingNovel = novelDao.getNovelByTitle(novelTitle)
+        val existingNovel: NovelEntity? = if (targetNovelId != null) {
+            novelDao.getNovelById(targetNovelId)
+        } else {
+            novelDao.getNovelByTitleIgnoreCase(novelTitle)
+        }
         val novelId: Long
         val existingFileNames: MutableSet<String>
 
@@ -45,7 +54,24 @@ class NovelImporter @Inject constructor(
         }
 
         if (sourceUrl.isNotBlank()) {
-            novelDao.updateSourceUrl(novelId, sourceUrl)
+            val existing = novelSourceDao.findByNovelAndUrl(novelId, sourceUrl)
+            if (existing == null) {
+                val isPrimary = novelSourceDao.getByNovel(novelId).isEmpty()
+                novelSourceDao.insert(
+                    NovelSourceEntity(
+                        novelId = novelId,
+                        sourceUrl = sourceUrl,
+                        domain = domain,
+                        isPrimary = isPrimary,
+                        addedAt = System.currentTimeMillis()
+                    )
+                )
+                if (isPrimary && (novelDao.getNovelById(novelId)?.sourceUrl ?: "").isEmpty()) {
+                    novelDao.updateSourceUrl(novelId, sourceUrl)
+                }
+            } else if (existing.domain != domain) {
+                novelSourceDao.updateUrl(existing.id, sourceUrl, domain)
+            }
         }
 
         return novelId to existingFileNames

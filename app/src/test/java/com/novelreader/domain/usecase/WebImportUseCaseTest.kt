@@ -8,6 +8,7 @@ import com.novelreader.data.local.db.NovelDatabase
 import com.novelreader.data.local.db.dao.ChapterDao
 import com.novelreader.data.local.db.dao.FailedChapterDao
 import com.novelreader.data.local.db.dao.NovelDao
+import com.novelreader.data.local.db.dao.NovelSourceDao
 import com.novelreader.data.parser.GenericFallbackParser
 import com.novelreader.data.parser.MhtParser
 import com.novelreader.data.parser.ParserRegistry
@@ -53,7 +54,7 @@ class WebImportUseCaseTest {
         )
         val httpClient = HttpClient(InMemoryCloudflareCookieStore())
         val coverDownloader = CoverDownloader(novelDao, httpClient)
-        val novelImporter = NovelImporter(novelDao, chapterDao, ChapterOrderNormalizer(chapterDao))
+        val novelImporter = NovelImporter(novelDao, chapterDao, ChapterOrderNormalizer(chapterDao), database.novelSourceDao())
 
         useCase = WebImportUseCase(
             context = context,
