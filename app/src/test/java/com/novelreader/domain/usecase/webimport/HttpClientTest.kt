@@ -101,4 +101,35 @@ class HttpClientTest {
         assertThat(response.statusCode).isEqualTo(200)
         assertThat(response.body).isEqualTo(original)
     }
+
+    @Test
+    fun get_persistsSetCookieAndSendsItOnSubsequentRequest() = runBlocking {
+        val store = InMemoryCloudflareCookieStore()
+        val clientWithStore = HttpClient(store, OkHttpClient.Builder()
+            .connectTimeout(30, TimeUnit.SECONDS)
+            .readTimeout(30, TimeUnit.SECONDS)
+            .followRedirects(true)
+            .followSslRedirects(true)
+            .build())
+        server.enqueue(
+            MockResponse()
+                .setResponseCode(200)
+                .setBody("home")
+                .addHeader("Set-Cookie", "articlevisited=1; Path=/; Max-Age=31536000")
+        )
+        server.enqueue(
+            MockResponse()
+                .setResponseCode(200)
+                .setBody("ajax")
+        )
+
+        clientWithStore.get("http://127.0.0.1:${server.port}/novel/foo")
+        clientWithStore.get("http://127.0.0.1:${server.port}/novel/foo?ajax=chapters")
+
+        val firstRequest = server.takeRequest()
+        assertThat(firstRequest.getHeader("Cookie") ?: "").doesNotContain("articlevisited")
+
+        val secondRequest = server.takeRequest()
+        assertThat(secondRequest.getHeader("Cookie") ?: "").contains("articlevisited=1")
+    }
 }

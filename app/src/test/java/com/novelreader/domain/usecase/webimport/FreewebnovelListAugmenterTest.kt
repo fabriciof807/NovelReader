@@ -121,4 +121,28 @@ class FreewebnovelListAugmenterTest {
 
         assertThat(result).isEmpty()
     }
+
+    @Test
+    fun augment_extractsLinksFromRealHomeFixture() = runBlocking<Unit> {
+        val homeHtml = """
+            <html><head><script>
+              window.chapterPagination = { currentPage: 1, pageSize: 40, totalPage: 3, totalChapters: 120 };
+            </script></head><body><a href='/novel/child-of-destiny/chapter-1'>C1</a></body></html>
+        """.trimIndent()
+        val homeDoc = Jsoup.parse(homeHtml)
+        val port = server.url("").port
+        val page2Body = """{"code":200,"html":"<ul><li><a href='/novel/child-of-destiny/chapter-41' class='con'>Chapter 41</a></li></ul>","page":2}"""
+        val page3Body = """{"code":200,"html":"<ul><li><a href='/novel/child-of-destiny/chapter-81' class='con'>Chapter 81</a></li></ul>","page":3}"""
+        server.enqueue(MockResponse().setResponseCode(200).setBody(page2Body))
+        server.enqueue(MockResponse().setResponseCode(200).setBody(page3Body))
+
+        val result = augmenter.augment(
+            "http://www.freewebnovel.com:$port/novel/child-of-destiny",
+            homeDoc,
+            client
+        )
+
+        assertThat(result).hasSize(2)
+        assertThat(result.map { it.title }).containsExactly("Chapter 41", "Chapter 81")
+    }
 }

@@ -35,7 +35,6 @@ class FreeWebNovelParserTest {
         """.trimIndent()
         val doc = Jsoup.parse(html)
         val parsed = parser.parse(doc, "chapter_1.html")
-        // canonical 'Novel - Chapter N | SiteName' pattern: strip site suffix, keep chapter part
         assertThat(parsed.chapterTitle).isEqualTo("Chapter 1")
     }
 
@@ -82,5 +81,38 @@ class FreeWebNovelParserTest {
         val parsed = parser.parse(doc, "chapter_5.html")
         assertThat(parsed.novelTitle).isEqualTo("Cultivation Novel")
         assertThat(parsed.chapterTitle).isEqualTo("Chapter 5")
+    }
+
+    @Test fun `parses real fixture chapter page - novel title from h1 tit`() {
+        val html = java.io.File("src/test/resources/freewebnovel/chapter1_child_of_destiny.html").readText()
+        val doc = Jsoup.parse(html)
+        val parsed = parser.parse(doc, "chapter-1")
+        assertThat(parsed.novelTitle).isEqualTo("Child of Destiny")
+    }
+
+    @Test fun `parses real fixture chapter page - chapter title from h1 tit`() {
+        val html = java.io.File("src/test/resources/freewebnovel/chapter1_child_of_destiny.html").readText()
+        val doc = Jsoup.parse(html)
+        val parsed = parser.parse(doc, "chapter-1")
+        assertThat(parsed.chapterTitle).isEqualTo("Chapter 1 Only One Alive")
+    }
+
+    @Test fun `parses real fixture chapter page - content is non-empty and has real paragraphs`() {
+        val html = java.io.File("src/test/resources/freewebnovel/chapter1_child_of_destiny.html").readText()
+        val doc = Jsoup.parse(html)
+        val parsed = parser.parse(doc, "chapter-1")
+        assertThat(parsed.content).isNotEmpty()
+        assertThat(parsed.content.length).isGreaterThan(1000)
+        assertThat(parsed.content).contains("White Village")
+        assertThat(parsed.content).contains("January 17")
+        assertThat(parsed.content).doesNotContain("read-ads")
+        assertThat(parsed.content).doesNotContain("Page not found")
+    }
+
+    @Test fun `parses 404 page gracefully - content does not contain 'Page not found' text`() {
+        val html = java.io.File("src/test/resources/freewebnovel/notfound_chapter_old_format.html").readText()
+        val doc = Jsoup.parse(html)
+        val parsed = parser.parse(doc, "child-of-destiny/chapter-1.html")
+        assertThat(parsed.content).doesNotContain("Page not found")
     }
 }
