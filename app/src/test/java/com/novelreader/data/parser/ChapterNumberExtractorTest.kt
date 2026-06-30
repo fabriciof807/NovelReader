@@ -48,4 +48,13 @@ class ChapterNumberExtractorTest {
         val num = ChapterNumberExtractor.extract("Chapter 2 - page 999")
         assertThat(num).isEqualTo(2)
     }
+
+    @Test fun `captures first number when filename has chapter-N-uniqueId format`() {
+        val num = ChapterNumberExtractor.extract(
+            title = "Chapter 10",
+            fileName = "chapter-10-41",
+            url = "https://readnovelfull.com/sample/chapter-10-41.html"
+        )
+        assertThat(num).isEqualTo(10)
+    }
 }
