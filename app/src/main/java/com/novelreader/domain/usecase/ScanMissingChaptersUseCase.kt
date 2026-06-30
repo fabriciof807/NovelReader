@@ -60,6 +60,10 @@ class ScanMissingChaptersUseCase @Inject constructor(
     ): ScanResult {
         val existing = chapterDao.getChaptersByNovelSync(novelId)
         val existingFileNames = existing.map { it.fileName }.toSet()
+        val existingNumbers = existing
+            .filter { it.content.isNotBlank() }
+            .mapNotNull { c -> ChapterNumberExtractor.extract(c.title, c.fileName).takeIf { it != Int.MAX_VALUE } }
+            .toSet()
 
         var missing = 0
         for (link in expected) {
@@ -68,22 +72,24 @@ class ScanMissingChaptersUseCase @Inject constructor(
             } else {
                 "chapter_${link.chapterNumber}"
             }
-            if (fileName !in existingFileNames) {
-                failedChapterDao.deleteByNovelAndFileName(novelId, fileName)
-                failedChapterDao.insert(
-                    FailedChapterEntity(
-                        novelId = novelId,
-                        title = link.title.ifBlank { "Chapter ${link.chapterNumber}" },
-                        fileName = fileName,
-                        url = link.url.takeIf { it.isNotBlank() },
-                        sourceType = sourceType,
-                        chapterNumber = link.chapterNumber,
-                        errorType = FailedChapterErrorType.MISSING_NUMBER,
-                        errorMessage = "Capítulo ${link.chapterNumber} não encontrado no banco"
-                    )
+            val chapterNum = link.chapterNumber
+            val presentByFile = fileName in existingFileNames
+            val presentByNumber = chapterNum != Int.MAX_VALUE && chapterNum in existingNumbers
+            if (presentByFile || presentByNumber) continue
+            failedChapterDao.deleteByNovelAndFileName(novelId, fileName)
+            failedChapterDao.insert(
+                FailedChapterEntity(
+                    novelId = novelId,
+                    title = link.title.ifBlank { "Chapter ${link.chapterNumber}" },
+                    fileName = fileName,
+                    url = link.url.takeIf { it.isNotBlank() },
+                    sourceType = sourceType,
+                    chapterNumber = chapterNum,
+                    errorType = FailedChapterErrorType.MISSING_NUMBER,
+                    errorMessage = "Capítulo ${link.chapterNumber} não encontrado no banco"
                 )
-                missing++
-            }
+            )
+            missing++
         }
 
         var empty = 0
