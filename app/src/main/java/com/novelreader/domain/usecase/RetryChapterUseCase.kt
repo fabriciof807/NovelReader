@@ -1,5 +1,6 @@
 package com.novelreader.domain.usecase
 
+import android.util.Log
 import com.novelreader.data.local.db.dao.FailedChapterDao
 import com.novelreader.data.local.db.entity.FailedChapterErrorType
 import com.novelreader.domain.usecase.importnovel.ChapterEntry
@@ -7,6 +8,8 @@ import com.novelreader.domain.usecase.importnovel.ChapterInserter
 import com.novelreader.domain.usecase.webimport.ChapterFetcher
 import javax.inject.Inject
 import javax.inject.Singleton
+
+private const val FAILURE_TAG = "WebImportFailure"
 
 @Singleton
 class RetryChapterUseCase @Inject constructor(
@@ -22,6 +25,21 @@ class RetryChapterUseCase @Inject constructor(
 
         return try {
             val fetched = chapterFetcher.fetch(url, failed.fileName, failed.title)
+            if (looksLikeStaleContent(fetched.content)) {
+                Log.w(
+                    FAILURE_TAG,
+                    "retry failedId=$failedId novelId=${failed.novelId} url=$url fileName=${failed.fileName} errType=empty_content errMsg=content blank or stale"
+                )
+                failedChapterDao.deleteById(failedId)
+                failedChapterDao.insert(
+                    failed.copy(
+                        errorType = FailedChapterErrorType.EMPTY_CONTENT,
+                        errorMessage = "Retry returned empty/stale content",
+                        attemptedAt = System.currentTimeMillis()
+                    )
+                )
+                return Result.failure(IllegalStateException("Retry returned empty/stale content"))
+            }
             chapterInserter.insertEntries(
                 failed.novelId,
                 listOf(
@@ -34,12 +52,21 @@ class RetryChapterUseCase @Inject constructor(
                 )
             )
             failedChapterDao.deleteById(failedId)
+            Log.w(
+                FAILURE_TAG,
+                "retry failedId=$failedId novelId=${failed.novelId} url=$url fileName=${failed.fileName} errType=success errMsg=recovered"
+            )
             Result.success(Unit)
         } catch (e: Exception) {
+            val errorType = FailedChapterErrorType.classify(e)
+            Log.w(
+                FAILURE_TAG,
+                "retry failedId=$failedId novelId=${failed.novelId} url=$url fileName=${failed.fileName} errType=$errorType errMsg=${e.message ?: "Erro"}"
+            )
             failedChapterDao.deleteById(failedId)
             failedChapterDao.insert(
                 failed.copy(
-                    errorType = FailedChapterErrorType.classify(e),
+                    errorType = errorType,
                     errorMessage = e.message ?: "Erro desconhecido",
                     attemptedAt = System.currentTimeMillis()
                 )

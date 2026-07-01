@@ -1,6 +1,7 @@
 package com.novelreader.domain.usecase
 
 import android.content.Context
+import android.util.Log
 import com.novelreader.R
 import com.novelreader.data.local.db.dao.ChapterDao
 import com.novelreader.data.local.db.dao.FailedChapterDao
@@ -14,6 +15,7 @@ import com.novelreader.domain.usecase.webimport.ChapterFetcher
 import com.novelreader.domain.usecase.webimport.CoverDownloader
 import com.novelreader.domain.usecase.webimport.ImportedChapter
 import com.novelreader.domain.usecase.webimport.NovelImporter
+import com.novelreader.domain.usecase.webimport.RateLimitedException
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.delay
@@ -21,6 +23,8 @@ import kotlinx.coroutines.withContext
 import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
+
+private const val FAILURE_TAG = "WebImportFailure"
 
 @Singleton
 class WebImportUseCase @Inject constructor(
@@ -35,7 +39,7 @@ class WebImportUseCase @Inject constructor(
     @IoDispatcher private val io: CoroutineDispatcher
 ) {
     companion object {
-        private const val CHAPTER_FETCH_PACING_MS = 2_000L
+        private const val CHAPTER_FETCH_PACING_MS = 5_000L
     }
 
     suspend fun fetchChapterList(homeUrl: String): Result<FetchResult> = withContext(io) {
@@ -110,6 +114,24 @@ class WebImportUseCase @Inject constructor(
 
                 try {
                     val fetched = chapterFetcher.fetch(link.url, fileName, link.title)
+                    val validContent = !looksLikeStaleContent(fetched.content)
+                    if (!validContent) {
+                        Log.w(
+                            FAILURE_TAG,
+                            "novelId=$novelId url=${link.url} fileName=$fileName errType=empty_content errMsg=content blank or stale"
+                        )
+                        recordFailedChapter(
+                            novelId = novelId,
+                            link = link,
+                            fileName = fileName,
+                            chapterNumber = chapterNumber,
+                            errorType = FailedChapterErrorType.EMPTY_CONTENT,
+                            errorMessage = "Fetched content is empty or stale"
+                        )
+                        onError?.invoke(link.url, "Fetched content is empty or stale")
+                        onProgress?.invoke(successCount, sorted.size)
+                        continue
+                    }
                     if (fileName in existingFileNames) {
                         chapterDao.deleteByNovelIdAndFileName(novelId, fileName)
                         existingFileNames.remove(fileName)
@@ -125,22 +147,20 @@ class WebImportUseCase @Inject constructor(
                     )
                     successCount++
                 } catch (e: Exception) {
-                    val errorType = FailedChapterErrorType.classify(e)
-                    val errorMessage = e.message ?: "Erro desconhecido"
-                    onError?.invoke(link.url, errorMessage)
-                    failedChapterDao.deleteByNovelAndFileName(novelId, fileName)
-                    failedChapterDao.insert(
-                        FailedChapterEntity(
-                            novelId = novelId,
-                            title = link.title.ifBlank { fileName },
-                            fileName = fileName,
-                            url = link.url,
-                            sourceType = "WEB",
-                            chapterNumber = chapterNumber,
-                            errorType = errorType,
-                            errorMessage = errorMessage
-                        )
+                    val (errorType, errorMessage) = classifyFetchError(e)
+                    Log.w(
+                        FAILURE_TAG,
+                        "novelId=$novelId url=${link.url} fileName=$fileName errType=$errorType errMsg=$errorMessage"
                     )
+                    recordFailedChapter(
+                        novelId = novelId,
+                        link = link,
+                        fileName = fileName,
+                        chapterNumber = chapterNumber,
+                        errorType = errorType,
+                        errorMessage = errorMessage
+                    )
+                    onError?.invoke(link.url, errorMessage)
                 }
                 onProgress?.invoke(successCount, sorted.size)
             }
@@ -157,22 +177,37 @@ class WebImportUseCase @Inject constructor(
             Result.failure(e)
         }
     }
-}
 
-private val STALE_CONTENT_MARKERS = listOf(
-    "Page not found",
-    "Not Found",
-    "404 page not found",
-    "404 Not Found",
-    "The address you accessed is incorrect"
-)
-
-internal fun looksLikeStaleContent(content: String): Boolean {
-    if (content.isBlank()) return true
-    if (content.length < 200) return true
-    val lower = content.lowercase()
-    for (marker in STALE_CONTENT_MARKERS) {
-        if (lower.contains(marker.lowercase())) return true
+    private suspend fun recordFailedChapter(
+        novelId: Long,
+        link: ChapterLink,
+        fileName: String,
+        chapterNumber: Int,
+        errorType: String,
+        errorMessage: String
+    ) {
+        failedChapterDao.deleteByNovelAndFileName(novelId, fileName)
+        failedChapterDao.insert(
+            FailedChapterEntity(
+                novelId = novelId,
+                title = link.title.ifBlank { fileName },
+                fileName = fileName,
+                url = link.url,
+                sourceType = "WEB",
+                chapterNumber = chapterNumber,
+                errorType = errorType,
+                errorMessage = errorMessage
+            )
+        )
     }
-    return false
+
+    private fun classifyFetchError(e: Exception): Pair<String, String> {
+        if (e is RateLimitedException) {
+            return FailedChapterErrorType.NETWORK to
+                "Rate limited (HTTP ${e.lastStatusCode}) after ${e.attempts} attempts; try again later"
+        }
+        val type = FailedChapterErrorType.classify(e)
+        val message = e.message ?: "Erro desconhecido"
+        return type to message
+    }
 }
