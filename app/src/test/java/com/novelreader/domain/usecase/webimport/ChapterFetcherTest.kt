@@ -96,4 +96,59 @@ class ChapterFetcherTest {
         assertThat(fetched.content).doesNotContain("Novel list")
         assertThat(fetched.content).doesNotContain("Your Library")
     }
+
+    @Test
+    fun fetch_429sRateLimited_throwsRateLimitedAfterMaxRetries() = runBlocking {
+        val port = server.url("").port
+        repeat(5) {
+            server.enqueue(MockResponse().setResponseCode(429).setBody("Too Many Requests"))
+        }
+
+        val fetcher = ChapterFetcher(parserRegistry, httpClient, requireHttps = false)
+        fetcher.retryDelayFn = { _, _ -> 0L }
+
+        val ex = runCatching {
+            fetcher.fetch(
+                "http://www.freewebnovel.com:$port/novel/test/chapter-1",
+                "chapter-1",
+                "Chapter 1"
+            )
+        }.exceptionOrNull()
+
+        assertThat(ex).isInstanceOf(RateLimitedException::class.java)
+        val rle = ex as RateLimitedException
+        assertThat(rle.url).contains("chapter-1")
+        assertThat(rle.attempts).isEqualTo(5)
+        assertThat(rle.lastStatusCode).isEqualTo(429)
+        assertThat(server.requestCount).isEqualTo(5)
+    }
+
+    @Test
+    fun fetch_429sThenSuccess_returnsContent() = runBlocking {
+        val port = server.url("").port
+        repeat(3) {
+            server.enqueue(MockResponse().setResponseCode(429).setBody("Too Many Requests"))
+        }
+        val chapterHtml = """
+            <html><head><title>Test Novel - Chapter 1 Real Content | Free Web Novel</title></head>
+            <body><h1 class="tit"><a href="/novel/test" title="Test Novel">Test Novel</a></h1>
+            <div class="chapter-start"></div>
+            <p>Recovered after 429s.</p>
+            <p>Another paragraph of content.</p>
+            <div class="chapter-end"></div>
+            </body></html>
+        """.trimIndent()
+        server.enqueue(MockResponse().setResponseCode(200).setBody(chapterHtml))
+
+        val fetcher = ChapterFetcher(parserRegistry, httpClient, requireHttps = false)
+        fetcher.retryDelayFn = { _, _ -> 0L }
+        val fetched = fetcher.fetch(
+            "http://www.freewebnovel.com:$port/novel/test/chapter-1",
+            "chapter-1",
+            "Chapter 1"
+        )
+
+        assertThat(fetched.content).contains("Recovered after 429s")
+        assertThat(server.requestCount).isEqualTo(4)
+    }
 }

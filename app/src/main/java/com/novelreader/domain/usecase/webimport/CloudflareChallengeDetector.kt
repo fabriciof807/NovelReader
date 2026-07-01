@@ -22,3 +22,9 @@ class CloudflareChallengeRequiredException(
     val url: String,
     val evidence: String
 ) : RuntimeException("Cloudflare challenge required for $url: $evidence")
+
+class RateLimitedException(
+    val url: String,
+    val attempts: Int,
+    val lastStatusCode: Int
+) : RuntimeException("Rate limited (HTTP $lastStatusCode) for $url after $attempts attempts")

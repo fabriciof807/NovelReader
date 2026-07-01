@@ -17,7 +17,9 @@ data class FetchedChapter(
 )
 
 private const val DIAGNOSTIC_TAG = "WebFetchProbe"
+private const val FAILURE_TAG = "WebImportFailure"
 private const val BODY_SNIPPET_MAX = 256
+private const val DEFAULT_MAX_RETRIES = 5
 
 @Singleton
 class ChapterFetcher @Inject constructor(
@@ -29,7 +31,14 @@ class ChapterFetcher @Inject constructor(
         this.requireHttps = requireHttps
     }
 
+    @androidx.annotation.VisibleForTesting
+    var retryDelayFn: (Int, Int) -> Long = ::nextRetryDelayMs
+
+    @androidx.annotation.VisibleForTesting
+    var maxRetries: Int = DEFAULT_MAX_RETRIES
+
     private var requireHttps: Boolean = true
+
     suspend fun fetch(url: String, fileName: String, chapterTitle: String): FetchedChapter {
         val chapterDoc = fetchWithRetry(url)
         val parser = parserRegistry.getParserForUrl(url)
@@ -42,14 +51,16 @@ class ChapterFetcher @Inject constructor(
         return FetchedChapter(title = resultTitle, content = parsed.content, fileName = fileName)
     }
 
-    private suspend fun fetchWithRetry(url: String, maxRetries: Int = 3): Document {
+    private suspend fun fetchWithRetry(url: String): Document {
         if (requireHttps && !url.startsWith("https://")) throw SecurityException("Apenas HTTPS permitido")
         var lastException: Exception? = null
+        var lastStatusCode: Int = 0
         for (attempt in 1..maxRetries) {
             try {
                 if (attempt > 1) delay(attempt * 2000L)
                 val response = httpClient.get(url, referrer = url.substringBeforeLast("/"))
                 val statusCode = response.statusCode
+                lastStatusCode = statusCode
                 if (statusCode in 200..299) {
                     return Jsoup.parse(response.body, url)
                 }
@@ -83,26 +94,65 @@ class ChapterFetcher @Inject constructor(
                 }
                 val hse = HttpStatusException("HTTP error fetching URL", statusCode, url)
                 lastException = hse
-                val retryDelay = nextRetryDelayMs(attempt, statusCode)
-                if (retryDelay > 0L) {
-                    delay(retryDelay)
-                } else {
+                if (attempt >= maxRetries) {
+                    if (statusCode == 429) {
+                        Log.w(
+                            FAILURE_TAG,
+                            "url=$url attempt=$attempt/$maxRetries status=$statusCode errType=rate_limited errMsg=giving_up"
+                        )
+                        throw RateLimitedException(url = url, attempts = attempt, lastStatusCode = statusCode)
+                    }
+                    Log.w(
+                        FAILURE_TAG,
+                        "url=$url attempt=$attempt/$maxRetries status=$statusCode errType=network errMsg=giving_up"
+                    )
                     throw hse
                 }
+                Log.w(
+                    FAILURE_TAG,
+                    "url=$url attempt=$attempt/$maxRetries status=$statusCode errType=network errMsg=will_retry"
+                )
+                val retryDelay = retryDelayFn(attempt, statusCode)
+                if (retryDelay > 0L) delay(retryDelay)
             } catch (e: CloudflareChallengeRequiredException) {
+                throw e
+            } catch (e: RateLimitedException) {
                 throw e
             } catch (e: HttpStatusException) {
                 lastException = e
-                val retryDelay = nextRetryDelayMs(attempt, e.statusCode)
-                if (retryDelay > 0L && attempt < maxRetries) {
-                    delay(retryDelay)
-                } else {
+                lastStatusCode = e.statusCode
+                if (attempt >= maxRetries) {
+                    if (e.statusCode == 429) {
+                        Log.w(
+                            FAILURE_TAG,
+                            "url=$url attempt=$attempt/$maxRetries status=${e.statusCode} errType=rate_limited errMsg=giving_up"
+                        )
+                        throw RateLimitedException(url = url, attempts = attempt, lastStatusCode = e.statusCode)
+                    }
+                    Log.w(
+                        FAILURE_TAG,
+                        "url=$url attempt=$attempt/$maxRetries status=${e.statusCode} errType=network errMsg=giving_up"
+                    )
                     throw e
                 }
+                Log.w(
+                    FAILURE_TAG,
+                    "url=$url attempt=$attempt/$maxRetries status=${e.statusCode} errType=network errMsg=will_retry"
+                )
+                val retryDelay = retryDelayFn(attempt, e.statusCode)
+                if (retryDelay > 0L) delay(retryDelay)
             } catch (e: Exception) {
                 lastException = e
-                if (attempt < maxRetries) delay(attempt * 2000L)
+                Log.w(
+                    FAILURE_TAG,
+                    "url=$url attempt=$attempt/$maxRetries errType=other errMsg=${e.message ?: e::class.java.simpleName}"
+                )
+                if (attempt >= maxRetries) throw e
+                delay(attempt * 2000L)
             }
+        }
+        if (lastStatusCode == 429) {
+            throw RateLimitedException(url = url, attempts = maxRetries, lastStatusCode = lastStatusCode)
         }
         throw lastException ?: Exception("Request failed after $maxRetries retries")
     }
