@@ -10,6 +10,7 @@ import com.novelreader.data.local.db.dao.CharacterPhotoDao
 import com.novelreader.data.local.db.dao.FailedChapterDao
 import com.novelreader.data.local.db.dao.NovelDao
 import com.novelreader.data.local.db.entity.ChapterEntity
+import com.novelreader.data.local.db.entity.FailedChapterEntity
 import com.novelreader.data.local.db.entity.NovelEntity
 import com.novelreader.data.local.preferences.LibraryPreferences
 import com.novelreader.data.parser.MhtParser
@@ -18,6 +19,7 @@ import com.novelreader.data.remote.MvlempyrCharacterImporter
 import com.novelreader.data.worker.UpdateCheckScheduler
 import com.novelreader.domain.usecase.BackgroundImportManager
 import com.novelreader.domain.usecase.BackgroundImportState
+import com.novelreader.domain.usecase.ChapterLink
 import com.novelreader.domain.usecase.CharacterManagementUseCase
 import com.novelreader.domain.usecase.CoverManagementUseCase
 import com.novelreader.domain.usecase.RetryChapterUseCase
@@ -264,6 +266,96 @@ class LibraryViewModelTest {
             assertThat(viewModel.showDeleteDialog.value).isNull()
             coVerify { coverManagement.deleteNovelCovers(7, null) }
             cancelAndConsumeRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `retryAllFailedChapters enqueues all failed with urls via startImport`() = runTest {
+        val novel = NovelEntity(id = 11, title = "Stuck Novel", sourceUrl = "https://example.com/stuck")
+        coEvery { novelDao.getNovelById(11) } returns novel
+        coEvery { failedChapterDao.getByNovel(11) } returns listOf(
+            FailedChapterEntity(
+                id = 1,
+                novelId = 11,
+                title = "Ch 5",
+                fileName = "ch5",
+                url = "https://example.com/ch5.html",
+                sourceType = "WEB",
+                chapterNumber = 5,
+                errorType = "network",
+                errorMessage = "timeout"
+            ),
+            FailedChapterEntity(
+                id = 2,
+                novelId = 11,
+                title = "Ch 6",
+                fileName = "ch6",
+                url = "https://example.com/ch6.html",
+                sourceType = "WEB",
+                chapterNumber = 6,
+                errorType = "network",
+                errorMessage = "timeout"
+            )
+        )
+
+        viewModel.retryAllFailedChapters(11)
+
+        coVerify {
+            bgManager.startImport(
+                novelTitle = "Stuck Novel",
+                links = match { links ->
+                    links.size == 2 &&
+                        links[0].url == "https://example.com/ch5.html" &&
+                        links[0].chapterNumber == 5 &&
+                        links[1].url == "https://example.com/ch6.html" &&
+                        links[1].chapterNumber == 6
+                },
+                coverUrl = null,
+                sourceUrl = "https://example.com/stuck",
+                targetNovelId = 11
+            )
+        }
+    }
+
+    @Test
+    fun `retryAllFailedChapters skips failed with no url`() = runTest {
+        val novel = NovelEntity(id = 12, title = "Mixed Failed", sourceUrl = "https://example.com/mixed")
+        coEvery { novelDao.getNovelById(12) } returns novel
+        coEvery { failedChapterDao.getByNovel(12) } returns listOf(
+            FailedChapterEntity(
+                id = 1,
+                novelId = 12,
+                title = "Ch 1",
+                fileName = "ch1",
+                url = "https://example.com/ch1.html",
+                sourceType = "WEB",
+                chapterNumber = 1,
+                errorType = "network",
+                errorMessage = "timeout"
+            ),
+            FailedChapterEntity(
+                id = 2,
+                novelId = 12,
+                title = "Ch 2",
+                fileName = "ch2",
+                url = null,
+                sourceType = "WEB",
+                chapterNumber = 2,
+                errorType = "parse",
+                errorMessage = "manual"
+            )
+        )
+
+        viewModel.retryAllFailedChapters(12)
+
+        coVerify {
+            bgManager.startImport(
+                novelTitle = "Mixed Failed",
+                links = match { it.size == 1 && it[0].url == "https://example.com/ch1.html" },
+                coverUrl = null,
+                sourceUrl = "https://example.com/mixed",
+                targetNovelId = 12
+            )
         }
     }
 }

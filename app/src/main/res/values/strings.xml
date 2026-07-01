@@ -195,6 +195,8 @@
     <string name="failed_chapters_retry_no_match">Importado, mas arquivo não corresponde a nenhuma falha registrada</string>
     <string name="failed_chapters_empty">Nenhum capítulo com falha</string>
     <string name="failed_chapters_scan">Escanear capítulos faltantes</string>
+    <string name="retry_all_failed">Tentar todos (%1$d)</string>
+    <string name="retry_all_failed_started">Reimportando %1$d capítulos em background</string>
     <string name="failed_chapters_scan_title">Escanear capítulos</string>
     <string name="failed_chapters_scan_result">%1$d capítulo(s) com problema encontrado(s)</string>
     <string name="failed_chapters_scan_no_url">Novel sem URL de origem</string>

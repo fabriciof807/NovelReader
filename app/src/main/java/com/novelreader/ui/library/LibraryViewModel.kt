@@ -23,6 +23,7 @@ import com.novelreader.data.worker.UpdateCheckScheduler
 import com.novelreader.di.qualifiers.IoDispatcher
 import com.novelreader.domain.usecase.BackgroundImportManager
 import com.novelreader.domain.usecase.BackgroundImportState
+import com.novelreader.domain.usecase.ChapterLink
 import com.novelreader.domain.usecase.ScanMissingChaptersUseCase
 import com.novelreader.domain.usecase.ScanResult
 import com.novelreader.domain.usecase.importnovel.ChapterEntry
@@ -754,6 +755,31 @@ class LibraryViewModel @Inject constructor(
             val failed = failedChapterDao.getById(failedId) ?: return@launch
             failedChapterDao.deleteById(failedId)
             refreshFailedChapters(failed.novelId)
+        }
+    }
+
+    fun retryAllFailedChapters(novelId: Long) {
+        viewModelScope.launch {
+            val failed = failedChapterDao.getByNovel(novelId).filter { !it.url.isNullOrBlank() }
+            if (failed.isEmpty()) return@launch
+            val novel = novelDao.getNovelById(novelId) ?: return@launch
+            val links = failed.mapNotNull { f ->
+                val url = f.url ?: return@mapNotNull null
+                ChapterLink(
+                    title = f.title,
+                    url = url,
+                    chapterNumber = f.chapterNumber.takeIf { it != Int.MAX_VALUE } ?: Int.MAX_VALUE
+                )
+            }
+            if (links.isEmpty()) return@launch
+            backgroundImportManager.startImport(
+                novelTitle = novel.title,
+                links = links,
+                coverUrl = null,
+                sourceUrl = novel.sourceUrl,
+                targetNovelId = novelId
+            )
+            _updateCheckResult.emit(context.getString(R.string.retry_all_failed_started, links.size))
         }
     }
 

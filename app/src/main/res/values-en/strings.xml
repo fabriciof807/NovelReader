@@ -201,6 +201,8 @@
     <string name="failed_chapters_scan_invalid_range">Invalid range</string>
     <string name="failed_chapters_scan_range_from">From</string>
     <string name="failed_chapters_scan_range_to">To</string>
+    <string name="retry_all_failed">Retry all (%1$d)</string>
+    <string name="retry_all_failed_started">Re-importing %1$d failed chapters in background</string>
     <string name="error_type_network">Network</string>
     <string name="error_type_parse">Parse</string>
     <string name="error_type_io">I/O</string>

@@ -66,6 +66,7 @@ fun ChaptersTab(
     onToggleSort: () -> Unit = {},
     failedChapters: List<FailedChapterEntity> = emptyList(),
     onRetryFailed: (FailedChapterEntity) -> Unit = {},
+    onRetryAllFailed: (Long) -> Unit = {},
     onRetryFailedManually: (FailedChapterEntity, Uri) -> Unit = { _, _ -> },
     onDismissFailed: (FailedChapterEntity) -> Unit = {},
     onScanWeb: (Long) -> Unit = {},
@@ -228,6 +229,18 @@ fun ChaptersTab(
                         fontWeight = FontWeight.SemiBold,
                         modifier = Modifier.weight(1f)
                     )
+                    val retryableCount = failedChapters.count { !it.url.isNullOrBlank() }
+                    if (retryableCount > 0) {
+                        TextButton(onClick = { onRetryAllFailed(novelId) }) {
+                            Icon(
+                                Icons.Default.Refresh,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(Modifier.size(4.dp))
+                            Text(stringResource(R.string.retry_all_failed, retryableCount))
+                        }
+                    }
                     IconButton(onClick = {
                         if (sourceUrlAvailable) {
                             onScanWeb(novelId)

@@ -307,6 +307,7 @@ fun LibraryScreen(
                     onToggleSort = { viewModel.onIntent(LibraryIntent.ToggleChapterSortOrder) },
                     failedChapters = failedChapters,
                     onRetryFailed = { viewModel.onIntent(LibraryIntent.RetryFailedChapter(it.id)) },
+                    onRetryAllFailed = { viewModel.retryAllFailedChapters(it) },
                     onRetryFailedManually = { failed, uri ->
                         viewModel.onIntent(LibraryIntent.RetryFailedChapterManually(failed.id, uri))
                     },
