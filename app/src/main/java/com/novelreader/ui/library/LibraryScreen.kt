@@ -284,7 +284,13 @@ fun LibraryScreen(
                     searchQuery = searchQuery,
                     filterChip = filterChip,
                     onFilterChipChange = { filterChip = it },
-                    onNovelClick = { viewModel.onIntent(LibraryIntent.SelectNovel(it)) },
+                    onNovelClick = { novel ->
+                        if (novel.lastChapterId != null) {
+                            onChapterClick(novel.id, novel.lastChapterId)
+                        } else {
+                            viewModel.onIntent(LibraryIntent.SelectNovel(novel))
+                        }
+                    },
                     onLongClick = { viewModel.onIntent(LibraryIntent.RequestDelete(it.id)) },
                     onToggleAutoUpdate = { viewModel.onIntent(LibraryIntent.ToggleAutoUpdate(it.id)) },
                     onCheckForUpdates = { viewModel.onIntent(LibraryIntent.CheckForUpdates(it.id)) },

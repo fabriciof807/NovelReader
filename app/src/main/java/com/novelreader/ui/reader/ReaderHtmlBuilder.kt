@@ -22,7 +22,7 @@ private val NAV_PATTERNS = listOf(
 
 fun themeVars(config: ReaderConfig): Map<String, String> = when (config.theme) {
     "dark" -> mapOf(
-        "bgColor" to "#1a1a2e",
+        "bgColor" to "#0a0a0f",
         "textColor" to "#e0e0e0",
         "accentColor" to "#90caf9",
         "linkColor" to "#64b5f6"

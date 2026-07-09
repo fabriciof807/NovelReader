@@ -53,7 +53,7 @@ class ReaderHtmlBuilderTest {
         )
         val root = html.substringAfter("<style>").substringBefore("</style>")
             .substringAfter(":root {").substringBefore("}")
-        assertThat(root).contains("--bg-color: #1a1a2e;")
+        assertThat(root).contains("--bg-color: #0a0a0f;")
         assertThat(root).contains("--text-color: #e0e0e0;")
         assertThat(root).contains("--accent-color: #90caf9;")
         assertThat(root).contains("--link-color: #64b5f6;")
@@ -91,7 +91,7 @@ class ReaderHtmlBuilderTest {
         assertThat(js).contains("applyConfig(args.args);")
         assertThat(js).doesNotContain("JSON.parse(args)")
         assertThat(js).contains("\"fontFamily\":\"serif\"")
-        assertThat(js).contains("\"bgColor\":\"#1a1a2e\"")
+        assertThat(js).contains("\"bgColor\":\"#0a0a0f\"")
         assertThat(js).contains("\"autoScrollSpeed\":0")
     }
 
