@@ -129,12 +129,12 @@ class WebImportUseCase @Inject constructor(
                             errorMessage = "Fetched content is empty or stale"
                         )
                         onError?.invoke(link.url, "Fetched content is empty or stale")
-                        deleteExistingChapter(novelId, fileName, existingFileNames, existingByFileName)
                         onProgress?.invoke(successCount, sorted.size)
                         continue
                     }
                     if (fileName in existingFileNames) {
-                        deleteExistingChapter(novelId, fileName, existingFileNames, existingByFileName)
+                        chapterDao.deleteByNovelIdAndFileName(novelId, fileName)
+                        existingFileNames.remove(fileName)
                     }
                     existingFileNames.add(fileName)
                     importedChapters.add(
@@ -161,7 +161,6 @@ class WebImportUseCase @Inject constructor(
                         errorMessage = errorMessage
                     )
                     onError?.invoke(link.url, errorMessage)
-                    deleteExistingChapter(novelId, fileName, existingFileNames, existingByFileName)
                 }
                 onProgress?.invoke(successCount, sorted.size)
             }
@@ -172,8 +171,6 @@ class WebImportUseCase @Inject constructor(
                 if (wasExisting) {
                     novelDao.setHasUpdates(novelId, true)
                 }
-            } else {
-                novelDao.updateChapterCount(novelId, chapterDao.getChaptersByNovelSync(novelId).size)
             }
             Result.success(novelId)
         } catch (e: Exception) {
@@ -212,27 +209,5 @@ class WebImportUseCase @Inject constructor(
         val type = FailedChapterErrorType.classify(e)
         val message = e.message ?: "Erro desconhecido"
         return type to message
-    }
-
-    private suspend fun deleteExistingChapter(
-        novelId: Long,
-        fileName: String,
-        existingFileNames: MutableSet<String>,
-        existingByFileName: Map<String, com.novelreader.data.local.db.entity.ChapterEntity>
-    ) {
-        if (fileName !in existingFileNames) return
-        val deleted = existingByFileName[fileName]
-        if (deleted != null) {
-            val novel = novelDao.getNovelById(novelId)
-            if (novel?.lastChapterId == deleted.id) {
-                val prev = chapterDao.getChaptersByNovelSync(novelId)
-                    .filter { it.fileName != fileName }
-                    .sortedBy { it.orderIndex }
-                    .lastOrNull()
-                novelDao.updateLastChapterId(novelId, prev?.id)
-            }
-        }
-        chapterDao.deleteByNovelIdAndFileName(novelId, fileName)
-        existingFileNames.remove(fileName)
     }
 }
