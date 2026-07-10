@@ -1,5 +1,6 @@
 package com.novelreader.domain.usecase
 
+import android.util.Log
 import com.novelreader.data.local.preferences.ImportPreferences
 import com.novelreader.data.worker.ImportWorkScheduler
 import com.novelreader.data.worker.ObserverCallbacks
@@ -98,6 +99,8 @@ class BackgroundImportManager @Inject constructor(
             }
 
             override fun onAllIdle() {
+                val s = _state.value
+                Log.w("ImportRetry", "onAllIdle running=${s.running} completed=${s.completed} pendingInQueue=${s.pendingInQueue} novelTitle=${s.novelTitle}")
                 if (_state.value.pendingInQueue > 0) return
                 if (_state.value.running || !_state.value.completed) {
                     _state.value = _state.value.copy(
@@ -119,6 +122,7 @@ class BackgroundImportManager @Inject constructor(
         targetNovelId: Long? = null
     ) {
         val specs = ImportJobSpec.create(novelTitle, links, coverUrl, sourceUrl, domain, targetNovelId)
+        Log.w("ImportRetry", "startImport title=$novelTitle links=${links.size} batches=${specs.size} running=${_state.value.running} targetNovelId=$targetNovelId")
 
         if (_state.value.running) {
             specs.forEach { scheduler.schedule(it) }

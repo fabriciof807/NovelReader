@@ -16,6 +16,7 @@ Thumbs.db
 *.keystore
 local.properties
 .opencode
+/scripts/
 
 # Landing page build output
 landing-page/node_modules/

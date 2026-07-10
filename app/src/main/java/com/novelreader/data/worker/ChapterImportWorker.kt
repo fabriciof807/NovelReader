@@ -1,6 +1,7 @@
 package com.novelreader.data.worker
 
 import android.content.Context
+import android.util.Log
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.ForegroundInfo
@@ -31,7 +32,12 @@ class ChapterImportWorker @AssistedInject constructor(
 ) : CoroutineWorker(appContext, params) {
 
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
-        val spec = readSpec() ?: return@withContext Result.failure()
+        val spec = readSpec()
+        if (spec == null) {
+            Log.w("ImportRetry", "doWork specRead=fail → failure")
+            return@withContext Result.failure()
+        }
+        Log.w("ImportRetry", "doWork id=${spec.id} title=${spec.novelTitle} links=${spec.links.size} split=${spec.splitIndex+1}/${spec.splitCount}")
         val total = spec.links.size
         setForegroundAsync(notificationHelper.createForegroundInfo(spec, 0, total))
 

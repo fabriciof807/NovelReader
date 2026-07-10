@@ -77,6 +77,7 @@ class LibraryViewModelTest {
         every { novelDao.getAllNovels() } returns flowOf(emptyList())
         every { bookmarkDao.getAll() } returns flowOf(emptyList())
         every { prefs.sortOrder } returns flowOf("LAST_READ")
+        every { prefs.chapterSortOrder } returns flowOf("ASCENDING")
         every { prefs.viewMode } returns flowOf("GRID")
         every { bgManager.state } returns MutableStateFlow(BackgroundImportState())
         viewModel = LibraryViewModel(

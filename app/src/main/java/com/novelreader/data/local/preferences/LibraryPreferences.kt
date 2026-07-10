@@ -20,6 +20,7 @@ class LibraryPreferences @Inject constructor(
 ) {
     private object Keys {
         val SORT_ORDER = stringPreferencesKey("sort_order")
+        val CHAPTER_SORT_ORDER = stringPreferencesKey("chapter_sort_order")
         val VIEW_MODE = stringPreferencesKey("view_mode")
     }
 
@@ -29,6 +30,14 @@ class LibraryPreferences @Inject constructor(
 
     suspend fun updateSortOrder(order: String) {
         context.libraryDataStore.edit { it[Keys.SORT_ORDER] = order }
+    }
+
+    val chapterSortOrder: Flow<String> = context.libraryDataStore.data.map { prefs ->
+        prefs[Keys.CHAPTER_SORT_ORDER] ?: "ASCENDING"
+    }
+
+    suspend fun updateChapterSortOrder(order: String) {
+        context.libraryDataStore.edit { it[Keys.CHAPTER_SORT_ORDER] = order }
     }
 
     val viewMode: Flow<String> = context.libraryDataStore.data.map { prefs ->

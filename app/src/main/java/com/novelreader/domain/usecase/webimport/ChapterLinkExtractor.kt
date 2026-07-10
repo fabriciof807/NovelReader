@@ -20,8 +20,9 @@ internal fun extractChapterLinks(doc: Document, homeUrl: String, homeDomain: Str
         if (linkDomain != null && linkDomain != homeDomain && !href.startsWith("/")) continue
 
         val normalizedHref = if (href.startsWith("/")) {
-            val base = homeUrl.trimEnd('/')
-            "$base$href"
+            val uri = URI(homeUrl)
+            val origin = "${uri.scheme}://${uri.authority}"
+            "$origin$href"
         } else href
 
         val lowerHref = normalizedHref.lowercase()
@@ -53,8 +54,9 @@ internal fun extractChapterLinks(doc: Document, homeUrl: String, homeDomain: Str
             if (linkDomain != null && linkDomain != homeDomain && !href.startsWith("/")) continue
 
             val normalizedHref = if (href.startsWith("/")) {
-                val base = homeUrl.trimEnd('/')
-                "$base$href"
+                val uri = URI(homeUrl)
+                val origin = "${uri.scheme}://${uri.authority}"
+                "$origin$href"
             } else href
 
             val lowerHref = normalizedHref.lowercase()

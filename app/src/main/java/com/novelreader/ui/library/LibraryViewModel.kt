@@ -2,9 +2,11 @@ package com.novelreader.ui.library
 
 import android.content.Context
 import android.net.Uri
+import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.work.WorkManager
 import com.novelreader.R
 import com.novelreader.data.local.preferences.LibraryPreferences
 import com.novelreader.data.local.db.dao.ChapterDao
@@ -264,6 +266,11 @@ class LibraryViewModel @Inject constructor(
         viewModelScope.launch {
             updateCheckScheduler.rescheduleIfNeeded()
         }
+        viewModelScope.launch {
+            val saved = libraryPreferences.chapterSortOrder.first()
+            val order = try { ChapterSortOrder.valueOf(saved) } catch (_: Exception) { ChapterSortOrder.ASCENDING }
+            _chapterSortOrder.value = order
+        }
         val pendingNovelId = savedStateHandle.get<Long>(ARG_SELECTED_NOVEL_ID)?.takeIf { it > 0L }
         if (pendingNovelId != null) {
             viewModelScope.launch {
@@ -360,10 +367,12 @@ class LibraryViewModel @Inject constructor(
     }
 
     fun toggleChapterSortOrder() {
-        _chapterSortOrder.value = when (_chapterSortOrder.value) {
+        val newOrder = when (_chapterSortOrder.value) {
             ChapterSortOrder.ASCENDING -> ChapterSortOrder.DESCENDING
             ChapterSortOrder.DESCENDING -> ChapterSortOrder.ASCENDING
         }
+        _chapterSortOrder.value = newOrder
+        viewModelScope.launch { libraryPreferences.updateChapterSortOrder(newOrder.name) }
         _selectedNovel.value?.let { loadChapters(it.id) }
     }
 
@@ -760,7 +769,10 @@ class LibraryViewModel @Inject constructor(
 
     fun retryAllFailedChapters(novelId: Long) {
         viewModelScope.launch {
-            val failed = failedChapterDao.getByNovel(novelId).filter { !it.url.isNullOrBlank() }
+            val allFailed = failedChapterDao.getByNovel(novelId)
+            val failed = allFailed.filter { !it.url.isNullOrBlank() }
+            val skippedNoUrl = allFailed.size - failed.size
+            Log.w("ImportRetry", "retryAllFailedChapters novelId=$novelId failed=${allFailed.size} retryable=${failed.size} skippedNoUrl=$skippedNoUrl")
             if (failed.isEmpty()) return@launch
             val novel = novelDao.getNovelById(novelId) ?: return@launch
             val links = failed.mapNotNull { f ->

@@ -1,5 +1,6 @@
 package com.novelreader.data.worker
 
+import android.util.Log
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import com.novelreader.data.local.preferences.ImportPreferences
@@ -101,9 +102,15 @@ class WorkCompletionObserver @Inject constructor(
                     .getWorkInfosByTagFlow(ChapterImportWorker.TAG_IMPORT)
                     .first()
                     .any { it.state == WorkInfo.State.RUNNING || it.state == WorkInfo.State.ENQUEUED }
-                if (active) return@withLock
+                if (active) {
+                    Log.w("ImportRetry", "tryScheduleNext activeWork=yes → skip-active")
+                    return@withLock
+                }
 
-                val next = importPrefs.dequeueJob() ?: return@withLock
+                val next = importPrefs.dequeueJob() ?: run {
+                    Log.w("ImportRetry", "tryScheduleNext activeWork=no queue=empty → skip-empty")
+                    return@withLock
+                }
                 specFileStore.write(next)
                 val request = ImportWorkRequestFactory.build(next)
                 workManager.enqueueUniqueWork(
@@ -111,6 +118,7 @@ class WorkCompletionObserver @Inject constructor(
                     androidx.work.ExistingWorkPolicy.REPLACE,
                     request
                 )
+                Log.w("ImportRetry", "tryScheduleNext activeWork=no → enqueued id=${next.id} title=${next.novelTitle} links=${next.links.size}")
             }
         }
     }
