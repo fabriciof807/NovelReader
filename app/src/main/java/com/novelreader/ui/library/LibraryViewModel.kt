@@ -828,5 +828,6 @@ class LibraryViewModel @Inject constructor(
 
     companion object {
         const val ARG_SELECTED_NOVEL_ID = "selectedNovelId"
+        const val ARG_SHOW_FAILED = "showFailed"
     }
 }

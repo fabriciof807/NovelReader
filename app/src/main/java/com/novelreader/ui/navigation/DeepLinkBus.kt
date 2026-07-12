@@ -10,12 +10,13 @@ import javax.inject.Singleton
 sealed class DeepLinkAction {
     data class ViewNovel(val novelId: Long) : DeepLinkAction()
     data class OpenCloudflareSolver(val novelId: Long?) : DeepLinkAction()
+    data class OpenFailedChapters(val novelId: Long) : DeepLinkAction()
 }
 
 @Singleton
 class DeepLinkBus @Inject constructor() {
     private val _events = MutableSharedFlow<DeepLinkAction>(
-        replay = 0,
+        replay = 1,
         extraBufferCapacity = 1,
         onBufferOverflow = BufferOverflow.DROP_OLDEST
     )

@@ -25,7 +25,7 @@ import com.novelreader.ui.settings.SettingsScreen
 
 object Routes {
     const val LIBRARY = "library"
-    const val LIBRARY_WITH_SELECTION = "library?${LibraryViewModel.ARG_SELECTED_NOVEL_ID}={${LibraryViewModel.ARG_SELECTED_NOVEL_ID}}"
+    const val LIBRARY_WITH_SELECTION = "library?${LibraryViewModel.ARG_SELECTED_NOVEL_ID}={${LibraryViewModel.ARG_SELECTED_NOVEL_ID}}&${LibraryViewModel.ARG_SHOW_FAILED}={${LibraryViewModel.ARG_SHOW_FAILED}}"
     const val IMPORT = "import"
     const val READER = "reader/{novelId}/{chapterId}?searchQuery={searchQuery}"
     const val FAVORITES = "favorites"
@@ -41,7 +41,11 @@ object Routes {
     }
 
     fun libraryWithSelectedNovel(novelId: Long): String {
-        return "library?${LibraryViewModel.ARG_SELECTED_NOVEL_ID}=$novelId"
+        return "library?${LibraryViewModel.ARG_SELECTED_NOVEL_ID}=$novelId&${LibraryViewModel.ARG_SHOW_FAILED}=false"
+    }
+
+    fun libraryWithFailedChapters(novelId: Long): String {
+        return "library?${LibraryViewModel.ARG_SELECTED_NOVEL_ID}=$novelId&${LibraryViewModel.ARG_SHOW_FAILED}=true"
     }
 }
 
@@ -67,6 +71,11 @@ fun NovelReaderNavGraph(
                         launchSingleTop = true
                     }
                 }
+                is DeepLinkAction.OpenFailedChapters -> {
+                    navController.navigate(Routes.libraryWithFailedChapters(action.novelId)) {
+                        launchSingleTop = true
+                    }
+                }
             }
         }
     }
@@ -87,6 +96,10 @@ fun NovelReaderNavGraph(
                 navArgument(LibraryViewModel.ARG_SELECTED_NOVEL_ID) {
                     type = NavType.LongType
                     defaultValue = -1L
+                },
+                navArgument(LibraryViewModel.ARG_SHOW_FAILED) {
+                    type = NavType.BoolType
+                    defaultValue = false
                 }
             )
         ) {
