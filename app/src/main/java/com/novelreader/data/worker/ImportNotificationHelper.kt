@@ -9,6 +9,7 @@ import android.content.pm.ServiceInfo
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.work.ForegroundInfo
+import com.novelreader.MainActivity
 import com.novelreader.R
 import com.novelreader.domain.usecase.ImportJobSpec
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -72,6 +73,7 @@ class ImportNotificationHelper @Inject constructor(
             .setSilent(true)
             .setProgress(total.coerceAtLeast(1), progress, total == 0)
             .setCategory(NotificationCompat.CATEGORY_PROGRESS)
+            .setContentIntent(novelPendingIntent(spec.targetNovelId, MainActivity.ACTION_OPEN_NOVEL, spec.id.hashCode()))
             .addAction(
                 R.drawable.ic_notification,
                 context.getString(R.string.import_notification_cancel),
@@ -115,6 +117,7 @@ class ImportNotificationHelper @Inject constructor(
             .setAutoCancel(true)
             .setCategory(NotificationCompat.CATEGORY_STATUS)
             .setProgress(0, 0, false)
+            .setContentIntent(novelPendingIntent(spec.targetNovelId, MainActivity.ACTION_OPEN_NOVEL, COMPLETION_NOTIFICATION_ID))
             .build()
 
         val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
@@ -131,6 +134,7 @@ class ImportNotificationHelper @Inject constructor(
             .setOngoing(false)
             .setAutoCancel(true)
             .setCategory(NotificationCompat.CATEGORY_ERROR)
+            .setContentIntent(novelPendingIntent(spec.targetNovelId, MainActivity.ACTION_OPEN_FAILED_CHAPTERS, COMPLETION_NOTIFICATION_ID + 1))
             .build()
 
         val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
@@ -138,4 +142,18 @@ class ImportNotificationHelper @Inject constructor(
     }
 
     fun notificationId(spec: ImportJobSpec): Int = NOTIFICATION_ID_BASE + spec.id.hashCode().rem(1000).let { if (it < 0) it + 1000 else it }
+
+    private fun novelPendingIntent(novelId: Long?, action: String, requestCode: Int): PendingIntent {
+        val intent = context.packageManager.getLaunchIntentForPackage(context.packageName)?.apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            if (novelId != null) {
+                putExtra(MainActivity.EXTRA_DEEP_LINK_ACTION, action)
+                putExtra(MainActivity.EXTRA_NOVEL_ID, novelId)
+            }
+        } ?: Intent()
+        return PendingIntent.getActivity(
+            context, requestCode, intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+    }
 }
