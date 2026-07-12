@@ -2,12 +2,15 @@ package com.novelreader.data.worker
 
 import android.app.NotificationManager
 import android.content.Context
+import android.content.Intent
 import androidx.test.core.app.ApplicationProvider
 import com.google.common.truth.Truth.assertThat
+import com.novelreader.MainActivity
 import com.novelreader.domain.usecase.ImportJobSpec
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.Shadows
 import org.robolectric.annotation.Config
 import java.util.UUID
 
@@ -33,8 +36,13 @@ class ImportNotificationHelperTest {
         )
         val info = helper.createForegroundInfo(spec, 0, 10)
         val notification = info.notification
+        val shadow = Shadows.shadowOf(notification.contentIntent)
+        val intent: Intent = shadow.savedIntent
 
-        assertThat(notification.contentIntent).isNotNull()
+        assertThat(intent.getStringExtra(MainActivity.EXTRA_DEEP_LINK_ACTION))
+            .isEqualTo(MainActivity.ACTION_OPEN_NOVEL)
+        assertThat(intent.getLongExtra(MainActivity.EXTRA_NOVEL_ID, -1L))
+            .isEqualTo(42L)
     }
 
     @Test
@@ -51,8 +59,10 @@ class ImportNotificationHelperTest {
             targetNovelId = null
         )
         val info = helper.createForegroundInfo(spec, 0, 10)
+        val shadow = Shadows.shadowOf(info.notification.contentIntent)
+        val intent: Intent = shadow.savedIntent
 
-        assertThat(info.notification.contentIntent).isNotNull()
+        assertThat(intent.getStringExtra(MainActivity.EXTRA_DEEP_LINK_ACTION)).isNull()
     }
 
     @Test
@@ -71,7 +81,12 @@ class ImportNotificationHelperTest {
         helper.postCompletionNotification(spec, 5, 10, 0)
         val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         val posted = manager.getActiveNotifications()
-        assertThat(posted).isNotEmpty()
+        val notification = posted.first().notification
+        val shadow = Shadows.shadowOf(notification.contentIntent)
+        val intent: Intent = shadow.savedIntent
+
+        assertThat(intent.getStringExtra(MainActivity.EXTRA_DEEP_LINK_ACTION))
+            .isEqualTo(MainActivity.ACTION_OPEN_NOVEL)
     }
 
     @Test
@@ -90,6 +105,11 @@ class ImportNotificationHelperTest {
         helper.postFailureNotification(spec)
         val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         val posted = manager.getActiveNotifications()
-        assertThat(posted).isNotEmpty()
+        val notification = posted.first().notification
+        val shadow = Shadows.shadowOf(notification.contentIntent)
+        val intent: Intent = shadow.savedIntent
+
+        assertThat(intent.getStringExtra(MainActivity.EXTRA_DEEP_LINK_ACTION))
+            .isEqualTo(MainActivity.ACTION_OPEN_FAILED_CHAPTERS)
     }
 }
