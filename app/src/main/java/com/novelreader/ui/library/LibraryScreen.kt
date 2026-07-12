@@ -84,6 +84,7 @@ fun LibraryScreen(
     val isImportingCharacters by viewModel.isImportingCharacters.collectAsState()
     val characterImportResult by viewModel.characterImportResult.collectAsState()
     val failedChapters by viewModel.failedChapters.collectAsState()
+    val scrollToFailedRequest by viewModel.scrollToFailedRequest.collectAsState()
     val viewMode by viewModel.viewMode.collectAsState()
     val context = LocalContext.current
 
@@ -331,7 +332,9 @@ fun LibraryScreen(
                     },
                     onChapterClick = { chapterId ->
                         selectedNovel?.let { onChapterClick(it.id, chapterId) }
-                    }
+                    },
+                    pendingScrollToFailedNovelId = scrollToFailedRequest,
+                    onConsumeScrollToFailed = { viewModel.consumeScrollToFailed() }
                 )
                 2 -> PersonagensTab(
                     characters = characters,

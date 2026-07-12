@@ -76,6 +76,8 @@ fun ChaptersTab(
     totalChapters: Int = 0,
     initialScroll: LibraryViewModel.ChaptersScrollState? = null,
     onScroll: (Int, Int) -> Unit = { _, _ -> },
+    pendingScrollToFailedNovelId: Long? = null,
+    onConsumeScrollToFailed: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var pendingFilePickForFailed by remember { mutableStateOf<Long?>(null) }
@@ -92,6 +94,13 @@ fun ChaptersTab(
         }
             .debounce(300)
             .collect { (idx, off) -> onScroll(idx, off) }
+    }
+    LaunchedEffect(pendingScrollToFailedNovelId, chapters.size, failedChapters.size) {
+        val target = pendingScrollToFailedNovelId
+        if (target != null && target == novelId && failedChapters.isNotEmpty()) {
+            listState.scrollToItem(chapters.size + 1)
+            onConsumeScrollToFailed()
+        }
     }
     val filePicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()

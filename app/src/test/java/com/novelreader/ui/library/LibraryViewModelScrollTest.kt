@@ -22,11 +22,13 @@ import com.novelreader.domain.usecase.ScanMissingChaptersUseCase
 import com.novelreader.domain.usecase.WebImportUseCase
 import com.novelreader.domain.usecase.importnovel.ChapterInserter
 import com.novelreader.domain.usecase.importnovel.FileCharsetDetector
+import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
+import com.novelreader.data.local.db.entity.NovelEntity
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
@@ -152,5 +154,74 @@ class LibraryViewModelScrollTest {
         assertThat(map[1L]?.firstVisibleItemScrollOffset).isEqualTo(40)
         assertThat(map[2L]?.firstVisibleItemIndex).isEqualTo(7)
         assertThat(map[3L]?.firstVisibleItemScrollOffset).isEqualTo(50)
+    }
+
+    @Test
+    fun `scrollToFailedRequest is set when showFailed flag is true`() = runTest {
+        val novel = NovelEntity(id = 1L, title = "Test", sourceUrl = "", coverPath = null)
+        coEvery { novelDao.getNovelById(1L) } returns novel
+
+        savedState[LibraryViewModel.ARG_SELECTED_NOVEL_ID] = 1L
+        savedState[LibraryViewModel.ARG_SHOW_FAILED] = true
+        val vm = LibraryViewModel(
+            context = context,
+            savedStateHandle = savedState,
+            novelDao = novelDao,
+            chapterDao = chapterDao,
+            bookmarkDao = bookmarkDao,
+            backgroundImportManager = bgManager,
+            libraryPreferences = prefs,
+            characterManagementUseCase = charManagement,
+            coverManagementUseCase = coverManagement,
+            characterPhotoDao = charPhotoDao,
+            mvlempyrCharacterImporter = importer,
+            updateCheckScheduler = updateCheckScheduler,
+            webImportUseCase = webImportUseCase,
+            failedChapterDao = failedChapterDao,
+            retryChapterUseCase = retryChapterUseCase,
+            scanMissingChaptersUseCase = scanMissingChaptersUseCase,
+            chapterInserter = chapterInserter,
+            parserRegistry = parserRegistry,
+            mhtParser = mhtParser,
+            fileCharsetDetector = fileCharsetDetector,
+            io = Dispatchers.Unconfined
+        )
+
+        assertThat(vm.scrollToFailedRequest.value).isEqualTo(1L)
+    }
+
+    @Test
+    fun `consumeScrollToFailed resets scrollToFailedRequest to null`() = runTest {
+        val novel = NovelEntity(id = 2L, title = "Test 2", sourceUrl = "", coverPath = null)
+        coEvery { novelDao.getNovelById(2L) } returns novel
+
+        savedState[LibraryViewModel.ARG_SELECTED_NOVEL_ID] = 2L
+        savedState[LibraryViewModel.ARG_SHOW_FAILED] = true
+        val vm = LibraryViewModel(
+            context = context,
+            savedStateHandle = savedState,
+            novelDao = novelDao,
+            chapterDao = chapterDao,
+            bookmarkDao = bookmarkDao,
+            backgroundImportManager = bgManager,
+            libraryPreferences = prefs,
+            characterManagementUseCase = charManagement,
+            coverManagementUseCase = coverManagement,
+            characterPhotoDao = charPhotoDao,
+            mvlempyrCharacterImporter = importer,
+            updateCheckScheduler = updateCheckScheduler,
+            webImportUseCase = webImportUseCase,
+            failedChapterDao = failedChapterDao,
+            retryChapterUseCase = retryChapterUseCase,
+            scanMissingChaptersUseCase = scanMissingChaptersUseCase,
+            chapterInserter = chapterInserter,
+            parserRegistry = parserRegistry,
+            mhtParser = mhtParser,
+            fileCharsetDetector = fileCharsetDetector,
+            io = Dispatchers.Unconfined
+        )
+
+        vm.consumeScrollToFailed()
+        assertThat(vm.scrollToFailedRequest.value).isNull()
     }
 }

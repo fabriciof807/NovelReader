@@ -146,4 +146,31 @@ class ChaptersTabScrollTest {
         }
         composeTestRule.waitForIdle()
     }
+
+    @Test
+    fun `ChaptersTab renders with pendingScrollToFailedNovelId without crashing`() {
+        composeTestRule.setContent {
+            NovelReaderTheme {
+                ChaptersTab(
+                    novelId = 6L,
+                    chapters = (0L..4L).map {
+                        ChapterEntity(
+                            id = it,
+                            novelId = 6L,
+                            title = "Ch $it",
+                            fileName = "ch_$it.html",
+                            orderIndex = it.toInt(),
+                            content = "<p>x</p>"
+                        )
+                    },
+                    bookmarkCounts = emptyMap(),
+                    sortOrder = ChapterSortOrder.ASCENDING,
+                    onChapterClick = { },
+                    pendingScrollToFailedNovelId = 6L,
+                    onConsumeScrollToFailed = { }
+                )
+            }
+        }
+        composeTestRule.waitForIdle()
+    }
 }

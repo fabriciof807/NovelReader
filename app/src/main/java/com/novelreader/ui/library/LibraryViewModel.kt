@@ -173,6 +173,13 @@ class LibraryViewModel @Inject constructor(
     private val _failedChapters = MutableStateFlow<List<FailedChapterEntity>>(emptyList())
     val failedChapters: StateFlow<List<FailedChapterEntity>> = _failedChapters
 
+    private val _scrollToFailedRequest = MutableStateFlow<Long?>(null)
+    val scrollToFailedRequest: StateFlow<Long?> = _scrollToFailedRequest
+
+    fun consumeScrollToFailed() {
+        _scrollToFailedRequest.value = null
+    }
+
     private val _updateCheckResult = MutableSharedFlow<String>(
         replay = 0, extraBufferCapacity = 2, onBufferOverflow = BufferOverflow.DROP_OLDEST
     )
@@ -277,8 +284,12 @@ class LibraryViewModel @Inject constructor(
                 val novel = novelDao.getNovelById(pendingNovelId)
                 if (novel != null) {
                     selectNovel(novel)
+                    if (savedStateHandle.get<Boolean>(ARG_SHOW_FAILED) == true) {
+                        _scrollToFailedRequest.value = pendingNovelId
+                    }
                 }
                 savedStateHandle.remove<Long>(ARG_SELECTED_NOVEL_ID)
+                savedStateHandle.remove<Boolean>(ARG_SHOW_FAILED)
             }
         }
     }
