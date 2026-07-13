@@ -14,6 +14,23 @@ import org.robolectric.annotation.Config
 class ReaderPreferencesTest {
 
     @Test
+    fun `swipeDirection defaults to vertical`() = runTest {
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        val prefs = ReaderPreferences(context)
+        assertThat(prefs.config.first().swipeDirection).isEqualTo("vertical")
+    }
+
+    @Test
+    fun `updateSwipeDirection persists all four valid values`() = runTest {
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        val prefs = ReaderPreferences(context)
+        for (dir in listOf("vertical", "horizontal", "both", "none")) {
+            prefs.updateSwipeDirection(dir)
+            assertThat(prefs.config.first().swipeDirection).isEqualTo(dir)
+        }
+    }
+
+    @Test
     fun `keepScreenOn defaults to true`() = runTest {
         val context = ApplicationProvider.getApplicationContext<android.content.Context>()
         val prefs = ReaderPreferences(context)

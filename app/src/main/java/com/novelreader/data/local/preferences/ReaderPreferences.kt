@@ -22,7 +22,8 @@ data class ReaderConfig(
     val lineHeight: Float = 1.8f,
     val theme: String = "light",
     val autoScrollSpeed: Float = 0f,
-    val keepScreenOn: Boolean = true
+    val keepScreenOn: Boolean = true,
+    val swipeDirection: String = "vertical"
 )
 
 @Singleton
@@ -36,6 +37,7 @@ class ReaderPreferences @Inject constructor(
         val THEME = stringPreferencesKey("theme")
         val AUTO_SCROLL_SPEED = stringPreferencesKey("auto_scroll_speed")
         val KEEP_SCREEN_ON = booleanPreferencesKey("keep_screen_on")
+        val SWIPE_DIRECTION = stringPreferencesKey("swipe_direction")
     }
 
     val config: Flow<ReaderConfig> = context.dataStore.data.map { prefs ->
@@ -45,7 +47,8 @@ class ReaderPreferences @Inject constructor(
             lineHeight = prefs[Keys.LINE_HEIGHT]?.toFloatOrNull() ?: 1.8f,
             theme = prefs[Keys.THEME] ?: "light",
             autoScrollSpeed = prefs[Keys.AUTO_SCROLL_SPEED]?.toFloatOrNull() ?: 0f,
-            keepScreenOn = prefs[Keys.KEEP_SCREEN_ON] ?: true
+            keepScreenOn = prefs[Keys.KEEP_SCREEN_ON] ?: true,
+            swipeDirection = prefs[Keys.SWIPE_DIRECTION]?.takeIf { it in setOf("vertical", "horizontal", "both", "none") } ?: "vertical"
         )
     }
 
@@ -67,5 +70,9 @@ class ReaderPreferences @Inject constructor(
 
     suspend fun updateKeepScreenOn(value: Boolean) {
         context.dataStore.edit { it[Keys.KEEP_SCREEN_ON] = value }
+    }
+
+    suspend fun updateSwipeDirection(direction: String) {
+        context.dataStore.edit { it[Keys.SWIPE_DIRECTION] = direction }
     }
 }
