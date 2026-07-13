@@ -79,6 +79,11 @@
     <string name="line_spacing">Spacing: %.1f</string>
     <string name="reader_auto_scroll">Auto-scroll</string>
     <string name="reader_auto_scroll_hint">Tap the screen to pause.</string>
+    <string name="reader_swipe_direction">Swipe direction</string>
+    <string name="reader_swipe_vertical">Vertical</string>
+    <string name="reader_swipe_horizontal">Horizontal</string>
+    <string name="reader_swipe_both">Both</string>
+    <string name="reader_swipe_none">Off</string>
     <string name="reader_keep_screen_on">Keep screen on</string>
     <string name="bookmarks_count">Bookmarks (%d)</string>
     <string name="no_bookmarks_chapter">No bookmarks in this chapter</string>

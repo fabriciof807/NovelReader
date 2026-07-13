@@ -266,6 +266,10 @@ class ReaderViewModel @Inject constructor(
         viewModelScope.launch { readerPreferences.updateKeepScreenOn(value) }
     }
 
+    fun updateSwipeDirection(direction: String) {
+        viewModelScope.launch { readerPreferences.updateSwipeDirection(direction) }
+    }
+
     private var searchJob: Job? = null
 
     fun activateSearch() {

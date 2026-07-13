@@ -199,6 +199,7 @@ fun ReaderScreen(
             onLineHeightChange = { viewModel.updateLineHeight(it) },
             onAutoScrollSpeedChange = { viewModel.updateAutoScrollSpeed(it) },
             onKeepScreenOnChange = { viewModel.updateKeepScreenOn(it) },
+            onSwipeDirectionChange = { viewModel.updateSwipeDirection(it) },
             onDismiss = { viewModel.hideSettings() }
         )
     }

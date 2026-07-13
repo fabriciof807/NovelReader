@@ -15,9 +15,13 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.ArrowUpward
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material.icons.filled.TouchApp
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -50,6 +54,7 @@ fun SettingsSheet(
     onLineHeightChange: (Float) -> Unit,
     onAutoScrollSpeedChange: (Float) -> Unit,
     onKeepScreenOnChange: (Boolean) -> Unit,
+    onSwipeDirectionChange: (String) -> Unit = {},
     onDismiss: () -> Unit
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -167,6 +172,49 @@ fun SettingsSheet(
             HorizontalDivider()
             Spacer(modifier = Modifier.height(16.dp))
 
+            Text(
+                stringResource(R.string.reader_swipe_direction),
+                style = MaterialTheme.typography.titleSmall
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                SwipeOption(
+                    icon = Icons.Default.ArrowUpward,
+                    label = stringResource(R.string.reader_swipe_vertical),
+                    selected = config.swipeDirection == "vertical",
+                    onClick = { onSwipeDirectionChange("vertical") },
+                    modifier = Modifier.weight(1f)
+                )
+                SwipeOption(
+                    icon = Icons.AutoMirrored.Filled.ArrowBack,
+                    label = stringResource(R.string.reader_swipe_horizontal),
+                    selected = config.swipeDirection == "horizontal",
+                    onClick = { onSwipeDirectionChange("horizontal") },
+                    modifier = Modifier.weight(1f)
+                )
+                SwipeOption(
+                    icon = Icons.Default.SwapHoriz,
+                    label = stringResource(R.string.reader_swipe_both),
+                    selected = config.swipeDirection == "both",
+                    onClick = { onSwipeDirectionChange("both") },
+                    modifier = Modifier.weight(1f)
+                )
+                SwipeOption(
+                    icon = Icons.Default.Close,
+                    label = stringResource(R.string.reader_swipe_none),
+                    selected = config.swipeDirection == "none",
+                    onClick = { onSwipeDirectionChange("none") },
+                    modifier = Modifier.weight(1f)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+            HorizontalDivider()
+            Spacer(modifier = Modifier.height(16.dp))
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
@@ -243,6 +291,51 @@ private fun ThemeOption(
         Text(
             label,
             style = MaterialTheme.typography.labelMedium,
+            fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+            color = if (selected) MaterialTheme.colorScheme.primary
+            else MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+@Composable
+private fun SwipeOption(
+    icon: ImageVector,
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val bgColor = if (selected)
+        MaterialTheme.colorScheme.primaryContainer
+    else
+        MaterialTheme.colorScheme.surfaceVariant
+
+    val borderColor = if (selected)
+        MaterialTheme.colorScheme.primary
+    else
+        Color.Transparent
+
+    Column(
+        modifier = modifier
+            .clip(RoundedCornerShape(12.dp))
+            .background(bgColor)
+            .border(2.dp, borderColor, RoundedCornerShape(12.dp))
+            .clickable(onClick = onClick)
+            .padding(vertical = 12.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Icon(
+            icon,
+            contentDescription = label,
+            tint = if (selected) MaterialTheme.colorScheme.primary
+            else MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(22.dp)
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            label,
+            style = MaterialTheme.typography.labelSmall,
             fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
             color = if (selected) MaterialTheme.colorScheme.primary
             else MaterialTheme.colorScheme.onSurfaceVariant

@@ -209,6 +209,18 @@ class ReaderViewModelTest {
     }
 
     @Test
+    fun `updateSwipeDirection forwards value to readerPreferences`() = runTest {
+        coEvery { chapterDao.getChapterById(10) } returns ChapterEntity(
+            id = 10, novelId = 1L, title = "Ch1", fileName = "ch1.html",
+            orderIndex = 1, content = "<p>x</p>"
+        )
+        coEvery { chapterDao.getChaptersByNovelSync(1L) } returns emptyList()
+        viewModel = createViewModel()
+        viewModel.updateSwipeDirection("horizontal")
+        coVerify { readerPrefs.updateSwipeDirection("horizontal") }
+    }
+
+    @Test
     fun `updateKeepScreenOn calls readerPreferences updateKeepScreenOn`() = runTest {
         viewModel = createViewModel()
         viewModel.updateKeepScreenOn(false)

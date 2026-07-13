@@ -79,6 +79,11 @@
     <string name="line_spacing">Espaçamento: %.1f</string>
     <string name="reader_auto_scroll">Rolagem automática</string>
     <string name="reader_auto_scroll_hint">Toque na tela para pausar.</string>
+    <string name="reader_swipe_direction">Direção do swipe</string>
+    <string name="reader_swipe_vertical">Vertical</string>
+    <string name="reader_swipe_horizontal">Horizontal</string>
+    <string name="reader_swipe_both">Ambos</string>
+    <string name="reader_swipe_none">Desligado</string>
     <string name="reader_keep_screen_on">Manter tela ligada</string>
     <string name="bookmarks_count">Favoritos (%d)</string>
     <string name="no_bookmarks_chapter">Nenhum favorito neste capítulo</string>
