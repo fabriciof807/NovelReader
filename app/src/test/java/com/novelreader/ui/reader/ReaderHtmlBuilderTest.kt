@@ -128,4 +128,43 @@ class ReaderHtmlBuilderTest {
         val js = searchHighlightJs(query = "nonexistent", restoreRatio = 0.3f)
         assertThat(js).contains("args.restoreRatio")
     }
+
+    @Test
+    fun `buildReaderHtml with swipeDirection vertical sets vertical direction and uses vertical-branch guard`() {
+        val html = buildReaderHtml("<p>x</p>", ReaderConfig(swipeDirection = "vertical"))
+        assertThat(html).contains("_swipeDir = 'vertical'")
+        assertThat(html).contains("_swipeDir === 'vertical' || _swipeDir === 'both'")
+        assertThat(html).contains("dy < 0 ? 'next' : 'prev'")
+    }
+
+    @Test
+    fun `buildReaderHtml with swipeDirection horizontal sets horizontal direction and uses horizontal-branch guard`() {
+        val html = buildReaderHtml("<p>x</p>", ReaderConfig(swipeDirection = "horizontal"))
+        assertThat(html).contains("_swipeDir = 'horizontal'")
+        assertThat(html).contains("_swipeDir === 'horizontal' || _swipeDir === 'both'")
+        assertThat(html).contains("dx < 0 ? 'next' : 'prev'")
+    }
+
+    @Test
+    fun `buildReaderHtml with swipeDirection both contains both vertical and horizontal guards`() {
+        val html = buildReaderHtml("<p>x</p>", ReaderConfig(swipeDirection = "both"))
+        assertThat(html).contains("_swipeDir = 'both'")
+        assertThat(html).contains("dy < 0 ? 'next' : 'prev'")
+        assertThat(html).contains("dx < 0 ? 'next' : 'prev'")
+    }
+
+    @Test
+    fun `buildReaderHtml with swipeDirection none sets none and guards never match`() {
+        val html = buildReaderHtml("<p>x</p>", ReaderConfig(swipeDirection = "none"))
+        assertThat(html).contains("_swipeDir = 'none'")
+        // ponytail: both branch guards present; runtime _swipeDir === 'none' matches neither
+        assertThat(html).contains("_swipeDir === 'vertical' || _swipeDir === 'both'")
+        assertThat(html).contains("_swipeDir === 'horizontal' || _swipeDir === 'both'")
+    }
+
+    @Test
+    fun `applyConfigJs passes swipeDirection to applyConfig`() {
+        val js = applyConfigJs(ReaderConfig(swipeDirection = "horizontal"))
+        assertThat(js).contains("\"swipeDirection\":\"horizontal\"")
+    }
 }

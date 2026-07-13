@@ -175,6 +175,7 @@ fun buildReaderHtml(
                 if (sel !== _lastSel) { _lastSel = sel; Android.onTextSelected(sel); }
             });
 
+            var _swipeDir = '${config.swipeDirection}';
             (function() {
                 var _ts = {x:0, y:0, t:0};
                 document.addEventListener('touchstart', function(e) {
@@ -186,13 +187,27 @@ fun buildReaderHtml(
                     var dt = Date.now() - _ts.t;
                     if (Math.abs(dx) < 15 && Math.abs(dy) < 15 && dt < 300) {
                         try { Android.onTap(); } catch(e) {}
-                    } else if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) {
-                        try { Android.onSwipe(dx > 0 ? 'prev' : 'next'); } catch(e) {}
+                        return;
+                    }
+                    if (dt > 500) return;
+                    var dir = null;
+                    if ((_swipeDir === 'vertical' || _swipeDir === 'both') &&
+                        Math.abs(dy) > 60 && Math.abs(dy) > Math.abs(dx) * 1.5) {
+                        dir = dy < 0 ? 'next' : 'prev';
+                    }
+                    if (dir === null &&
+                        (_swipeDir === 'horizontal' || _swipeDir === 'both') &&
+                        Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+                        dir = dx < 0 ? 'next' : 'prev';
+                    }
+                    if (dir !== null) {
+                        try { Android.onSwipe(dir); } catch(e) {}
                     }
                 });
             })();
 
             function applyConfig(cfg) {
+                _swipeDir = cfg.swipeDirection;
                 var root = document.documentElement.style;
                 root.setProperty('--bg-color', cfg.bgColor);
                 root.setProperty('--text-color', cfg.textColor);
@@ -313,7 +328,8 @@ fun applyConfigJs(config: ReaderConfig): String {
         "fontFamily" to config.fontFamily,
         "fontSize" to config.fontSize,
         "lineHeight" to config.lineHeight,
-        "autoScrollSpeed" to config.autoScrollSpeed
+        "autoScrollSpeed" to config.autoScrollSpeed,
+        "swipeDirection" to config.swipeDirection
     )
     return buildJs(
         code = "applyConfig(args.args);",
