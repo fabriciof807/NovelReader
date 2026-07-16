@@ -32,10 +32,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.SwipeToDismissBox
-import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -59,7 +56,7 @@ import com.novelreader.R
 import com.novelreader.data.local.db.entity.CharacterEntity
 import com.novelreader.data.local.db.entity.CharacterPhotoEntity
 
-@OptIn(ExperimentalFoundationApi::class, androidx.compose.material3.ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun CharacterCard(
     character: CharacterEntity,
@@ -78,43 +75,11 @@ fun CharacterCard(
     var editNotes by remember { mutableStateOf(character.notes ?: "") }
     val focusRequester = remember { FocusRequester() }
 
-    val dismissState = rememberSwipeToDismissBoxState(
-        confirmValueChange = { value ->
-            if (value == SwipeToDismissBoxValue.EndToStart) {
-                onDeleteClick()
-                true
-            } else false
-        }
-    )
-
     LaunchedEffect(isEditingName) {
         if (isEditingName) focusRequester.requestFocus()
     }
 
-    SwipeToDismissBox(
-        state = dismissState,
-        enableDismissFromEndToStart = true,
-        enableDismissFromStartToEnd = false,
-        backgroundContent = {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(
-                        MaterialTheme.colorScheme.error.copy(alpha = 0.8f),
-                        RoundedCornerShape(12.dp)
-                    )
-                    .padding(horizontal = 24.dp),
-                contentAlignment = Alignment.CenterEnd
-            ) {
-                Icon(
-                    Icons.Default.Delete,
-                    contentDescription = stringResource(R.string.delete),
-                    tint = Color.White
-                )
-            }
-        }
-    ) {
-        Card(
+    Card(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 12.dp, vertical = 6.dp)
@@ -368,5 +333,4 @@ fun CharacterCard(
                 }
             }
         }
-    }
 }
