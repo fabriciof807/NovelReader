@@ -149,6 +149,7 @@ fun LibraryTab(
                         bgState = backgroundImportState,
                         onClick = { onNovelClick(novel) },
                         onLongClick = { showMenu = true },
+                        onShowMenu = { showMenu = true },
                         onContinueClick = { onContinueReading(novel) }
                     )
                     NovelMenu(
@@ -178,7 +179,8 @@ fun LibraryTab(
                         readProgress = readProgress[novel.id] ?: 0f,
                         bgState = backgroundImportState,
                         onClick = { onNovelClick(novel) },
-                        onLongClick = { showMenu = true }
+                        onLongClick = { showMenu = true },
+                        onShowMenu = { showMenu = true }
                     )
                     NovelMenu(
                         novel = novel,

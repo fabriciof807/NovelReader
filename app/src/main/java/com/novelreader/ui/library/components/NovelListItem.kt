@@ -13,8 +13,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -40,7 +44,8 @@ fun NovelListItem(
     readProgress: Float = 0f,
     bgState: BackgroundImportState,
     onClick: () -> Unit,
-    onLongClick: () -> Unit
+    onLongClick: () -> Unit,
+    onShowMenu: () -> Unit = {}
 ) {
     Card(
         modifier = Modifier
@@ -89,6 +94,12 @@ fun NovelListItem(
                         text = stringResource(R.string.chapters_count, novel.totalChapters),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                    )
+                }
+                IconButton(onClick = onShowMenu) {
+                    Icon(
+                        Icons.Default.MoreVert,
+                        contentDescription = stringResource(R.string.options)
                     )
                 }
             }

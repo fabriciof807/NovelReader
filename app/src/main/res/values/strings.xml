@@ -304,4 +304,7 @@
     <string name="failed_chapter_retry_mht">Importar MHT/HTML</string>
     <string name="reader_action_failed">Ação falhou: %1$s</string>
     <string name="action_retry">Tentar novamente</string>
+
+    <!-- Novel menu -->
+    <string name="options">Opções</string>
 </resources>
