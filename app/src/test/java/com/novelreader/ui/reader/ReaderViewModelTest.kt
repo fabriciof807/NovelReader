@@ -1,6 +1,7 @@
 package com.novelreader.ui.reader
 
 import android.content.Context
+import android.net.Uri
 import androidx.lifecycle.SavedStateHandle
 import app.cash.turbine.test
 import com.google.common.truth.Truth.assertThat
@@ -12,6 +13,7 @@ import com.novelreader.data.local.db.entity.BookmarkEntity
 import com.novelreader.data.local.db.entity.ChapterEntity
 import com.novelreader.data.local.db.FtsSearchService
 import com.novelreader.data.local.preferences.ReaderPreferences
+import com.novelreader.domain.usecase.ReimportChapterContentUseCase
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -39,6 +41,7 @@ class ReaderViewModelTest {
     private val readerPrefs: ReaderPreferences = mockk(relaxed = true)
     private val charDao: CharacterDao = mockk(relaxed = true)
     private val ftsSearchService: FtsSearchService = mockk(relaxed = true)
+    private val reimportChapterContentUseCase: ReimportChapterContentUseCase = mockk(relaxed = true)
 
     private lateinit var viewModel: ReaderViewModel
 
@@ -62,7 +65,8 @@ class ReaderViewModelTest {
         bookmarkDao = bookmarkDao,
         readerPreferences = readerPrefs,
         characterDao = charDao,
-        ftsSearchService = ftsSearchService
+        ftsSearchService = ftsSearchService,
+        reimportChapterContentUseCase = reimportChapterContentUseCase
     )
 
     @Test
@@ -220,10 +224,103 @@ class ReaderViewModelTest {
         coVerify { readerPrefs.updateSwipeDirection("horizontal") }
     }
 
-    @Test
-    fun `updateKeepScreenOn calls readerPreferences updateKeepScreenOn`() = runTest {
-        viewModel = createViewModel()
-        viewModel.updateKeepScreenOn(false)
-        coVerify { readerPrefs.updateKeepScreenOn(false) }
+@Test
+fun `loadChapter with blank content sets isEmpty in state`() = runTest {
+    val chapter = ChapterEntity(
+        id = 10, novelId = 1, title = "Ch1",
+        fileName = "ch1.html", orderIndex = 0, content = ""
+    )
+    coEvery { chapterDao.getChapterById(any()) } returns chapter
+    coEvery { chapterDao.getChaptersByNovelSync(1) } returns listOf(chapter)
+    coEvery { novelDao.getNovelById(1) } returns null
+    coEvery { novelDao.updateLastRead(any(), any()) } returns Unit
+    coEvery { chapterDao.markAsRead(any(), any()) } returns Unit
+
+    viewModel = createViewModel()
+
+    viewModel.state.test {
+        val loaded = awaitItem()
+        assertThat(loaded.isEmpty).isTrue()
+        cancelAndConsumeRemainingEvents()
     }
+}
+
+@Test
+fun `loadChapter with short content less than 200 chars sets isEmpty`() = runTest {
+    val chapter = ChapterEntity(
+        id = 10, novelId = 1, title = "Ch2",
+        fileName = "ch2.html", orderIndex = 1, content = "<p>short</p>"
+    )
+    coEvery { chapterDao.getChapterById(any()) } returns chapter
+    coEvery { chapterDao.getChaptersByNovelSync(1) } returns listOf(chapter)
+    coEvery { novelDao.getNovelById(1) } returns null
+    coEvery { novelDao.updateLastRead(any(), any()) } returns Unit
+    coEvery { chapterDao.markAsRead(any(), any()) } returns Unit
+
+    viewModel = createViewModel()
+
+    viewModel.state.test {
+        val loaded = awaitItem()
+        assertThat(loaded.isEmpty).isTrue()
+        cancelAndConsumeRemainingEvents()
+    }
+}
+
+@Test
+fun `importMhtForChapter success calls useCase and reloads chapter`() = runTest {
+    val chapter = ChapterEntity(
+        id = 10, novelId = 1, title = "Ch1",
+        fileName = "ch1.html", orderIndex = 0, content = ""
+    )
+    coEvery { chapterDao.getChapterById(any()) } returns chapter
+    coEvery { chapterDao.getChaptersByNovelSync(1) } returns listOf(chapter)
+    coEvery { novelDao.getNovelById(1) } returns null
+    coEvery { novelDao.updateLastRead(any(), any()) } returns Unit
+    coEvery { chapterDao.markAsRead(any(), any()) } returns Unit
+
+    viewModel = createViewModel()
+    val filledContent = "<p>" + "x".repeat(200) + "</p>"
+    val filledChapter = chapter.copy(content = filledContent)
+    coEvery { chapterDao.getChapterById(any()) } returns filledChapter
+    coEvery { chapterDao.getChaptersByNovelSync(1) } returns listOf(filledChapter)
+    coEvery { reimportChapterContentUseCase.importFile(10, 1, any()) } returns Result.success(Unit)
+
+    viewModel.importMhtForChapter(mockk<Uri>())
+
+    viewModel.state.test {
+        val after = awaitItem()
+        assertThat(after.isEmpty).isFalse()
+        assertThat(after.chapter?.content).isEqualTo(filledContent)
+        cancelAndConsumeRemainingEvents()
+    }
+}
+
+@Test
+fun `loadChapter with content over threshold sets isEmpty false`() = runTest {
+    val content = "<p>" + "x".repeat(200) + "</p>"
+    val chapter = ChapterEntity(
+        id = 10, novelId = 1, title = "Ch3",
+        fileName = "ch3.html", orderIndex = 2, content = content
+    )
+    coEvery { chapterDao.getChapterById(any()) } returns chapter
+    coEvery { chapterDao.getChaptersByNovelSync(1) } returns listOf(chapter)
+    coEvery { novelDao.getNovelById(1) } returns null
+    coEvery { novelDao.updateLastRead(any(), any()) } returns Unit
+    coEvery { chapterDao.markAsRead(any(), any()) } returns Unit
+
+    viewModel = createViewModel()
+
+    viewModel.state.test {
+        val loaded = awaitItem()
+        assertThat(loaded.isEmpty).isFalse()
+        cancelAndConsumeRemainingEvents()
+    }
+}
+
+@Test
+fun `updateKeepScreenOn calls readerPreferences updateKeepScreenOn`() = runTest {
+    viewModel = createViewModel()
+    viewModel.updateKeepScreenOn(false)
+    coVerify { readerPrefs.updateKeepScreenOn(false) }
+}
 }

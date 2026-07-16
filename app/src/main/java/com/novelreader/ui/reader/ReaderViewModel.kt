@@ -1,6 +1,7 @@
 package com.novelreader.ui.reader
 
 import android.content.Context
+import android.net.Uri
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -16,6 +17,7 @@ import com.novelreader.data.local.db.entity.ChapterEntity
 import com.novelreader.data.local.db.entity.NovelEntity
 import com.novelreader.data.local.preferences.ReaderConfig
 import com.novelreader.data.local.preferences.ReaderPreferences
+import com.novelreader.domain.usecase.ReimportChapterContentUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Job
@@ -38,6 +40,7 @@ data class ReaderState(
     val bookmarks: List<BookmarkEntity> = emptyList(),
     val isLoading: Boolean = true,
     val error: String? = null,
+    val isEmpty: Boolean = false,
     val showBookmarkDialog: Boolean = false,
     val showSettings: Boolean = false,
     val config: ReaderConfig = ReaderConfig(),
@@ -56,7 +59,8 @@ class ReaderViewModel @Inject constructor(
     private val bookmarkDao: BookmarkDao,
     private val readerPreferences: ReaderPreferences,
     private val characterDao: CharacterDao,
-    private val ftsSearchService: FtsSearchService
+    private val ftsSearchService: FtsSearchService,
+    private val reimportChapterContentUseCase: ReimportChapterContentUseCase
 ) : ViewModel() {
 
     private val novelId: Long = savedStateHandle["novelId"] ?: 0L
@@ -75,6 +79,10 @@ class ReaderViewModel @Inject constructor(
     private var currentChapter: ChapterEntity? = null
     private var allChapters: List<ChapterEntity> = emptyList()
     private var bookmarkCollectionJob: kotlinx.coroutines.Job? = null
+
+    companion object {
+        private const val emptyChapterThreshold = 200
+    }
 
     init {
         viewModelScope.launch {
@@ -108,12 +116,15 @@ class ReaderViewModel @Inject constructor(
             val prevId = allChapters.getOrNull(currentIndex - 1)?.id
             val nextId = allChapters.getOrNull(currentIndex + 1)?.id
 
+            val isEmpty = chapter.content.isBlank() || chapter.content.length < emptyChapterThreshold
+
             _state.value = _state.value.copy(
                 novel = novel,
                 chapter = chapter,
                 prevChapterId = prevId,
                 nextChapterId = nextId,
                 isLoading = false,
+                isEmpty = isEmpty,
                 allChapters = allChapters
             )
 
@@ -305,6 +316,19 @@ class ReaderViewModel @Inject constructor(
 
     fun clearSelection() {
         _state.value = _state.value.copy(selectedText = "")
+    }
+
+    fun importMhtForChapter(uri: Uri) {
+        viewModelScope.launch {
+            val chapter = _state.value.chapter ?: return@launch
+            val result = reimportChapterContentUseCase.importFile(chapter.id, chapter.novelId, uri)
+            if (result.isSuccess) {
+                loadChapter(chapter.id)
+            } else {
+                val msg = context.getString(R.string.empty_chapter_import_failed, result.exceptionOrNull()?.message ?: "Erro")
+                _errorEvents.emit(msg)
+            }
+        }
     }
 
     fun createCharacter(name: String, photoPath: String?) {

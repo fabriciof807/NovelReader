@@ -497,29 +497,38 @@ fun ReaderScreen(
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            if (state.isLoading) {
-                CircularProgressIndicator(
-                    modifier = Modifier.align(Alignment.Center)
-                )
-            } else if (state.error != null) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(
-                            text = state.error ?: "",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.error
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Button(onClick = { saveScroll(); onBack() }) {
-                            Text(stringResource(R.string.back))
+            when {
+                state.isLoading -> {
+                    CircularProgressIndicator(
+                        modifier = Modifier.align(Alignment.Center)
+                    )
+                }
+                state.error != null -> {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(
+                                text = state.error ?: "",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.error
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Button(onClick = { saveScroll(); onBack() }) {
+                                Text(stringResource(R.string.back))
+                            }
                         }
                     }
                 }
-            } else {
-                ReaderWebView(
+                state.isEmpty -> {
+                    EmptyChapterState(
+                        onImportMht = { viewModel.importMhtForChapter(it) },
+                        onBack = { saveScroll(); onBack() }
+                    )
+                }
+                else -> {
+                    ReaderWebView(
                     onTextSelected = { viewModel.onTextSelected(it) },
                     onScrollChanged = { ratio ->
                         scrollRatio = ratio
@@ -587,6 +596,7 @@ fun ReaderScreen(
                             contentDescription = stringResource(R.string.create_character)
                         )
                     }
+                }
                 }
             }
         }
