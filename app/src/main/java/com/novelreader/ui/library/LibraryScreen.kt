@@ -103,7 +103,11 @@ fun LibraryScreen(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
         val novel = coverTarget ?: return@rememberLauncherForActivityResult
-        uri?.let { viewModel.onIntent(LibraryIntent.ChangeCover(novel.id, it)) }
+        if (uri != null) {
+            viewModel.onIntent(LibraryIntent.ChangeCover(novel.id, uri))
+        } else {
+            viewModel.clearCoverRequest()
+        }
     }
 
     coverTarget?.let { novel ->

@@ -450,7 +450,6 @@ class LibraryViewModel @Inject constructor(
             if (url.isBlank()) return@launch
             if (!url.startsWith("https://")) {
                 _coverError.value = context.getString(R.string.cover_url_https_required)
-                _showUrlDialog.value = null
                 return@launch
             }
             val result = coverManagementUseCase.saveFromUrl(novelId, url)

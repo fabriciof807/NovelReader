@@ -359,4 +359,24 @@ class LibraryViewModelTest {
             )
         }
     }
+
+    @Test
+    fun `cover URL with non-https does not close dialog`() = runTest {
+        val novel = NovelEntity(id = 1, title = "Test")
+        viewModel.requestCoverByUrl(novel)
+        assertThat(viewModel.showUrlDialog.value).isEqualTo(novel)
+
+        viewModel.saveCoverFromUrl(novel.id, "http://example.com/img.jpg")
+        assertThat(viewModel.showUrlDialog.value).isEqualTo(novel)
+    }
+
+    @Test
+    fun `clearCoverRequest clears coverTargetNovel`() = runTest {
+        val novel = NovelEntity(id = 1, title = "Test")
+        viewModel.requestChangeCover(novel)
+        assertThat(viewModel.coverTargetNovel.value).isEqualTo(novel)
+
+        viewModel.clearCoverRequest()
+        assertThat(viewModel.coverTargetNovel.value).isNull()
+    }
 }

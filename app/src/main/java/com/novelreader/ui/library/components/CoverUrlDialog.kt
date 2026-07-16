@@ -21,21 +21,37 @@ fun CoverUrlDialog(
     onDismiss: () -> Unit
 ) {
     var url by remember { mutableStateOf("") }
+    var urlError by remember { mutableStateOf<String?>(null) }
+    val httpsError = stringResource(R.string.cover_url_https_required)
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.cover_url_title)) },
         text = {
             OutlinedTextField(
                 value = url,
-                onValueChange = { url = it },
+                onValueChange = { url = it; urlError = null },
                 label = { Text(stringResource(R.string.cover_url_hint)) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth()
             )
+            if (urlError != null) {
+                Text(
+                    text = urlError!!,
+                    color = androidx.compose.material3.MaterialTheme.colorScheme.error,
+                    style = androidx.compose.material3.MaterialTheme.typography.bodySmall
+                )
+            }
         },
         confirmButton = {
             Button(
-                onClick = { onConfirm(url) },
+                onClick = {
+                    if (url.startsWith("https://", ignoreCase = true)) {
+                        urlError = null
+                        onConfirm(url)
+                    } else {
+                        urlError = httpsError
+                    }
+                },
                 enabled = url.isNotBlank()
             ) {
                 Text(stringResource(R.string.save))
