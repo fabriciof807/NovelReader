@@ -6,8 +6,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.platform.LocalHapticFeedback
+
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -54,7 +53,6 @@ fun NovelReaderNavGraph(
     navController: NavHostController,
     deepLinkBus: DeepLinkBus
 ) {
-    val haptic = LocalHapticFeedback.current
     val currentBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = currentBackStackEntry?.destination?.route
 
@@ -77,12 +75,6 @@ fun NovelReaderNavGraph(
                     }
                 }
             }
-        }
-    }
-
-    LaunchedEffect(currentRoute) {
-        if (currentRoute != null && !currentRoute.startsWith(Routes.LIBRARY)) {
-            haptic?.performHapticFeedback(HapticFeedbackType.LongPress)
         }
     }
 

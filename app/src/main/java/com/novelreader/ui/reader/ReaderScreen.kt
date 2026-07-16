@@ -67,8 +67,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -110,7 +108,6 @@ fun ReaderScreen(
     var chapterSearchQuery by remember { mutableStateOf("") }
     val snackbarHostState = remember { SnackbarHostState() }
 
-    val haptic = LocalHapticFeedback.current
     val view = LocalView.current
 
     LaunchedEffect(state.config.keepScreenOn) {
@@ -186,7 +183,6 @@ fun ReaderScreen(
             bookmarks = state.bookmarks,
             onDismiss = { viewModel.hideBookmarkDialog() },
             onAddNew = {
-                haptic?.performHapticFeedback(HapticFeedbackType.LongPress)
                 showAddBookmarkDialog = true
             },
             onDelete = { id -> bookmarkToDelete = id },
@@ -373,7 +369,7 @@ fun ReaderScreen(
                     },
                     actions = {
                         if (!state.isSearchActive) {
-                            IconButton(onClick = { haptic?.performHapticFeedback(HapticFeedbackType.LongPress); viewModel.activateSearch() }) {
+                            IconButton(onClick = { viewModel.activateSearch() }) {
                                 Icon(
                                     Icons.Default.Search,
                                     contentDescription = stringResource(R.string.search)
@@ -423,7 +419,6 @@ fun ReaderScreen(
                         ) {
                             IconButton(
                                 onClick = {
-                                    haptic?.performHapticFeedback(HapticFeedbackType.LongPress)
                                     saveScroll()
                                     state.prevChapterId?.let { viewModel.loadChapter(it) }
                                 },
@@ -438,7 +433,6 @@ fun ReaderScreen(
                             Spacer(modifier = Modifier.weight(1f))
 
                             IconButton(onClick = {
-                                haptic?.performHapticFeedback(HapticFeedbackType.LongPress)
                                 webView?.evaluateJavascript(
                                     bookmarkCaptureRatioJs(),
                                     ValueCallback { value ->
@@ -477,14 +471,14 @@ fun ReaderScreen(
                                 }
                             }
 
-                            IconButton(onClick = { haptic?.performHapticFeedback(HapticFeedbackType.LongPress); viewModel.showSettings() }) {
+                            IconButton(onClick = { viewModel.showSettings() }) {
                                 Icon(
                                     Icons.Default.Settings,
                                     contentDescription = stringResource(R.string.settings)
                                 )
                             }
 
-                            IconButton(onClick = { haptic?.performHapticFeedback(HapticFeedbackType.LongPress); showChapterList = true }) {
+                            IconButton(onClick = { showChapterList = true }) {
                                 Icon(
                                     Icons.Default.List,
                                     contentDescription = stringResource(R.string.chapter_list)
@@ -495,7 +489,6 @@ fun ReaderScreen(
 
                             IconButton(
                                 onClick = {
-                                    haptic?.performHapticFeedback(HapticFeedbackType.LongPress)
                                     saveScroll()
                                     state.nextChapterId?.let { viewModel.loadChapter(it) }
                                 },
