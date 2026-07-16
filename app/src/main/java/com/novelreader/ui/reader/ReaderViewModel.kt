@@ -80,6 +80,15 @@ class ReaderViewModel @Inject constructor(
     private var allChapters: List<ChapterEntity> = emptyList()
     private var bookmarkCollectionJob: kotlinx.coroutines.Job? = null
 
+    private var retryAction: (() -> Unit)? = null
+
+    private val _retryAvailable = MutableStateFlow(false)
+    val retryAvailable: StateFlow<Boolean> = _retryAvailable
+
+    fun retryLastFailedAction() {
+        retryAction?.invoke()
+    }
+
     companion object {
         private const val emptyChapterThreshold = 200
     }
@@ -168,6 +177,19 @@ class ReaderViewModel @Inject constructor(
             try {
                 chapterDao.markAsRead(chapter.id, position)
             } catch (e: Exception) {
+                retryAction = {
+                    val pos = lastKnownScrollPosition
+                    viewModelScope.launch {
+                        try {
+                            chapterDao.markAsRead(chapter.id, pos)
+                            retryAction = null
+                            _retryAvailable.value = false
+                        } catch (e2: Exception) {
+                            _errorEvents.tryEmit(context.getString(R.string.reader_action_failed, e2.message ?: "Erro"))
+                        }
+                    }
+                }
+                _retryAvailable.value = true
                 _errorEvents.emit(e.message ?: e.toString())
             }
         }
@@ -196,6 +218,19 @@ class ReaderViewModel @Inject constructor(
             try {
                 chapterDao.markAsRead(chapter.id, position)
             } catch (e: Exception) {
+                retryAction = {
+                    val pos = lastKnownScrollPosition
+                    viewModelScope.launch {
+                        try {
+                            chapterDao.markAsRead(chapter.id, pos)
+                            retryAction = null
+                            _retryAvailable.value = false
+                        } catch (e2: Exception) {
+                            _errorEvents.tryEmit(context.getString(R.string.reader_action_failed, e2.message ?: "Erro"))
+                        }
+                    }
+                }
+                _retryAvailable.value = true
                 _errorEvents.emit(e.message ?: e.toString())
             }
         }
@@ -226,7 +261,11 @@ class ReaderViewModel @Inject constructor(
                     )
                 )
                 _state.value = _state.value.copy(showBookmarkDialog = false)
+                retryAction = null
+                _retryAvailable.value = false
             } catch (e: Exception) {
+                retryAction = { viewModelScope.launch { addBookmark(title, note) } }
+                _retryAvailable.value = true
                 _errorEvents.emit(e.message ?: e.toString())
             }
         }
@@ -236,7 +275,11 @@ class ReaderViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 bookmarkDao.deleteById(id)
+                retryAction = null
+                _retryAvailable.value = false
             } catch (e: Exception) {
+                retryAction = { viewModelScope.launch { deleteBookmark(id) } }
+                _retryAvailable.value = true
                 _errorEvents.emit(e.message ?: e.toString())
             }
         }
@@ -342,7 +385,11 @@ class ReaderViewModel @Inject constructor(
                     )
                 )
                 _state.value = _state.value.copy(selectedText = "")
+                retryAction = null
+                _retryAvailable.value = false
             } catch (e: Exception) {
+                retryAction = { viewModelScope.launch { createCharacter(name, photoPath) } }
+                _retryAvailable.value = true
                 _errorEvents.emit(e.message ?: e.toString())
             }
         }

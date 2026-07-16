@@ -302,4 +302,6 @@
     <string name="empty_chapter_body">This chapter is empty. Import an MHT/HTML file with its content, or go back and recover it from the chapters tab.</string>
     <string name="empty_chapter_import_failed">Import failed: %1$s</string>
     <string name="failed_chapter_retry_mht">Import MHT/HTML</string>
+    <string name="reader_action_failed">Action failed: %1$s</string>
+    <string name="action_retry">Retry</string>
 </resources>

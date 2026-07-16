@@ -302,4 +302,6 @@
     <string name="empty_chapter_body">Este capítulo está vazio. Importe um arquivo MHT/HTML com o conteúdo, ou volte e tente recuperá-lo pela aba de capítulos.</string>
     <string name="empty_chapter_import_failed">Falha ao importar: %1$s</string>
     <string name="failed_chapter_retry_mht">Importar MHT/HTML</string>
+    <string name="reader_action_failed">Ação falhou: %1$s</string>
+    <string name="action_retry">Tentar novamente</string>
 </resources>

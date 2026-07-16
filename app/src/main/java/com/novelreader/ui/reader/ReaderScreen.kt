@@ -48,6 +48,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
+import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -104,6 +108,7 @@ fun ReaderScreen(
     var bookmarkToDelete by remember { mutableStateOf<Long?>(null) }
     var showChapterList by remember { mutableStateOf(false) }
     var chapterSearchQuery by remember { mutableStateOf("") }
+    val snackbarHostState = remember { SnackbarHostState() }
 
     val haptic = LocalHapticFeedback.current
     val view = LocalView.current
@@ -145,6 +150,20 @@ fun ReaderScreen(
     LaunchedEffect(state.config, webView) {
         if (!isPageLoaded) return@LaunchedEffect
         webView?.evaluateJavascript(applyConfigJs(state.config), null)
+    }
+
+    val retryLabel = stringResource(R.string.action_retry)
+
+    LaunchedEffect(Unit) {
+        viewModel.errorEvents.collect { msg ->
+            snackbarHostState.showSnackbar(
+                message = msg,
+                actionLabel = if (viewModel.retryAvailable.value) retryLabel else null,
+                duration = SnackbarDuration.Short
+            )?.let {
+                if (it == SnackbarResult.ActionPerformed) viewModel.retryLastFailedAction()
+            }
+        }
     }
 
     LaunchedEffect(state.bookmarks, webView) {
@@ -307,6 +326,7 @@ fun ReaderScreen(
     }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             AnimatedVisibility(
                 visible = isControlsVisible,

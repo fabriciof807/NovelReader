@@ -323,4 +323,67 @@ fun `updateKeepScreenOn calls readerPreferences updateKeepScreenOn`() = runTest 
     viewModel.updateKeepScreenOn(false)
     coVerify { readerPrefs.updateKeepScreenOn(false) }
 }
+
+@Test
+fun `addBookmark on failure sets retryAvailable true`() = runTest {
+    val chapter = ChapterEntity(
+        id = 10, novelId = 1, title = "Ch1",
+        fileName = "ch1.html", orderIndex = 0, content = "<p>hi</p>"
+    )
+    coEvery { chapterDao.getChapterById(10) } returns chapter
+    coEvery { chapterDao.getChaptersByNovelSync(1) } returns listOf(chapter)
+    coEvery { novelDao.getNovelById(1) } returns null
+    coEvery { novelDao.updateLastRead(any(), any()) } returns Unit
+    coEvery { chapterDao.markAsRead(any(), any()) } returns Unit
+    coEvery { bookmarkDao.insert(any()) } throws RuntimeException("fail")
+
+    viewModel = createViewModel()
+    viewModel.showBookmarkDialog()
+    viewModel.addBookmark("title", "note")
+
+    assertThat(viewModel.retryAvailable.value).isTrue()
+}
+
+@Test
+fun `retryLastFailedAction re-runs addBookmark and clears retryAvailable on success`() = runTest {
+    val chapter = ChapterEntity(
+        id = 10, novelId = 1, title = "Ch1",
+        fileName = "ch1.html", orderIndex = 0, content = "<p>hi</p>"
+    )
+    coEvery { chapterDao.getChapterById(10) } returns chapter
+    coEvery { chapterDao.getChaptersByNovelSync(1) } returns listOf(chapter)
+    coEvery { novelDao.getNovelById(1) } returns null
+    coEvery { novelDao.updateLastRead(any(), any()) } returns Unit
+    coEvery { chapterDao.markAsRead(any(), any()) } returns Unit
+    coEvery { bookmarkDao.insert(any()) } throws RuntimeException("fail") andThen 1L
+
+    viewModel = createViewModel()
+    viewModel.showBookmarkDialog()
+    viewModel.addBookmark("title", "note")
+    assertThat(viewModel.retryAvailable.value).isTrue()
+
+    viewModel.retryLastFailedAction()
+
+    assertThat(viewModel.retryAvailable.value).isFalse()
+}
+
+@Test
+fun `successful action clears retryAvailable`() = runTest {
+    val chapter = ChapterEntity(
+        id = 10, novelId = 1, title = "Ch1",
+        fileName = "ch1.html", orderIndex = 0, content = "<p>hi</p>"
+    )
+    coEvery { chapterDao.getChapterById(10) } returns chapter
+    coEvery { chapterDao.getChaptersByNovelSync(1) } returns listOf(chapter)
+    coEvery { novelDao.getNovelById(1) } returns null
+    coEvery { novelDao.updateLastRead(any(), any()) } returns Unit
+    coEvery { chapterDao.markAsRead(any(), any()) } returns Unit
+    coEvery { bookmarkDao.insert(any()) } returns 1L
+
+    viewModel = createViewModel()
+    viewModel.showBookmarkDialog()
+    viewModel.addBookmark("title", "note")
+
+    assertThat(viewModel.retryAvailable.value).isFalse()
+}
 }
