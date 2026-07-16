@@ -26,6 +26,9 @@ interface ChapterDao {
     @Query("UPDATE chapters SET orderIndex = :orderIndex WHERE id = :id")
     suspend fun updateOrderIndex(id: Long, orderIndex: Int)
 
+    @Query("UPDATE chapters SET content = :content, title = :title WHERE id = :id")
+    suspend fun updateContent(id: Long, content: String, title: String)
+
     @Query("SELECT * FROM chapters WHERE id IN (:ids)")
     suspend fun getChaptersByIds(ids: List<Long>): List<ChapterEntity>
 
