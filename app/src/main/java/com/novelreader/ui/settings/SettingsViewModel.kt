@@ -8,8 +8,10 @@ import com.novelreader.data.local.preferences.AppPreferences
 import com.novelreader.domain.usecase.ExportDataUseCase
 import com.novelreader.domain.usecase.ImportDataUseCase
 import com.novelreader.domain.usecase.ImportPreview
+import com.novelreader.domain.usecase.ImportResult
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -47,6 +49,12 @@ class SettingsViewModel @Inject constructor(
 
     private val _importPreview = MutableSharedFlow<ImportPreview>(extraBufferCapacity = 1)
     val importPreview: SharedFlow<ImportPreview> = _importPreview
+
+    private val _isImporting = MutableStateFlow(false)
+    val isImporting: StateFlow<Boolean> = _isImporting
+
+    private val _lastImportResult = MutableStateFlow<ImportResult?>(null)
+    val lastImportResult: StateFlow<ImportResult?> = _lastImportResult
 
     private var pendingImportUri: Uri? = null
 
@@ -95,9 +103,12 @@ class SettingsViewModel @Inject constructor(
     fun importSelected(selectedTitles: Set<String>) {
         val uri = pendingImportUri ?: return
         pendingImportUri = null
+        if (_isImporting.value) return
         viewModelScope.launch {
+            _isImporting.value = true
             try {
                 val result = importDataUseCase.execute(uri, selectedTitles)
+                _lastImportResult.value = result
                 val sb = StringBuilder()
                 if (result.novelsQueued.isNotEmpty()) {
                     sb.append("${result.novelsQueued.size} novel(is) na fila. ")
@@ -114,7 +125,13 @@ class SettingsViewModel @Inject constructor(
                 _importResult.emit(sb.toString().trimEnd())
             } catch (e: Exception) {
                 _importError.emit(e.message ?: "Erro ao importar dados")
+            } finally {
+                _isImporting.value = false
             }
         }
+    }
+
+    fun clearImportResult() {
+        _lastImportResult.value = null
     }
 }

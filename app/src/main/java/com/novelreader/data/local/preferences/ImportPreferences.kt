@@ -89,6 +89,24 @@ class ImportPreferences @Inject constructor(
         }
     }
 
+    suspend fun getJobsByNovelTitle(title: String): List<ImportJobSpec> =
+        pendingQueue.first().filter { it.novelTitle == title }
+
+    suspend fun removeJobsByNovelTitle(title: String) {
+        context.importDataStore.edit { prefs ->
+            val current = prefs[Keys.PENDING_QUEUE] ?: "[]"
+            val array = try { JSONArray(current) } catch (_: Exception) { JSONArray() }
+            val newArray = JSONArray()
+            for (i in 0 until array.length()) {
+                val spec = decode(array.getString(i))
+                if (spec?.novelTitle != title) {
+                    newArray.put(array.get(i))
+                }
+            }
+            prefs[Keys.PENDING_QUEUE] = newArray.toString()
+        }
+    }
+
     suspend fun clearQueue() {
         context.importDataStore.edit { prefs ->
             prefs[Keys.PENDING_QUEUE] = "[]"

@@ -4,6 +4,7 @@ import com.google.common.truth.Truth.assertThat
 import com.novelreader.data.local.preferences.ImportPreferences
 import com.novelreader.data.worker.ImportWorkScheduler
 import com.novelreader.data.worker.WorkCompletionObserver
+import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
@@ -44,21 +45,30 @@ class BackgroundImportManagerTest {
     }
 
     @Test
-    fun `cancel without id uses current job id`() = runTest {
-        manager.startImport("N", listOf(ChapterLink("c", "u", 1)))
-        val id = manager.state.value.id!!
+    fun `cancel resets state and cancels each job for the current novel`() = runTest {
+        val jobId = UUID.randomUUID()
+        coEvery { importPrefs.getJobsByNovelTitle("Test Novel") } returns listOf(
+            ImportJobSpec(id = jobId, novelTitle = "Test Novel", links = listOf("u1"), chapterNumbers = listOf(1), coverUrl = null, enqueuedAt = 0L)
+        )
+        manager.startImport(
+            novelTitle = "Test Novel",
+            links = listOf(ChapterLink("c1", "u1", 1))
+        )
 
         manager.cancel()
 
-        coVerify { scheduler.cancel(id) }
+        coVerify { scheduler.cancel(jobId) }
+        coVerify(exactly = 0) { scheduler.cancelAll() }
         assertThat(manager.state.value.running).isFalse()
+        assertThat(manager.state.value.completed).isFalse()
+        assertThat(manager.state.value.novelTitle).isEmpty()
     }
 
     @Test
-    fun `cancel with specific id passes it through`() = runTest {
-        val target = UUID.randomUUID()
-        manager.cancel(id = target)
-        coVerify { scheduler.cancel(target) }
+    fun `cancel with no active title does nothing`() = runTest {
+        manager.cancel()
+        coVerify(exactly = 0) { scheduler.cancelAll() }
+        coVerify(exactly = 0) { scheduler.cancel(any()) }
     }
 
     @Test

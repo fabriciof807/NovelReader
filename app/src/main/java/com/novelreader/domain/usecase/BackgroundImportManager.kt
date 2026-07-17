@@ -146,11 +146,11 @@ class BackgroundImportManager @Inject constructor(
     }
 
     suspend fun cancel(id: UUID? = null) {
-        val target = id ?: _state.value.id
-        if (target != null) scheduler.cancel(target)
-        _state.value = _state.value.copy(
-            running = false, completed = true, pendingInQueue = 0, queuedNovelTitles = emptyList()
-        )
+        val currentTitle = _state.value.novelTitle
+        if (currentTitle.isNotBlank()) {
+            importPrefs.getJobsByNovelTitle(currentTitle).forEach { scheduler.cancel(it.id) }
+        }
+        _state.value = BackgroundImportState()
     }
 
     suspend fun cancelAll() {

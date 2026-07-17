@@ -8,6 +8,7 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -39,6 +40,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -75,6 +77,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.novelreader.R
 import com.novelreader.domain.usecase.ImportPreview
 import com.novelreader.domain.usecase.ImportPreviewEntry
+import com.novelreader.domain.usecase.ImportResult
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -99,6 +102,8 @@ fun SettingsScreen(
     var importPreview by remember { mutableStateOf<ImportPreview?>(null) }
     var selectedImportTitles by remember { mutableStateOf<Set<String>>(emptySet()) }
     val snackbarHostState = remember { SnackbarHostState() }
+    val isImporting by viewModel.isImporting.collectAsState()
+    val lastImportResult by viewModel.lastImportResult.collectAsState()
 
     val exportLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("application/json")
@@ -293,7 +298,42 @@ fun SettingsScreen(
         }
     }
 
-    Scaffold(
+    if (lastImportResult != null) {
+        val result = lastImportResult!!
+        AlertDialog(
+            onDismissRequest = { viewModel.clearImportResult() },
+            title = { Text(stringResource(R.string.import_result_title)) },
+            text = {
+                Column {
+                    Text(stringResource(R.string.import_result_novels, result.novelsQueued.size))
+                    if (result.novelsFailed.isNotEmpty()) {
+                        Text(
+                            stringResource(R.string.import_result_failed, result.novelsFailed.size),
+                            color = MaterialTheme.colorScheme.error
+                        )
+                        result.novelsFailed.forEach { name ->
+                            Text(
+                                text = "• $name",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.error
+                            )
+                        }
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    Text(stringResource(R.string.import_result_bookmarks, result.bookmarksPending))
+                    Text(stringResource(R.string.import_result_characters, result.charactersPending))
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { viewModel.clearImportResult() }) {
+                    Text(stringResource(R.string.ok))
+                }
+            }
+        )
+    }
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
@@ -475,6 +515,16 @@ fun SettingsScreen(
 
             Spacer(modifier = Modifier.height(32.dp))
         }
+    }
+
+    if (isImporting) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            CircularProgressIndicator()
+        }
+    }
     }
 }
 

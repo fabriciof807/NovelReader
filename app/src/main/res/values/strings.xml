@@ -281,6 +281,11 @@
     <string name="import_preview_title">Preview de importação</string>
     <string name="import_preview_count">%1$d novels · %2$d bookmarks · %3$d personagens</string>
     <string name="import_preview_import">Importar %d selecionados</string>
+    <string name="import_result_title">Importação concluída</string>
+    <string name="import_result_novels">%d novel(ns) na fila de importação</string>
+    <string name="import_result_failed">%d falha(s):</string>
+    <string name="import_result_bookmarks">%d bookmark(s) pendente(s)</string>
+    <string name="import_result_characters">%d personagen(s) pendente(s)</string>
 
     <!-- Personagens tab FAB labels -->
     <string name="personagens_add_label">Adicionar</string>

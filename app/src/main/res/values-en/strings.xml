@@ -281,6 +281,11 @@
     <string name="import_preview_title">Import preview</string>
     <string name="import_preview_count">%1$d novels · %2$d bookmarks · %3$d characters</string>
     <string name="import_preview_import">Import %d selected</string>
+    <string name="import_result_title">Import complete</string>
+    <string name="import_result_novels">%d novel(s) queued for import</string>
+    <string name="import_result_failed">%d failure(s):</string>
+    <string name="import_result_bookmarks">%d bookmark(s) pending</string>
+    <string name="import_result_characters">%d character(s) pending</string>
 
     <!-- Personagens tab FAB labels -->
     <string name="personagens_add_label">Add</string>
