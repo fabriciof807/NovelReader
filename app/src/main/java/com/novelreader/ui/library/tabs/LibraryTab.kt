@@ -19,6 +19,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
@@ -69,6 +70,7 @@ fun LibraryTab(
     onToggleAutoUpdate: (NovelEntity) -> Unit,
     onCheckForUpdates: (NovelEntity) -> Unit,
     onResyncChapters: (NovelEntity) -> Unit,
+    onChapters: (NovelEntity) -> Unit,
     onRequestChangeCover: (NovelEntity) -> Unit,
     onRequestCoverByUrl: (NovelEntity) -> Unit,
     onContinueReading: (NovelEntity) -> Unit,
@@ -161,6 +163,7 @@ fun LibraryTab(
                         onToggleAutoUpdate = { showMenu = false; onToggleAutoUpdate(novel) },
                         onCheckForUpdates = { showMenu = false; onCheckForUpdates(novel) },
                         onResyncChapters = { showMenu = false; onResyncChapters(novel) },
+                        onChapters = { showMenu = false; onChapters(novel) },
                         onDelete = { showMenu = false; onLongClick(novel) }
                     )
                 }
@@ -191,6 +194,7 @@ fun LibraryTab(
                         onToggleAutoUpdate = { showMenu = false; onToggleAutoUpdate(novel) },
                         onCheckForUpdates = { showMenu = false; onCheckForUpdates(novel) },
                         onResyncChapters = { showMenu = false; onResyncChapters(novel) },
+                        onChapters = { showMenu = false; onChapters(novel) },
                         onDelete = { showMenu = false; onLongClick(novel) }
                     )
                 }
@@ -257,6 +261,7 @@ private fun NovelMenu(
     onToggleAutoUpdate: () -> Unit,
     onCheckForUpdates: () -> Unit,
     onResyncChapters: () -> Unit,
+    onChapters: () -> Unit,
     onDelete: () -> Unit
 ) {
     DropdownMenu(
@@ -292,6 +297,11 @@ private fun NovelMenu(
             text = { Text(stringResource(R.string.resync_chapters)) },
             onClick = onResyncChapters,
             leadingIcon = { Icon(Icons.Default.Refresh, contentDescription = null) }
+        )
+        DropdownMenuItem(
+            text = { Text(stringResource(R.string.chapters)) },
+            onClick = onChapters,
+            leadingIcon = { Icon(Icons.Default.List, contentDescription = null) }
         )
         DropdownMenuItem(
             text = { Text(stringResource(R.string.delete), color = MaterialTheme.colorScheme.error) },

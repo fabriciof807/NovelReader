@@ -79,6 +79,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.novelreader.R
 import com.novelreader.data.local.db.entity.BookmarkEntity
 import com.novelreader.data.local.preferences.ReaderConfig
+import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -112,6 +113,13 @@ fun ReaderScreen(
 
     LaunchedEffect(state.config.keepScreenOn) {
         view.keepScreenOn = state.config.keepScreenOn
+    }
+
+    LaunchedEffect(isControlsVisible) {
+        if (isControlsVisible) {
+            delay(4000L)
+            isControlsVisible = false
+        }
     }
 
     if (initialSearchQuery != lastInitialSearchQuery) {
