@@ -43,8 +43,12 @@ class BackgroundImportManager @Inject constructor(
     private val _state = MutableStateFlow(BackgroundImportState())
     val state: StateFlow<BackgroundImportState> = _state.asStateFlow()
 
+    @Volatile
     private var importedCountBase: Int = 0
+    @Volatile
     private var pendingSplitCount: Int = 0
+    @Volatile
+    private var handoffPending: Boolean = false
 
     private suspend fun refreshQueuedTitles() {
         val specs = importPrefs.pendingQueue.first()
@@ -57,6 +61,7 @@ class BackgroundImportManager @Inject constructor(
         completionObserver.callbacks = object : ObserverCallbacks {
             override fun onProgress(id: UUID, processed: Int, total: Int, currentChapter: Int) {
                 if (_state.value.id == id) {
+                    handoffPending = false
                     val cumulative = importedCountBase + processed
                     _state.value = _state.value.copy(
                         running = true,
@@ -70,6 +75,7 @@ class BackgroundImportManager @Inject constructor(
 
             override suspend fun onJobTerminal(id: UUID, success: Boolean) {
                 if (_state.value.id != id) return
+                handoffPending = false
                 pendingSplitCount--
                 if (pendingSplitCount <= 0) {
                     val remaining = importPrefs.pendingQueue.first()
@@ -99,14 +105,16 @@ class BackgroundImportManager @Inject constructor(
             }
 
             override fun onAllIdle() {
-                val s = _state.value
-                Log.w("ImportRetry", "onAllIdle running=${s.running} completed=${s.completed} pendingInQueue=${s.pendingInQueue} novelTitle=${s.novelTitle}")
-                if (_state.value.pendingInQueue > 0) return
-                if (_state.value.running || !_state.value.completed) {
-                    _state.value = _state.value.copy(
+                val snapshot = _state.value
+                Log.w("ImportRetry", "onAllIdle running=${snapshot.running} completed=${snapshot.completed} pendingInQueue=${snapshot.pendingInQueue} novelTitle=${snapshot.novelTitle}")
+                if (handoffPending || snapshot.id == null || pendingSplitCount > 0) return
+                if (snapshot.pendingInQueue > 0) return
+                if (snapshot.running || !snapshot.completed) {
+                    val completedState = snapshot.copy(
                         running = false, completed = true,
                         pendingInQueue = 0, queuedNovelTitles = emptyList()
                     )
+                    _state.compareAndSet(snapshot, completedState)
                 }
             }
         }
@@ -119,46 +127,88 @@ class BackgroundImportManager @Inject constructor(
         coverUrl: String? = null,
         sourceUrl: String = "",
         domain: String = "",
-        targetNovelId: Long? = null
+        targetNovelId: Long? = null,
+        isFavorite: Boolean? = null
     ) {
-        val specs = ImportJobSpec.create(novelTitle, links, coverUrl, sourceUrl, domain, targetNovelId)
-        Log.w("ImportRetry", "startImport title=$novelTitle links=${links.size} batches=${specs.size} running=${_state.value.running} targetNovelId=$targetNovelId")
+        completionObserver.withSchedulingLock {
+            val specs = ImportJobSpec.create(
+                novelTitle = novelTitle,
+                links = links,
+                coverUrl = coverUrl,
+                sourceUrl = sourceUrl,
+                domain = domain,
+                targetNovelId = targetNovelId,
+                isFavorite = isFavorite
+            )
+            Log.w("ImportRetry", "startImport title=$novelTitle links=${links.size} batches=${specs.size} running=${_state.value.running} targetNovelId=$targetNovelId")
 
-        if (_state.value.running) {
+            if (_state.value.running) {
+                specs.forEach { scheduler.schedule(it) }
+                refreshQueuedTitles()
+                return@withSchedulingLock
+            }
+
+            val first = specs.first()
+            importedCountBase = 0
+            pendingSplitCount = specs.size
+            _state.value = BackgroundImportState(
+                id = first.id,
+                running = true,
+                completed = false,
+                novelTitle = novelTitle,
+                totalToImport = links.size,
+                importedCount = 0,
+                errors = 0
+            )
             specs.forEach { scheduler.schedule(it) }
-            refreshQueuedTitles()
-            return
         }
-
-        val first = specs.first()
-        _state.value = BackgroundImportState(
-            id = first.id,
-            running = true,
-            completed = false,
-            novelTitle = novelTitle,
-            totalToImport = links.size,
-            importedCount = 0,
-            errors = 0
-        )
-        importedCountBase = 0
-        pendingSplitCount = specs.size
-        specs.forEach { scheduler.schedule(it) }
     }
 
     suspend fun cancel(id: UUID? = null) {
-        val currentTitle = _state.value.novelTitle
-        if (currentTitle.isNotBlank()) {
-            importPrefs.getJobsByNovelTitle(currentTitle).forEach { scheduler.cancel(it.id) }
+        completionObserver.withSchedulingLock {
+            val current = _state.value
+            val targetId = id ?: current.id
+
+            if (current.novelTitle.isNotBlank()) {
+                importPrefs.removeJobsByNovelTitle(current.novelTitle)
+            }
+            targetId?.let { scheduler.cancel(it) }
+
+            importedCountBase = 0
+            pendingSplitCount = 0
+
+            val remaining = importPrefs.pendingQueue.first()
+            if (remaining.isEmpty()) {
+                handoffPending = false
+                _state.value = BackgroundImportState()
+                return@withSchedulingLock
+            }
+
+            val nextTitle = remaining.first().novelTitle
+            val nextSpecs = remaining.filter { it.novelTitle == nextTitle }
+            handoffPending = true
+            pendingSplitCount = nextSpecs.size
+            _state.value = BackgroundImportState(
+                id = nextSpecs.first().id,
+                running = true,
+                novelTitle = nextTitle,
+                totalToImport = nextSpecs.sumOf { it.links.size }
+            )
+            refreshQueuedTitles()
+            completionObserver.tryScheduleNext()
         }
-        _state.value = BackgroundImportState()
     }
 
     suspend fun cancelAll() {
-        scheduler.cancelAll()
-        _state.value = BackgroundImportState()
+        completionObserver.withSchedulingLock {
+            scheduler.cancelAll()
+            handoffPending = false
+            _state.value = BackgroundImportState()
+        }
     }
 
     fun clearCompleted() {
+        handoffPending = false
         _state.value = BackgroundImportState()
     }
 }

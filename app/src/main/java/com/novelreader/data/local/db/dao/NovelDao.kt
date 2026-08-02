@@ -55,6 +55,9 @@ interface NovelDao {
     @Query("UPDATE novels SET hasUpdates = :on WHERE id = :id")
     suspend fun setHasUpdates(id: Long, on: Boolean)
 
+    @Query("UPDATE novels SET isFavorite = :isFavorite WHERE id = :id")
+    suspend fun updateFavorite(id: Long, isFavorite: Boolean)
+
     @Query("UPDATE novels SET lastChapterId = :chapterId WHERE id = :novelId")
     suspend fun updateLastChapterId(novelId: Long, chapterId: Long?)
 }

@@ -52,6 +52,42 @@ class SpecReaderTest {
         assertThat(read.splitCount).isEqualTo(spec.splitCount)
     }
 
+    @Test fun `readFromData round-trips nullable favorite through WorkData fallback`() {
+        val values = listOf(true, false, null)
+
+        values.forEach { expected ->
+            val spec = sampleSpec(
+                links = listOf("https://x.com/chapter"),
+                numbers = listOf(1)
+            ).copy(isFavorite = expected)
+            val read = SpecReader.readFromData(
+                ImportWorkRequestFactory.build(spec).workSpec.input,
+                store
+            )
+
+            assertThat(read).isNotNull()
+            assertThat(read!!.isFavorite).isEqualTo(expected)
+        }
+    }
+
+    @Test fun `readFromData does not overwrite stored favorite when WorkData omits it`() {
+        val spec = sampleSpec(
+            links = listOf("https://x.com/chapter"),
+            numbers = listOf(1)
+        ).copy(isFavorite = true)
+        store.write(spec)
+
+        val read = SpecReader.readFromData(
+            Data.Builder()
+                .putString(ChapterImportWorker.KEY_JOB_ID, spec.id.toString())
+                .putString(ChapterImportWorker.KEY_TITLE, spec.novelTitle)
+                .build(),
+            store
+        )
+
+        assertThat(read!!.isFavorite).isTrue()
+    }
+
     @Test fun `readFromData reads from file store even when links array is absent from input data`() {
         val spec = sampleSpec(
             links = listOf("https://long-domain.example/chap/1", "https://long-domain.example/chap/2", "https://long-domain.example/chap/3"),
@@ -104,6 +140,8 @@ class SpecReaderTest {
         .putInt(ChapterImportWorker.KEY_SPLIT_COUNT, spec.splitCount)
         .putInt(ChapterImportWorker.KEY_SPLIT_INDEX, spec.splitIndex)
         .putString(ChapterImportWorker.KEY_SOURCE_URL, spec.sourceUrl)
+        .putBoolean(ChapterImportWorker.KEY_IS_FAVORITE_PRESENT, spec.isFavorite != null)
+        .putBoolean(ChapterImportWorker.KEY_IS_FAVORITE, spec.isFavorite ?: false)
         .build()
 
     private fun sampleSpec(links: List<String>, numbers: List<Int>) = ImportJobSpec(

@@ -34,6 +34,10 @@ class WorkCompletionObserver @Inject constructor(
 
     var callbacks: ObserverCallbacks? = null
 
+    suspend fun withSchedulingLock(block: suspend () -> Unit) {
+        schedulingMutex.withLock { block() }
+    }
+
     fun start() {
         scope.launch {
             workManager.getWorkInfosByTagFlow(ChapterImportWorker.TAG_IMPORT)
@@ -41,47 +45,49 @@ class WorkCompletionObserver @Inject constructor(
                     var hasTerminal = false
                     var hasActive = false
 
-                    for (info in workInfos) {
-                        val state = info.state
-                        val isTerminal = state == WorkInfo.State.SUCCEEDED ||
-                            state == WorkInfo.State.FAILED ||
-                            state == WorkInfo.State.CANCELLED
+                    schedulingMutex.withLock {
+                        for (info in workInfos) {
+                            val state = info.state
+                            val isTerminal = state == WorkInfo.State.SUCCEEDED ||
+                                state == WorkInfo.State.FAILED ||
+                                state == WorkInfo.State.CANCELLED
 
-                        if (state == WorkInfo.State.RUNNING || state == WorkInfo.State.ENQUEUED) {
-                            hasActive = true
-                            val jobId = extractJobId(info) ?: continue
-                            val processed = info.progress.getInt(ChapterImportWorker.KEY_PROGRESS, 0)
-                            val total = info.progress.getInt(ChapterImportWorker.KEY_TOTAL, 0)
-                            if (total > 0) {
-                                progressCache[info.id] = Pair(processed, total)
-                            }
-                            val currentChapter = info.progress.getInt(ChapterImportWorker.KEY_CURRENT_CHAPTER, 0)
-                            callbacks?.onProgress(jobId, processed, total, currentChapter)
-                        } else if (isTerminal) {
-                            if (processedWorkIds.add(info.id)) {
-                                hasTerminal = true
-                                val jobId = extractJobId(info) ?: continue
-                                val cached = progressCache.remove(info.id)
-                                val processed = cached?.first
-                                    ?: info.progress.getInt(ChapterImportWorker.KEY_PROGRESS, 0)
-                                val total = cached?.second
-                                    ?: info.progress.getInt(ChapterImportWorker.KEY_TOTAL, 0)
-                                if (total > 0) {
-                                    callbacks?.onProgress(jobId, processed, total)
+                            if (state == WorkInfo.State.RUNNING || state == WorkInfo.State.ENQUEUED) {
+                                hasActive = true
+                                val jobId = extractJobId(info)
+                                if (jobId != null) {
+                                    val processed = info.progress.getInt(ChapterImportWorker.KEY_PROGRESS, 0)
+                                    val total = info.progress.getInt(ChapterImportWorker.KEY_TOTAL, 0)
+                                    if (total > 0) {
+                                        progressCache[info.id] = Pair(processed, total)
+                                    }
+                                    val currentChapter = info.progress.getInt(ChapterImportWorker.KEY_CURRENT_CHAPTER, 0)
+                                    callbacks?.onProgress(jobId, processed, total, currentChapter)
                                 }
-                                val success = state == WorkInfo.State.SUCCEEDED
-                                callbacks?.onJobTerminal(jobId, success)
+                            } else if (isTerminal && processedWorkIds.add(info.id)) {
+                                hasTerminal = true
+                                val jobId = extractJobId(info)
+                                if (jobId != null) {
+                                    val cached = progressCache.remove(info.id)
+                                    val processed = cached?.first
+                                        ?: info.progress.getInt(ChapterImportWorker.KEY_PROGRESS, 0)
+                                    val total = cached?.second
+                                        ?: info.progress.getInt(ChapterImportWorker.KEY_TOTAL, 0)
+                                    if (total > 0) {
+                                        callbacks?.onProgress(jobId, processed, total)
+                                    }
+                                    val success = state == WorkInfo.State.SUCCEEDED
+                                    callbacks?.onJobTerminal(jobId, success)
+                                }
                             }
+                        }
+
+                        if (!hasActive && workInfos.all { isTerminalState(it.state) || processedWorkIds.contains(it.id) }) {
+                            callbacks?.onAllIdle()
                         }
                     }
 
-                    if (hasTerminal) {
-                        tryScheduleNext()
-                    }
-
-                    if (!hasActive && workInfos.all { isTerminalState(it.state) || processedWorkIds.contains(it.id) }) {
-                        callbacks?.onAllIdle()
-                    }
+                    if (hasTerminal) tryScheduleNext()
                 }
         }
     }
@@ -96,30 +102,32 @@ class WorkCompletionObserver @Inject constructor(
     }
 
     fun tryScheduleNext() {
-        scope.launch {
-            schedulingMutex.withLock {
-                val active = workManager
-                    .getWorkInfosByTagFlow(ChapterImportWorker.TAG_IMPORT)
-                    .first()
-                    .any { it.state == WorkInfo.State.RUNNING || it.state == WorkInfo.State.ENQUEUED }
-                if (active) {
-                    Log.w("ImportRetry", "tryScheduleNext activeWork=yes → skip-active")
-                    return@withLock
-                }
+        scope.launch { scheduleNextIfIdle() }
+    }
 
-                val next = importPrefs.dequeueJob() ?: run {
-                    Log.w("ImportRetry", "tryScheduleNext activeWork=no queue=empty → skip-empty")
-                    return@withLock
-                }
-                specFileStore.write(next)
-                val request = ImportWorkRequestFactory.build(next)
-                workManager.enqueueUniqueWork(
-                    ChapterImportWorker.UNIQUE_ACTIVE,
-                    androidx.work.ExistingWorkPolicy.REPLACE,
-                    request
-                )
-                Log.w("ImportRetry", "tryScheduleNext activeWork=no → enqueued id=${next.id} title=${next.novelTitle} links=${next.links.size}")
+    internal suspend fun scheduleNextIfIdle() {
+        schedulingMutex.withLock {
+            val active = workManager
+                .getWorkInfosByTagFlow(ChapterImportWorker.TAG_IMPORT)
+                .first()
+                .any { it.state == WorkInfo.State.RUNNING || it.state == WorkInfo.State.ENQUEUED }
+            if (active) {
+                Log.w("ImportRetry", "tryScheduleNext activeWork=yes → skip-active")
+                return@withLock
             }
+
+            val next = importPrefs.dequeueJob() ?: run {
+                Log.w("ImportRetry", "tryScheduleNext activeWork=no queue=empty → skip-empty")
+                return@withLock
+            }
+            specFileStore.write(next)
+            val request = ImportWorkRequestFactory.build(next)
+            workManager.enqueueUniqueWork(
+                ChapterImportWorker.UNIQUE_ACTIVE,
+                androidx.work.ExistingWorkPolicy.REPLACE,
+                request
+            )
+            Log.w("ImportRetry", "tryScheduleNext activeWork=no → enqueued id=${next.id} title=${next.novelTitle} links=${next.links.size}")
         }
     }
 

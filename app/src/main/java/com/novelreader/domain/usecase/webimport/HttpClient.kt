@@ -67,34 +67,26 @@ class HttpClient @Inject constructor(
                 "gzip" -> decompressGzip(raw)
                 "br" -> decompressBrotli(raw)
                 "deflate" -> decompressDeflate(raw)
-                else -> String(raw, Charsets.UTF_8)
+                else -> raw
             }
             HttpResponse(
                 statusCode = r.code,
-                body = decompressed,
+                body = decompressed.toString(Charsets.UTF_8),
                 headers = r.headers.toMap(),
-                finalUrl = finalUrl
+                finalUrl = finalUrl,
+                bodyBytes = decompressed
             )
         }
     }
 
-    private fun decompressGzip(bytes: ByteArray): String {
-        java.util.zip.GZIPInputStream(bytes.inputStream()).use { gis ->
-            return gis.readBytes().toString(Charsets.UTF_8)
-        }
-    }
+    private fun decompressGzip(bytes: ByteArray): ByteArray =
+        java.util.zip.GZIPInputStream(bytes.inputStream()).use { it.readBytes() }
 
-    private fun decompressBrotli(bytes: ByteArray): String {
-        return org.brotli.dec.BrotliInputStream(bytes.inputStream()).use { bis ->
-            bis.readBytes().toString(Charsets.UTF_8)
-        }
-    }
+    private fun decompressBrotli(bytes: ByteArray): ByteArray =
+        org.brotli.dec.BrotliInputStream(bytes.inputStream()).use { it.readBytes() }
 
-    private fun decompressDeflate(bytes: ByteArray): String {
-        java.util.zip.InflaterInputStream(bytes.inputStream()).use { iis ->
-            return iis.readBytes().toString(Charsets.UTF_8)
-        }
-    }
+    private fun decompressDeflate(bytes: ByteArray): ByteArray =
+        java.util.zip.InflaterInputStream(bytes.inputStream()).use { it.readBytes() }
 
     companion object {
         const val USER_AGENT = "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.6778.200 Mobile Safari/537.36"

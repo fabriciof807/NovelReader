@@ -34,6 +34,22 @@ class ChapterPaginationStateExtractorTest {
     }
 
     @Test
+    fun extractsPaginationFromIndexListPageAttributesWhenScriptStateIsAbsent() {
+        val doc = Jsoup.parse(
+            """
+                <div id="indexListPage" data-page-size="40" data-total-page="8" data-total-chapters="291"></div>
+            """.trimIndent()
+        )
+
+        val state = extractChapterPaginationState(doc)
+
+        assertThat(state).isNotNull()
+        assertThat(state!!.totalChapters).isEqualTo(291)
+        assertThat(state.totalPage).isEqualTo(8)
+        assertThat(state.pageSize).isEqualTo(40)
+    }
+
+    @Test
     fun returnsNullWhenNoChapterPaginationScriptPresent() {
         val html = "<html><body><p>no script</p></body></html>"
         val doc = Jsoup.parse(html)

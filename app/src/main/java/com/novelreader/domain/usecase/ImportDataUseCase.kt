@@ -76,6 +76,7 @@ class ImportDataUseCase @Inject constructor(
             val novel = novelsArr.getJSONObject(i)
             val title = novel.optString("title")
             val sourceUrl = novel.optString("sourceUrl")
+            val isFavorite = if (novel.has("isFavorite")) novel.getBoolean("isFavorite") else null
             if (sourceUrl.isBlank()) continue
             if (selectedTitles != null && title !in selectedTitles) continue
             try {
@@ -90,7 +91,8 @@ class ImportDataUseCase @Inject constructor(
                             novelTitle = novelTitle,
                             links = chapterLinks,
                             coverUrl = fetchResult.coverUrl,
-                            sourceUrl = sourceUrl
+                            sourceUrl = sourceUrl,
+                            isFavorite = isFavorite
                         )
                         queued.add(novelTitle)
                     }

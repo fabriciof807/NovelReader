@@ -17,9 +17,18 @@ object SpecReader {
         val sourceUrl = data.getString(ChapterImportWorker.KEY_SOURCE_URL) ?: ""
         val domain = data.getString(ChapterImportWorker.KEY_DOMAIN) ?: ""
         val targetNovelId = data.getLong(ChapterImportWorker.KEY_TARGET_NOVEL_ID, -1L).takeIf { it >= 0 }
+        val isFavorite = if (data.getBoolean(ChapterImportWorker.KEY_IS_FAVORITE_PRESENT, false)) {
+            data.getBoolean(ChapterImportWorker.KEY_IS_FAVORITE, false)
+        } else {
+            null
+        }
         val fromStore = store.read(id)
         if (fromStore != null) {
-            return fromStore.copy(domain = domain.ifEmpty { fromStore.domain }, targetNovelId = targetNovelId ?: fromStore.targetNovelId)
+            return fromStore.copy(
+                domain = domain.ifEmpty { fromStore.domain },
+                targetNovelId = targetNovelId ?: fromStore.targetNovelId,
+                isFavorite = isFavorite ?: fromStore.isFavorite
+            )
         }
         return ImportJobSpec(
             id = id,
@@ -32,7 +41,8 @@ object SpecReader {
             splitIndex = splitIndex,
             sourceUrl = sourceUrl,
             domain = domain,
-            targetNovelId = targetNovelId
+            targetNovelId = targetNovelId,
+            isFavorite = isFavorite
         )
     }
 }

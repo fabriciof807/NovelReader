@@ -18,13 +18,17 @@ import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
+import kotlinx.coroutines.withContext
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -170,6 +174,93 @@ class ReaderViewModelTest {
         viewModel.saveScrollPosition()
 
         coVerify { chapterDao.markAsRead(10, 500) }
+    }
+
+    @Test
+    fun `loadChapter without restore starts at zero for the selected chapter`() = runTest {
+        val chapterA = ChapterEntity(
+            id = 10, novelId = 1, title = "Ch1",
+            fileName = "ch1.html", orderIndex = 0, content = "<p>A</p>", isRead = true
+        )
+        val chapterB = ChapterEntity(
+            id = 11, novelId = 1, title = "Ch2",
+            fileName = "ch2.html", orderIndex = 1, content = "<p>B</p>",
+            isRead = true, lastScrollPosition = 420
+        )
+        coEvery { chapterDao.getChapterById(10) } returns chapterA
+        coEvery { chapterDao.getChapterById(11) } returns chapterB
+        coEvery { chapterDao.getChaptersByNovelSync(1) } returns listOf(chapterA, chapterB)
+        coEvery { novelDao.getNovelById(1) } returns null
+        coEvery { novelDao.updateLastRead(any(), any()) } returns Unit
+        coEvery { chapterDao.markAsRead(any(), any()) } returns Unit
+
+        viewModel = createViewModel()
+        viewModel.updateLiveScroll(1f)
+        viewModel.loadChapter(chapterB.id, restorePosition = false)
+        assertThat(viewModel.getScrollRatio()).isEqualTo(0f)
+        viewModel.saveScrollPosition()
+
+        coVerify { chapterDao.markAsRead(chapterB.id, 0) }
+    }
+
+    @Test
+    fun `goToPrevChapter restores the previous chapter position`() = runTest {
+        savedState["chapterId"] = 12L
+        val chapterB = ChapterEntity(
+            id = 11, novelId = 1, title = "Ch2",
+            fileName = "ch2.html", orderIndex = 0, content = "<p>B</p>",
+            isRead = true, lastScrollPosition = 420
+        )
+        val chapterC = ChapterEntity(
+            id = 12, novelId = 1, title = "Ch3",
+            fileName = "ch3.html", orderIndex = 1, content = "<p>C</p>", isRead = true
+        )
+        coEvery { chapterDao.getChapterById(12) } returns chapterC
+        coEvery { chapterDao.getChapterById(11) } returns chapterB
+        coEvery { chapterDao.getChaptersByNovelSync(1) } returns listOf(chapterB, chapterC)
+        coEvery { novelDao.getNovelById(1) } returns null
+        coEvery { novelDao.updateLastRead(any(), any()) } returns Unit
+        coEvery { chapterDao.markAsRead(any(), any()) } returns Unit
+
+        viewModel = createViewModel()
+        viewModel.goToPrevChapter()
+
+        assertThat(viewModel.getScrollRatio()).isEqualTo(0.42f)
+    }
+
+    @Test
+    fun `latest load request wins when an older chapter response completes later`() = runTest {
+        val chapterB = ChapterEntity(
+            id = 11, novelId = 1, title = "Ch2",
+            fileName = "ch2.html", orderIndex = 0, content = "<p>B</p>", isRead = true
+        )
+        val chapterC = ChapterEntity(
+            id = 12, novelId = 1, title = "Ch3",
+            fileName = "ch3.html", orderIndex = 1, content = "<p>C</p>", isRead = true
+        )
+        val chapterBResponse = CompletableDeferred<ChapterEntity?>()
+        val chapterCResponse = CompletableDeferred<ChapterEntity?>()
+        coEvery { chapterDao.getChapterById(10) } returns null
+        coEvery { chapterDao.getChapterById(11) } coAnswers {
+            withContext(NonCancellable) { chapterBResponse.await() }
+        }
+        coEvery { chapterDao.getChapterById(12) } coAnswers { chapterCResponse.await() }
+        coEvery { chapterDao.getChaptersByNovelSync(1) } returns listOf(chapterB, chapterC)
+        coEvery { novelDao.getNovelById(1) } returns null
+        coEvery { novelDao.updateLastRead(any(), any()) } returns Unit
+        coEvery { chapterDao.markAsRead(any(), any()) } returns Unit
+
+        viewModel = createViewModel()
+        viewModel.loadChapter(chapterB.id)
+        viewModel.loadChapter(chapterC.id)
+
+        chapterCResponse.complete(chapterC)
+        advanceUntilIdle()
+        assertThat(viewModel.state.value.chapter).isEqualTo(chapterC)
+        chapterBResponse.complete(chapterB)
+        advanceUntilIdle()
+
+        assertThat(viewModel.state.value.chapter).isEqualTo(chapterC)
     }
 
     @Test

@@ -7,6 +7,15 @@ import org.json.JSONObject
 import org.jsoup.Jsoup
 import org.jsoup.safety.Safelist
 
+enum class ChapterTransition { NONE, FROM_RIGHT, FROM_LEFT, FROM_TOP, FROM_BOTTOM }
+
+fun chapterTransitionFor(direction: String, axis: String): ChapterTransition = when {
+    direction == "prev" && axis == "v" -> ChapterTransition.FROM_TOP
+    direction == "prev" -> ChapterTransition.FROM_LEFT
+    direction == "next" && axis == "v" -> ChapterTransition.FROM_BOTTOM
+    else -> ChapterTransition.FROM_RIGHT
+}
+
 private val READER_SAFELIST = Safelist.none()
     .addTags("p", "h1", "h2", "h3", "h4", "h5", "h6", "br", "strong", "em", "b", "i", "u", "sub", "sup")
 
@@ -49,7 +58,8 @@ fun themeVars(config: ReaderConfig): Map<String, String> = when (config.theme) {
 
 fun buildReaderHtml(
     content: String,
-    config: ReaderConfig
+    config: ReaderConfig,
+    transition: ChapterTransition = ChapterTransition.NONE
 ): String {
     val sanitized = Jsoup.clean(content, READER_SAFELIST)
     val finalContent = stripJunkContent(sanitized)
@@ -131,6 +141,26 @@ fun buildReaderHtml(
             50%  { background-color: rgba(255, 235, 59, 1.0); }
             100% { background-color: rgba(255, 235, 59, 0.3); }
         }
+        #content.enter-from-right { animation: enterFromRight 0.3s ease-out; }
+        #content.enter-from-left { animation: enterFromLeft 0.3s ease-out; }
+        #content.enter-from-top { animation: enterFromTop 0.3s ease-out; }
+        #content.enter-from-bottom { animation: enterFromBottom 0.3s ease-out; }
+        @keyframes enterFromRight {
+            from { opacity: 0; transform: translateX(40px); }
+            to   { opacity: 1; transform: translateX(0); }
+        }
+        @keyframes enterFromLeft {
+            from { opacity: 0; transform: translateX(-40px); }
+            to   { opacity: 1; transform: translateX(0); }
+        }
+        @keyframes enterFromTop {
+            from { opacity: 0; transform: translateY(-40px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes enterFromBottom {
+            from { opacity: 0; transform: translateY(40px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
     """.trimIndent()
 
     val autoScrollJs = """
@@ -149,6 +179,12 @@ fun buildReaderHtml(
         document.addEventListener('touchend', function() { if (_asRunning && _asPaused) { clearTimeout(_asTimer); _asTimer = setTimeout(function(){ _asPaused = false; }, 2000); } });
         ${if (config.autoScrollSpeed > 0f) "setTimeout(startAutoScroll, 500);" else ""}
     """.trimIndent()
+
+    val contentClass = if (transition == ChapterTransition.NONE) {
+        ""
+    } else {
+        " class=\"enter-${transitionName(transition)}\""
+    }
 
     return """
         <!DOCTYPE html>
@@ -201,7 +237,7 @@ fun buildReaderHtml(
                         dir = dx < 0 ? 'next' : 'prev';
                     }
                     if (dir !== null) {
-                        try { Android.onSwipe(dir); } catch(e) {}
+                        try { Android.onSwipe(dir, Math.abs(dx) > Math.abs(dy) ? 'h' : 'v'); } catch(e) {}
                     }
                 });
             })();
@@ -251,10 +287,18 @@ fun buildReaderHtml(
             </script>
         </head>
         <body>
-            <div id="content">$finalContent</div>
+            <div id="content"$contentClass>$finalContent</div>
         </body>
         </html>
     """.trimIndent()
+}
+
+private fun transitionName(transition: ChapterTransition): String = when (transition) {
+    ChapterTransition.FROM_RIGHT -> "from-right"
+    ChapterTransition.FROM_LEFT -> "from-left"
+    ChapterTransition.FROM_TOP -> "from-top"
+    ChapterTransition.FROM_BOTTOM -> "from-bottom"
+    ChapterTransition.NONE -> ""
 }
 
 private fun stripJunkContent(html: String): String {
@@ -351,15 +395,16 @@ fun bookmarkCaptureRatioJs(): String = buildJs(
         " return ratio.toString();"
 )
 
-fun scrollRestoreJs(ratio: Float): String = buildJs(
+fun scrollRestoreJs(ratio: Float, completionToken: Int? = null): String = buildJs(
     code = "requestAnimationFrame(function() {" +
         " var max = document.body.scrollHeight - window.innerHeight;" +
         " window.scrollTo(0, max * args.ratio);" +
+        (completionToken?.let { " try { Android.onScrollRestoreComplete($it); } catch (e) {}" } ?: "") +
         " });",
     params = mapOf("ratio" to ratio)
 )
 
-fun searchHighlightJs(query: String, restoreRatio: Float): String = buildJs(
+fun searchHighlightJs(query: String, restoreRatio: Float, completionToken: Int? = null): String = buildJs(
     code = """
         setTimeout(function() {
             (function(q) {
@@ -390,6 +435,7 @@ fun searchHighlightJs(query: String, restoreRatio: Float): String = buildJs(
                     window.scrollTo(0, max * args.restoreRatio);
                 }
             })(args.query);
+            ${completionToken?.let { "try { Android.onScrollRestoreComplete($it); } catch (e) {}" } ?: ""}
         }, 1000);
     """.trimIndent(),
     params = mapOf("query" to query, "restoreRatio" to restoreRatio)

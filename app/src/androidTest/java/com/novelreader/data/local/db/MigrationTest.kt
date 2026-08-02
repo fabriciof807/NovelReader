@@ -3,6 +3,7 @@ package com.novelreader.data.local.db
 import androidx.room.testing.MigrationTestHelper
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import com.google.common.truth.Truth.assertThat
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -126,6 +127,26 @@ class MigrationTest {
         assert(cursor.getString(0) == "")
         assert(cursor.getLong(1) == 0L)
         assert(cursor.getInt(2) == 0)
+        cursor.close()
+        migratedDb.close()
+    }
+
+    @Test
+    fun migrate9to10_addsFavoriteColumnDefaultFalse() {
+        val db = helper.createDatabase(TEST_DB, 9)
+        db.execSQL(
+            "INSERT INTO novels (title, sourceFolder, totalChapters, lastReadAt, createdAt, sourceUrl, lastCheckedAt, autoUpdate, hasUpdates) " +
+                "VALUES ('T', '', 0, 0, 0, '', 0, 0, 0)"
+        )
+        db.close()
+
+        val migratedDb = helper.runMigrationsAndValidate(
+            TEST_DB, 10, true, NovelDatabase.MIGRATION_9_10
+        )
+
+        val cursor = migratedDb.query("SELECT isFavorite FROM novels")
+        assertThat(cursor.moveToFirst()).isTrue()
+        assertThat(cursor.getInt(cursor.getColumnIndexOrThrow("isFavorite"))).isEqualTo(0)
         cursor.close()
         migratedDb.close()
     }

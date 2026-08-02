@@ -100,6 +100,22 @@ class HttpClientTest {
 
         assertThat(response.statusCode).isEqualTo(200)
         assertThat(response.body).isEqualTo(original)
+        assertThat(response.bodyBytes?.contentEquals(original.toByteArray(Charsets.UTF_8))).isTrue()
+    }
+
+    @Test
+    fun get_preservesKnownResponseBytesAlongsideUtf8Body() = runBlocking {
+        val bytes = byteArrayOf(0x00, 0x01, 0x7f, 0x10, 0x20, 0xff.toByte(), 0x41, 0x42)
+        server.enqueue(
+            MockResponse()
+                .setBody(okio.Buffer().write(bytes))
+                .setResponseCode(200)
+        )
+
+        val response = client.get("http://127.0.0.1:${server.port}/binary")
+
+        assertThat(response.body).isEqualTo(bytes.toString(Charsets.UTF_8))
+        assertThat(response.bodyBytes?.contentEquals(bytes)).isTrue()
     }
 
     @Test

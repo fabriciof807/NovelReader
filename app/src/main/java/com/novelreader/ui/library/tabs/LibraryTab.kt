@@ -1,6 +1,8 @@
 package com.novelreader.ui.library.tabs
 
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -25,6 +27,8 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Sort
 import androidx.compose.material.icons.filled.SortByAlpha
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilterChip
@@ -54,6 +58,32 @@ import com.novelreader.ui.library.components.LibraryEmptyState
 import com.novelreader.ui.library.components.NovelCard
 import com.novelreader.ui.library.components.NovelListItem
 
+internal fun filterNovels(
+    novels: List<NovelEntity>,
+    searchQuery: String,
+    filterChip: NovelFilter,
+    readProgress: Map<Long, Float>
+): List<NovelEntity> {
+    val searchFiltered = if (searchQuery.isBlank()) novels
+    else novels.filter { it.title.contains(searchQuery, ignoreCase = true) }
+
+    return when (filterChip) {
+        NovelFilter.ALL -> searchFiltered
+        NovelFilter.READING -> searchFiltered.filter {
+            val progress = readProgress[it.id] ?: 0f
+            progress > 0f && progress < 1f
+        }
+        NovelFilter.COMPLETED -> searchFiltered.filter {
+            val progress = readProgress[it.id] ?: 0f
+            progress >= 1f && it.totalChapters > 0
+        }
+        NovelFilter.FAVORITES -> searchFiltered.filter { it.isFavorite }
+    }
+}
+
+internal fun favoriteIcon(isFavorite: Boolean) =
+    if (isFavorite) Icons.Filled.Star else Icons.Outlined.Star
+
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun LibraryTab(
@@ -71,6 +101,7 @@ fun LibraryTab(
     onCheckForUpdates: (NovelEntity) -> Unit,
     onResyncChapters: (NovelEntity) -> Unit,
     onChapters: (NovelEntity) -> Unit,
+    onToggleFavorite: (NovelEntity) -> Unit,
     onRequestChangeCover: (NovelEntity) -> Unit,
     onRequestCoverByUrl: (NovelEntity) -> Unit,
     onContinueReading: (NovelEntity) -> Unit,
@@ -79,20 +110,7 @@ fun LibraryTab(
     onImportWeb: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    val searchFiltered = if (searchQuery.isBlank()) novels
-    else novels.filter { it.title.contains(searchQuery, ignoreCase = true) }
-
-    val chipFiltered = when (filterChip) {
-        NovelFilter.ALL -> searchFiltered
-        NovelFilter.READING -> searchFiltered.filter {
-            val progress = readProgress[it.id] ?: 0f
-            progress > 0f && progress < 1f
-        }
-        NovelFilter.COMPLETED -> searchFiltered.filter {
-            val progress = readProgress[it.id] ?: 0f
-            progress >= 1f && it.totalChapters > 0
-        }
-    }
+    val chipFiltered = filterNovels(novels, searchQuery, filterChip, readProgress)
 
     val listState = rememberSaveable(saver = LazyListState.Saver) { LazyListState() }
 
@@ -104,6 +122,7 @@ fun LibraryTab(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
+                .horizontalScroll(rememberScrollState())
                 .padding(horizontal = 12.dp, vertical = 8.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
@@ -121,6 +140,11 @@ fun LibraryTab(
                 selected = filterChip == NovelFilter.COMPLETED,
                 onClick = { onFilterChipChange(NovelFilter.COMPLETED) },
                 label = { Text(stringResource(R.string.filter_completed)) }
+            )
+            FilterChip(
+                selected = filterChip == NovelFilter.FAVORITES,
+                onClick = { onFilterChipChange(NovelFilter.FAVORITES) },
+                label = { Text(stringResource(R.string.filter_favorite_novels)) }
             )
         }
         if (novels.isEmpty()) {
@@ -164,6 +188,7 @@ fun LibraryTab(
                         onCheckForUpdates = { showMenu = false; onCheckForUpdates(novel) },
                         onResyncChapters = { showMenu = false; onResyncChapters(novel) },
                         onChapters = { showMenu = false; onChapters(novel) },
+                        onToggleFavorite = { updatedNovel -> onToggleFavorite(updatedNovel) },
                         onDelete = { showMenu = false; onLongClick(novel) }
                     )
                 }
@@ -195,6 +220,7 @@ fun LibraryTab(
                         onCheckForUpdates = { showMenu = false; onCheckForUpdates(novel) },
                         onResyncChapters = { showMenu = false; onResyncChapters(novel) },
                         onChapters = { showMenu = false; onChapters(novel) },
+                        onToggleFavorite = { updatedNovel -> onToggleFavorite(updatedNovel) },
                         onDelete = { showMenu = false; onLongClick(novel) }
                     )
                 }
@@ -262,6 +288,7 @@ private fun NovelMenu(
     onCheckForUpdates: () -> Unit,
     onResyncChapters: () -> Unit,
     onChapters: () -> Unit,
+    onToggleFavorite: (NovelEntity) -> Unit,
     onDelete: () -> Unit
 ) {
     DropdownMenu(
@@ -302,6 +329,24 @@ private fun NovelMenu(
             text = { Text(stringResource(R.string.chapters)) },
             onClick = onChapters,
             leadingIcon = { Icon(Icons.Default.List, contentDescription = null) }
+        )
+        DropdownMenuItem(
+            text = {
+                Text(
+                    if (novel.isFavorite) stringResource(R.string.unfavorite_novel)
+                    else stringResource(R.string.favorite_novel)
+                )
+            },
+            onClick = {
+                onToggleFavorite(novel.copy(isFavorite = !novel.isFavorite))
+                onDismiss()
+            },
+            leadingIcon = {
+                Icon(
+                    imageVector = favoriteIcon(novel.isFavorite),
+                    contentDescription = null
+                )
+            }
         )
         DropdownMenuItem(
             text = { Text(stringResource(R.string.delete), color = MaterialTheme.colorScheme.error) },

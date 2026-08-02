@@ -28,6 +28,7 @@ import com.novelreader.domain.usecase.WebImportUseCase
 import com.novelreader.domain.usecase.importnovel.ChapterInserter
 import com.novelreader.domain.usecase.importnovel.FileCharsetDetector
 import com.novelreader.ui.library.mvi.LibraryIntent
+import com.novelreader.ui.library.tabs.filterNovels
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -135,6 +136,31 @@ class LibraryViewModelTest {
     fun `setSortOrder updates state and persists to prefs`() = runTest {
         viewModel.setSortOrder(SortOrder.TITLE)
         assertThat(viewModel.sortOrder.value).isEqualTo(SortOrder.TITLE)
+    }
+
+    @Test
+    fun `ToggleNovelFavorite intent updates novel favorite`() = runTest {
+        viewModel.onIntent(LibraryIntent.ToggleNovelFavorite(42L, true))
+
+        coVerify { novelDao.updateFavorite(42L, true) }
+    }
+
+    @Test
+    fun `favorite filter keeps favorites while applying search`() {
+        val novels = listOf(
+            NovelEntity(id = 1, title = "Favorite Reader", isFavorite = true),
+            NovelEntity(id = 2, title = "Other Reader", isFavorite = false),
+            NovelEntity(id = 3, title = "Favorite Other", isFavorite = true)
+        )
+
+        val filtered = filterNovels(
+            novels = novels,
+            searchQuery = "reader",
+            filterChip = NovelFilter.FAVORITES,
+            readProgress = emptyMap()
+        )
+
+        assertThat(filtered).containsExactly(novels[0])
     }
 
     @Test

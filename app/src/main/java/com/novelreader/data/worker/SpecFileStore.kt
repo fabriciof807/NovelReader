@@ -60,6 +60,7 @@ class SpecFileStore @Inject constructor(
             obj.put("sourceUrl", spec.sourceUrl)
             obj.put("domain", spec.domain)
             if (spec.targetNovelId != null) obj.put("targetNovelId", spec.targetNovelId)
+            if (spec.isFavorite != null) obj.put("isFavorite", spec.isFavorite)
             val linksArr = JSONArray()
             val numsArr = JSONArray()
             spec.links.forEachIndexed { i, url ->
@@ -87,7 +88,21 @@ class SpecFileStore @Inject constructor(
                 val sourceUrl = obj.optString("sourceUrl", "")
                 val domain = obj.optString("domain", "")
                 val targetNovelId = if (obj.has("targetNovelId")) obj.optLong("targetNovelId") else null
-                ImportJobSpec(id, title, links, numbers, cover, enqueuedAt, splitCount, splitIndex, sourceUrl, domain, targetNovelId)
+                val isFavorite = if (obj.has("isFavorite")) obj.getBoolean("isFavorite") else null
+                ImportJobSpec(
+                    id,
+                    title,
+                    links,
+                    numbers,
+                    cover,
+                    enqueuedAt,
+                    splitCount,
+                    splitIndex,
+                    sourceUrl,
+                    domain,
+                    targetNovelId,
+                    isFavorite
+                )
             } catch (_: Exception) {
                 null
             }

@@ -60,7 +60,7 @@ import javax.inject.Inject
 enum class SortOrder { TITLE, CREATED_AT, LAST_READ }
 enum class ChapterSortOrder { ASCENDING, DESCENDING }
 enum class ViewMode { GRID, LIST }
-enum class NovelFilter { ALL, READING, COMPLETED }
+enum class NovelFilter { ALL, READING, COMPLETED, FAVORITES }
 
 data class LibraryStats(
     val totalNovels: Int = 0,
@@ -310,6 +310,7 @@ class LibraryViewModel @Inject constructor(
             is LibraryIntent.CancelUrlDialog -> cancelUrlDialog()
             is LibraryIntent.ClearCoverError -> clearCoverError()
             is LibraryIntent.ToggleAutoUpdate -> toggleAutoUpdate(intent.novelId)
+            is LibraryIntent.ToggleNovelFavorite -> toggleNovelFavorite(intent.novelId, intent.isFavorite)
             is LibraryIntent.CheckForUpdates -> checkForUpdates(intent.novelId)
             is LibraryIntent.ResyncChapters -> resyncChapters(intent.novelId)
             is LibraryIntent.CancelBackgroundImport -> cancelBackgroundImport()
@@ -595,6 +596,12 @@ class LibraryViewModel @Inject constructor(
             val novel = novelDao.getNovelById(novelId) ?: return@launch
             novelDao.updateAutoUpdate(novelId, !novel.autoUpdate)
             updateCheckScheduler.rescheduleIfNeeded()
+        }
+    }
+
+    fun toggleNovelFavorite(novelId: Long, isFavorite: Boolean) {
+        viewModelScope.launch {
+            novelDao.updateFavorite(novelId, isFavorite)
         }
     }
 

@@ -101,8 +101,9 @@ fun ReaderScreen(
     val pendingSearchQueryState = remember { mutableStateOf(initialSearchQuery) }
     var pendingSearchQuery by pendingSearchQueryState
     var isPageLoaded by remember { mutableStateOf(false) }
+    var pendingRestoreToken by remember { mutableStateOf<Int?>(null) }
+    var pendingSwipeTransition by remember { mutableStateOf(ChapterTransition.NONE) }
     val loadToken = remember { LoadToken() }
-    var inflightToken by remember { mutableStateOf<Int?>(null) }
     var showAddBookmarkDialog by remember { mutableStateOf(false) }
     var bookmarkToDelete by remember { mutableStateOf<Long?>(null) }
     var showChapterList by remember { mutableStateOf(false) }
@@ -140,14 +141,18 @@ fun ReaderScreen(
     LaunchedEffect(state.chapter, webView) {
         state.chapter?.let { chapter ->
             webView?.let { wv ->
-                isPageLoaded = false
                 val issued = loadToken.next()
-                inflightToken = issued
+                pendingRestoreToken = issued
+                scrollRatio = viewModel.getScrollRatio()
+                isPageLoaded = false
+                val transition = pendingSwipeTransition
+                pendingSwipeTransition = ChapterTransition.NONE
                 val html = buildReaderHtml(
                     content = chapter.content,
-                    config = state.config
+                    config = state.config,
+                    transition = transition
                 )
-                wv.loadDataWithBaseURL(null, html, "text/html", "UTF-8", null)
+                wv.loadDataWithBaseURL(loadToken.baseUrl(issued), html, "text/html", "UTF-8", null)
             }
         }
     }
@@ -297,7 +302,7 @@ fun ReaderScreen(
                                     .fillMaxWidth()
                                     .clickable {
                                         saveScroll()
-                                        viewModel.loadChapter(chapter.id)
+                                        viewModel.loadChapter(chapter.id, restorePosition = true)
                                         chapterSearchQuery = ""
                                         showChapterList = false
                                     }
@@ -428,7 +433,7 @@ fun ReaderScreen(
                             IconButton(
                                 onClick = {
                                     saveScroll()
-                                    state.prevChapterId?.let { viewModel.loadChapter(it) }
+                                    viewModel.goToPrevChapter()
                                 },
                                 enabled = state.prevChapterId != null
                             ) {
@@ -498,7 +503,7 @@ fun ReaderScreen(
                             IconButton(
                                 onClick = {
                                     saveScroll()
-                                    state.nextChapterId?.let { viewModel.loadChapter(it) }
+                                    viewModel.goToNextChapter()
                                 },
                                 enabled = state.nextChapterId != null
                             ) {
@@ -552,41 +557,45 @@ fun ReaderScreen(
                     ReaderWebView(
                     onTextSelected = { viewModel.onTextSelected(it) },
                     onScrollChanged = { ratio ->
-                        scrollRatio = ratio
-                        viewModel.updateLiveScroll(ratio)
+                        if (isPageLoaded) {
+                            scrollRatio = ratio
+                            viewModel.updateLiveScroll(ratio)
+                        }
                     },
-                    onPageFinished = { wv, _ ->
-                        val issued = inflightToken
-                        inflightToken = null
-                        if (issued != null && loadToken.shouldAccept(issued)) {
-                            isPageLoaded = true
-                            wv.evaluateJavascript(applyConfigJs(state.config), null)
-                            wv.evaluateJavascript(applyBookmarksJs(state.bookmarks), null)
-                            val ratio = viewModel.getScrollRatio()
-                            val search = pendingSearchQuery
-                            if (search != null) {
-                                pendingSearchQuery = null
-                                wv.evaluateJavascript(buildJs(
-                                    code = "window.scrollTo(0, 0);",
-                                    params = emptyMap()
-                                ), null)
-                                wv.evaluateJavascript(
-                                    searchHighlightJs(search, ratio),
-                                    null
-                                )
-                            } else if (ratio > 0f) {
-                                wv.evaluateJavascript(scrollRestoreJs(ratio), null)
-                            }
+                    onPageFinished = { wv, url ->
+                        if (!loadToken.shouldAccept(url)) return@ReaderWebView
+                        val restoreToken = pendingRestoreToken ?: return@ReaderWebView
+                        val ratio = viewModel.getScrollRatio()
+                        scrollRatio = ratio
+                        wv.evaluateJavascript(applyConfigJs(state.config), null)
+                        wv.evaluateJavascript(applyBookmarksJs(state.bookmarks), null)
+                        val search = pendingSearchQuery
+                        if (search != null) {
+                            pendingSearchQuery = null
+                            wv.evaluateJavascript(buildJs(
+                                code = "window.scrollTo(0, 0);",
+                                params = emptyMap()
+                            ), null)
+                            wv.evaluateJavascript(
+                                searchHighlightJs(search, ratio, completionToken = restoreToken),
+                                null
+                            )
+                        } else {
+                            wv.evaluateJavascript(scrollRestoreJs(ratio, completionToken = restoreToken), null)
                         }
                     },
                     onWebViewReady = { webView = it },
+                    onScrollRestoreComplete = { token ->
+                        if (token == pendingRestoreToken) isPageLoaded = true
+                    },
                     onTap = { isControlsVisible = !isControlsVisible },
-                    onSwipe = { direction ->
+                    onSwipe = { direction, axis ->
                         saveScroll()
+                        pendingSwipeTransition = chapterTransitionFor(direction, axis)
                         if (direction == "prev") {
-                            state.prevChapterId?.let { viewModel.loadChapter(it) }
+                            viewModel.goToPrevChapter()
                         } else {
-                            state.nextChapterId?.let { viewModel.loadChapter(it) }
+                            viewModel.goToNextChapter()
                         }
                     },
                     modifier = Modifier.fillMaxSize()

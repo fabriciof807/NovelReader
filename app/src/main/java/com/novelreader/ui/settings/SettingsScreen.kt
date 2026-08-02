@@ -22,6 +22,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -75,6 +76,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.novelreader.R
+import com.novelreader.domain.usecase.ExportOptions
 import com.novelreader.domain.usecase.ImportPreview
 import com.novelreader.domain.usecase.ImportPreviewEntry
 import com.novelreader.domain.usecase.ImportResult
@@ -98,6 +100,9 @@ fun SettingsScreen(
     val themeExpanded = remember { mutableStateOf(true) }
     val langExpanded = remember { mutableStateOf(false) }
     var showExportConfirm by remember { mutableStateOf(false) }
+    var exportNovels by remember { mutableStateOf(true) }
+    var exportBookmarks by remember { mutableStateOf(true) }
+    var exportCharacters by remember { mutableStateOf(true) }
     var showImportConfirm by remember { mutableStateOf(false) }
     var importPreview by remember { mutableStateOf<ImportPreview?>(null) }
     var selectedImportTitles by remember { mutableStateOf<Set<String>>(emptySet()) }
@@ -165,15 +170,53 @@ fun SettingsScreen(
     }
 
     if (showExportConfirm) {
+        val canExport = exportNovels || exportBookmarks || exportCharacters
         AlertDialog(
             onDismissRequest = { showExportConfirm = false },
             title = { Text(stringResource(R.string.export_confirm_title)) },
-            text = { Text(stringResource(R.string.export_confirm_msg)) },
+            text = {
+                Column {
+                    Text(stringResource(R.string.export_confirm_msg))
+                    Spacer(modifier = Modifier.height(8.dp))
+                    ExportOptionRow(
+                        label = stringResource(R.string.export_novels),
+                        description = stringResource(R.string.export_novels_desc),
+                        checked = exportNovels,
+                        onCheckedChange = { exportNovels = it }
+                    )
+                    ExportOptionRow(
+                        label = stringResource(R.string.export_bookmarks),
+                        description = stringResource(R.string.export_bookmarks_desc),
+                        checked = exportBookmarks,
+                        onCheckedChange = { exportBookmarks = it }
+                    )
+                    ExportOptionRow(
+                        label = stringResource(R.string.export_characters),
+                        description = stringResource(R.string.export_characters_desc),
+                        checked = exportCharacters,
+                        onCheckedChange = { exportCharacters = it }
+                    )
+                    if (!canExport) {
+                        Text(
+                            text = stringResource(R.string.export_select_at_least_one),
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                        )
+                    }
+                }
+            },
             confirmButton = {
                 TextButton(onClick = {
                     showExportConfirm = false
-                    viewModel.exportData()
-                }) { Text(stringResource(R.string.confirm)) }
+                    viewModel.exportData(
+                        ExportOptions(
+                            novels = exportNovels,
+                            bookmarks = exportBookmarks,
+                            characters = exportCharacters
+                        )
+                    )
+                }, enabled = canExport) { Text(stringResource(R.string.confirm)) }
             },
             dismissButton = {
                 TextButton(onClick = { showExportConfirm = false }) {
@@ -432,7 +475,12 @@ fun SettingsScreen(
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { showExportConfirm = true },
+                    .clickable {
+                        exportNovels = true
+                        exportBookmarks = true
+                        exportCharacters = true
+                        showExportConfirm = true
+                    },
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.secondaryContainer
                 )
@@ -525,6 +573,43 @@ fun SettingsScreen(
             CircularProgressIndicator()
         }
     }
+    }
+}
+
+@Composable
+private fun ExportOptionRow(
+    label: String,
+    description: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .toggleable(
+                value = checked,
+                onValueChange = onCheckedChange,
+                role = Role.Checkbox
+            )
+            .padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Checkbox(
+            checked = checked,
+            onCheckedChange = null
+        )
+        Column(modifier = Modifier.padding(end = 8.dp)) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+            Text(
+                text = description,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
     }
 }
 

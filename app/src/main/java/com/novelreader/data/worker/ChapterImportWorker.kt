@@ -8,6 +8,7 @@ import androidx.work.ForegroundInfo
 import androidx.work.ListenableWorker.Result
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
+import com.novelreader.data.local.db.dao.NovelDao
 import com.novelreader.domain.usecase.BackgroundImportError
 import com.novelreader.domain.usecase.ChapterLink
 import com.novelreader.domain.usecase.ChapterOrderNormalizer
@@ -28,7 +29,8 @@ class ChapterImportWorker @AssistedInject constructor(
     private val notificationHelper: ImportNotificationHelper,
     private val workCompletionObserver: WorkCompletionObserver,
     private val chapterOrderNormalizer: ChapterOrderNormalizer,
-    private val specFileStore: SpecFileStore
+    private val specFileStore: SpecFileStore,
+    private val novelDao: NovelDao
 ) : CoroutineWorker(appContext, params) {
 
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
@@ -78,6 +80,9 @@ class ChapterImportWorker @AssistedInject constructor(
         if (result.isSuccess) {
             result.getOrNull()?.let { novelId ->
                 chapterOrderNormalizer.normalize(novelId)
+                if (spec.splitIndex == spec.splitCount - 1) {
+                    spec.isFavorite?.let { novelDao.updateFavorite(novelId, it) }
+                }
             }
             val importedCount = total - errors.size
             notificationHelper.postCompletionNotification(spec, importedCount, total, errors.size)
@@ -118,6 +123,8 @@ class ChapterImportWorker @AssistedInject constructor(
         const val KEY_SOURCE_URL = "source_url"
         const val KEY_DOMAIN = "import_domain"
         const val KEY_TARGET_NOVEL_ID = "import_target_novel_id"
+        const val KEY_IS_FAVORITE_PRESENT = "import_is_favorite_present"
+        const val KEY_IS_FAVORITE = "import_is_favorite"
         const val UNIQUE_ACTIVE = "chapter_import_active"
         const val TAG_IMPORT = "chapter_import"
     }

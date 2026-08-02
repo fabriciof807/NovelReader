@@ -21,7 +21,7 @@ class CoverDownloader @Inject constructor(
             dir.mkdirs()
             val dest = File(dir, "novel_$novelId.jpg")
             dest.outputStream().use { output ->
-                output.write(response.body.toByteArray(Charsets.UTF_8))
+                output.write(response.bodyBytes ?: response.body.toByteArray(Charsets.UTF_8))
             }
             if (dest.exists()) {
                 novelDao.updateCoverPath(novelId, dest.absolutePath)

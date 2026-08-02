@@ -6,26 +6,25 @@ import org.junit.Test
 class LoadTokenTest {
 
     @Test
-    fun `fresh token rejects any observed value`() {
-        val token = LoadToken()
-        assertThat(token.shouldAccept(0)).isFalse()
-    }
-
-    @Test
-    fun `next returns a new token and shouldAccept matches it`() {
-        val token = LoadToken()
-        val issued = token.next()
-        assertThat(token.shouldAccept(issued)).isTrue()
-        assertThat(token.shouldAccept(issued - 1)).isFalse()
-    }
-
-    @Test
-    fun `stale onPageFinished from a previous load is rejected after next`() {
+    fun `stale callback URL is rejected without consuming current load`() {
         val token = LoadToken()
         val first = token.next()
-        token.shouldAccept(first)
         val second = token.next()
-        assertThat(token.shouldAccept(first)).isFalse()
-        assertThat(token.shouldAccept(second)).isTrue()
+
+        assertThat(token.shouldAccept(token.baseUrl(first))).isFalse()
+        assertThat(token.shouldAccept(token.baseUrl(second))).isTrue()
+    }
+
+    @Test
+    fun `malformed callback URL is rejected`() {
+        assertThat(LoadToken().shouldAccept("about:blank")).isFalse()
+    }
+
+    @Test
+    fun `malformed numeric callback URL is rejected`() {
+        val token = LoadToken()
+        token.next()
+
+        assertThat(token.shouldAccept("1/")).isFalse()
     }
 }

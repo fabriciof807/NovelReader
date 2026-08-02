@@ -86,6 +86,54 @@ class ReaderHtmlBuilderTest {
     }
 
     @Test
+    fun `buildReaderHtml default transition keeps plain content div`() {
+        val html = buildReaderHtml(
+            content = "<p>x</p>",
+            config = ReaderConfig()
+        )
+        assertThat(html).contains("<div id=\"content\"><p>x</p></div>")
+        assertThat(html).doesNotContain("<div id=\"content\" class=")
+    }
+
+    @Test
+    fun `buildReaderHtml with FROM_RIGHT adds enter-from-right class and keyframes`() {
+        val html = buildReaderHtml(
+            content = "<p>x</p>",
+            config = ReaderConfig(),
+            transition = ChapterTransition.FROM_RIGHT
+        )
+        assertThat(html).contains("<div id=\"content\" class=\"enter-from-right\">")
+        assertThat(html).contains("@keyframes enterFromRight")
+    }
+
+    @Test
+    fun `buildReaderHtml with FROM_LEFT adds enter-from-left class and keyframes`() {
+        val html = buildReaderHtml(
+            content = "<p>x</p>",
+            config = ReaderConfig(),
+            transition = ChapterTransition.FROM_LEFT
+        )
+        assertThat(html).contains("<div id=\"content\" class=\"enter-from-left\">")
+        assertThat(html).contains("@keyframes enterFromLeft")
+    }
+
+    @Test
+    fun `buildReaderHtml with FROM_TOP and FROM_BOTTOM add vertical classes`() {
+        val top = buildReaderHtml("<p>x</p>", ReaderConfig(), ChapterTransition.FROM_TOP)
+        val bottom = buildReaderHtml("<p>x</p>", ReaderConfig(), ChapterTransition.FROM_BOTTOM)
+        assertThat(top).contains("<div id=\"content\" class=\"enter-from-top\">")
+        assertThat(bottom).contains("<div id=\"content\" class=\"enter-from-bottom\">")
+    }
+
+    @Test
+    fun `chapterTransitionFor maps swipe direction and axis to entry transition`() {
+        assertThat(chapterTransitionFor("next", "h")).isEqualTo(ChapterTransition.FROM_RIGHT)
+        assertThat(chapterTransitionFor("next", "v")).isEqualTo(ChapterTransition.FROM_BOTTOM)
+        assertThat(chapterTransitionFor("prev", "h")).isEqualTo(ChapterTransition.FROM_LEFT)
+        assertThat(chapterTransitionFor("prev", "v")).isEqualTo(ChapterTransition.FROM_TOP)
+    }
+
+    @Test
     fun `applyConfigJs passes the config object to applyConfig without JSON parse`() {
         val js = applyConfigJs(ReaderConfig(theme = "dark"))
         assertThat(js).contains("applyConfig(args.args);")
@@ -121,6 +169,19 @@ class ReaderHtmlBuilderTest {
     fun `scrollRestoreJs waits for layout before restoring scroll position`() {
         val js = scrollRestoreJs(0.5f)
         assertThat(js).contains("requestAnimationFrame")
+    }
+
+    @Test
+    fun `scrollRestoreJs supports chapter top`() {
+        val js = scrollRestoreJs(0f)
+        assertThat(js).contains("ratio")
+        assertThat(js).contains("0")
+    }
+
+    @Test
+    fun `scrollRestoreJs reports completion for the current load`() {
+        val js = scrollRestoreJs(0f, completionToken = 7)
+        assertThat(js).contains("Android.onScrollRestoreComplete(7)")
     }
 
     @Test

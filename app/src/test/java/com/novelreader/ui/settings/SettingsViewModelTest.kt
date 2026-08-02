@@ -7,8 +7,10 @@ import com.novelreader.domain.usecase.ImportPreview
 import com.novelreader.domain.usecase.ImportPreviewEntry
 import com.novelreader.domain.usecase.ImportResult
 import com.novelreader.data.local.preferences.AppPreferences
+import com.novelreader.domain.usecase.ExportOptions
 import com.novelreader.domain.usecase.ExportDataUseCase
 import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
@@ -102,5 +104,15 @@ class SettingsViewModelTest {
         viewModel.clearImportResult()
 
         assertThat(viewModel.lastImportResult.value).isNull()
+    }
+
+    @Test
+    fun `exportData forwards selected options`() = runTest {
+        val options = ExportOptions(novels = false, bookmarks = true, characters = false)
+        coEvery { exportDataUseCase.execute(options) } returns "{}"
+
+        viewModel.exportData(options)
+
+        coVerify { exportDataUseCase.execute(options) }
     }
 }

@@ -25,7 +25,7 @@ class ImportWorkScheduler @Inject constructor(
     suspend fun cancel(id: UUID) {
         importPrefs.removeJob(id)
         specFileStore.delete(id)
-        workManager.cancelWorkById(id)
+        workManager.cancelAllWorkByTag("job:$id")
     }
 
     suspend fun cancelAll() {
@@ -45,7 +45,9 @@ object ImportWorkRequestFactory {
                 ChapterImportWorker.KEY_ENQUEUED_AT to spec.enqueuedAt,
                 ChapterImportWorker.KEY_SPLIT_COUNT to spec.splitCount,
                 ChapterImportWorker.KEY_SPLIT_INDEX to spec.splitIndex,
-                ChapterImportWorker.KEY_SOURCE_URL to spec.sourceUrl
+                ChapterImportWorker.KEY_SOURCE_URL to spec.sourceUrl,
+                ChapterImportWorker.KEY_IS_FAVORITE_PRESENT to (spec.isFavorite != null),
+                ChapterImportWorker.KEY_IS_FAVORITE to (spec.isFavorite ?: false)
             )
         )
         .addTag(ChapterImportWorker.TAG_IMPORT)

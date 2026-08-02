@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.novelreader.data.local.preferences.AppPreferences
 import com.novelreader.domain.usecase.ExportDataUseCase
+import com.novelreader.domain.usecase.ExportOptions
 import com.novelreader.domain.usecase.ImportDataUseCase
 import com.novelreader.domain.usecase.ImportPreview
 import com.novelreader.domain.usecase.ImportResult
@@ -77,10 +78,10 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    fun exportData() {
+    fun exportData(options: ExportOptions = ExportOptions()) {
         viewModelScope.launch {
             try {
-                val json = exportDataUseCase.execute()
+                val json = exportDataUseCase.execute(options)
                 _exportedJson.emit(json)
             } catch (e: Exception) {
                 _exportError.emit(e.message ?: "Erro ao exportar dados")

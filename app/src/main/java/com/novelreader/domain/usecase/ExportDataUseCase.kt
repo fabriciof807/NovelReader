@@ -18,6 +18,12 @@ import java.util.Locale
 import javax.inject.Inject
 import javax.inject.Singleton
 
+data class ExportOptions(
+    val novels: Boolean = true,
+    val bookmarks: Boolean = true,
+    val characters: Boolean = true
+)
+
 @Singleton
 class ExportDataUseCase @Inject constructor(
     private val novelDao: NovelDao,
@@ -27,19 +33,19 @@ class ExportDataUseCase @Inject constructor(
     private val characterPhotoDao: CharacterPhotoDao,
     @IoDispatcher private val ioDispatcher: CoroutineDispatcher
 ) {
-    suspend fun execute(): String = withContext(ioDispatcher) {
+    suspend fun execute(options: ExportOptions = ExportOptions()): String = withContext(ioDispatcher) {
         val root = JSONObject()
 
-        root.put("version", 1)
+        root.put("version", 2)
         root.put("exportedAt", SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US).format(Date()))
 
         val novels = novelDao.getAllNovels().first()
-        root.put("novels", exportNovels(novels))
+        root.put("novels", if (options.novels) exportNovels(novels) else JSONArray())
 
-        root.put("bookmarks", exportBookmarks())
+        root.put("bookmarks", if (options.bookmarks) exportBookmarks() else JSONArray())
 
         val novelMap = novels.associateBy { it.id }
-        root.put("characters", exportCharacters(novelMap))
+        root.put("characters", if (options.characters) exportCharacters(novelMap) else JSONArray())
 
         root.toString(2)
     }
@@ -50,6 +56,7 @@ class ExportDataUseCase @Inject constructor(
             arr.put(JSONObject().apply {
                 put("title", novel.title)
                 put("sourceUrl", novel.sourceUrl)
+                put("isFavorite", novel.isFavorite)
             })
         }
         return arr

@@ -89,6 +89,31 @@ class FreewebnovelListAugmenterTest {
     }
 
     @Test
+    fun augment_fetchesAttributePaginationPagesTwoThroughEight() = runBlocking<Unit> {
+        val doc = Jsoup.parse(
+            """
+                <div id="indexListPage" data-page-size="40" data-total-page="8" data-total-chapters="291"></div>
+            """.trimIndent()
+        )
+        repeat(7) { index ->
+            val page = index + 2
+            val body = """{"code":200,"html":"<a href='/x/c$page.html'>C$page</a>","page":$page}"""
+            server.enqueue(MockResponse().setResponseCode(200).setBody(body))
+        }
+
+        val result = augmenter.augment(homeUrl, doc, client)
+        val requests = (2..8).map { server.takeRequest() }
+
+        assertThat(result.map { it.title }).containsExactly(
+            "C2", "C3", "C4", "C5", "C6", "C7", "C8"
+        ).inOrder()
+        requests.forEachIndexed { index, request ->
+            assertThat(request.path).contains("page=${index + 2}")
+            assertThat(request.path).contains("pageSize=40")
+        }
+    }
+
+    @Test
     fun augment_sendsXRequestedWithAndHomeUrlAsReferer() = runBlocking {
         val docHtml = """
             <html><head><script>

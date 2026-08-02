@@ -23,12 +23,23 @@ class ImportJobSpecTest {
         assertThat(spec.chapterNumbers[0]).isEqualTo(1)
         assertThat(spec.chapterNumbers[1]).isEqualTo(2)
         assertThat(spec.coverUrl).isEqualTo("https://x.com/cover.jpg")
+        assertThat(spec.isFavorite).isNull()
     }
 
     @Test
     fun `create accepts null cover`() {
         val specs = ImportJobSpec.create("N", listOf(ChapterLink("c", "u", 1)), null)
         assertThat(specs.first().coverUrl).isNull()
+    }
+
+    @Test
+    fun `create preserves nullable favorite metadata`() {
+        val link = listOf(ChapterLink("c", "u", 1))
+
+        assertThat(ImportJobSpec.create("N", link, null, isFavorite = true).first().isFavorite)
+            .isTrue()
+        assertThat(ImportJobSpec.create("N", link, null, isFavorite = false).first().isFavorite)
+            .isFalse()
     }
 
     @Test

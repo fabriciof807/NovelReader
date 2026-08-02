@@ -18,5 +18,6 @@ data class HttpResponse(
     val statusCode: Int,
     val body: String,
     val headers: Map<String, String>,
-    val finalUrl: String?
+    val finalUrl: String?,
+    val bodyBytes: ByteArray? = null
 )

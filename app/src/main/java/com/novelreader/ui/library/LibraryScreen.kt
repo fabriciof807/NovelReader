@@ -301,6 +301,9 @@ fun LibraryScreen(
                     onCheckForUpdates = { viewModel.onIntent(LibraryIntent.CheckForUpdates(it.id)) },
                     onResyncChapters = { viewModel.onIntent(LibraryIntent.ResyncChapters(it.id)) },
                     onChapters = { viewModel.onIntent(LibraryIntent.SelectNovel(it)) },
+                    onToggleFavorite = { novel ->
+                        viewModel.onIntent(LibraryIntent.ToggleNovelFavorite(novel.id, novel.isFavorite))
+                    },
                     onRequestChangeCover = { viewModel.onIntent(LibraryIntent.RequestChangeCover(it.id)) },
                     onRequestCoverByUrl = { viewModel.onIntent(LibraryIntent.RequestCoverByUrl(it.id)) },
                     onContinueReading = { novel ->

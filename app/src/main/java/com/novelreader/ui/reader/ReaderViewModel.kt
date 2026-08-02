@@ -79,6 +79,8 @@ class ReaderViewModel @Inject constructor(
     private var currentChapter: ChapterEntity? = null
     private var allChapters: List<ChapterEntity> = emptyList()
     private var bookmarkCollectionJob: kotlinx.coroutines.Job? = null
+    private var loadChapterJob: Job? = null
+    private var loadRequestId: Long = 0
 
     private var retryAction: (() -> Unit)? = null
 
@@ -102,29 +104,37 @@ class ReaderViewModel @Inject constructor(
         loadChapter(chapterId)
     }
 
-    fun loadChapter(chapterId: Long) {
-        viewModelScope.launch {
-            _state.value = _state.value.copy(isLoading = true)
+    fun loadChapter(chapterId: Long, restorePosition: Boolean = true) {
+        loadChapterJob?.cancel()
+        val requestId = ++loadRequestId
+        loadChapterJob = viewModelScope.launch {
+            _state.value = _state.value.copy(isLoading = true, error = null)
 
-            val chapter = chapterDao.getChapterById(chapterId)
-            if (chapter == null) {
-                _state.value = _state.value.copy(
-                    isLoading = false,
-                    error = context.getString(R.string.reader_chapter_not_found)
-                )
+            val chapter = chapterDao.getChapterById(chapterId) ?: run {
+                if (requestId == loadRequestId) {
+                    _state.value = _state.value.copy(
+                        isLoading = false,
+                        error = context.getString(R.string.reader_chapter_not_found)
+                    )
+                }
                 return@launch
             }
-            currentChapter = chapter
             val novel = novelDao.getNovelById(chapter.novelId)
-
-            if (allChapters.isEmpty() || allChapters.firstOrNull()?.novelId != chapter.novelId) {
-                allChapters = chapterDao.getChaptersByNovelSync(chapter.novelId)
+            val chaptersForNovel = if (
+                allChapters.isEmpty() || allChapters.firstOrNull()?.novelId != chapter.novelId
+            ) {
+                chapterDao.getChaptersByNovelSync(chapter.novelId)
+            } else {
+                allChapters
             }
+            if (requestId != loadRequestId) return@launch
 
+            allChapters = chaptersForNovel
+            currentChapter = chapter
+            lastKnownScrollPosition = if (restorePosition) chapter.lastScrollPosition else 0
             val currentIndex = allChapters.indexOfFirst { it.id == chapterId }
             val prevId = allChapters.getOrNull(currentIndex - 1)?.id
             val nextId = allChapters.getOrNull(currentIndex + 1)?.id
-
             val isEmpty = chapter.content.isBlank() || chapter.content.length < emptyChapterThreshold
 
             _state.value = _state.value.copy(
@@ -133,14 +143,12 @@ class ReaderViewModel @Inject constructor(
                 prevChapterId = prevId,
                 nextChapterId = nextId,
                 isLoading = false,
+                error = null,
                 isEmpty = isEmpty,
                 allChapters = allChapters
             )
-
             collectBookmarks(chapterId)
-
             novelDao.updateLastRead(chapter.novelId, chapterId)
-
             if (!chapter.isRead) {
                 chapterDao.markAsRead(chapter.id, chapter.lastScrollPosition)
             }
@@ -156,13 +164,9 @@ class ReaderViewModel @Inject constructor(
         }
     }
 
-    fun goToPrevChapter() {
-        _state.value.prevChapterId?.let { loadChapter(it) }
-    }
+    fun goToPrevChapter() = _state.value.prevChapterId?.let { loadChapter(it, true) }
 
-    fun goToNextChapter() {
-        _state.value.nextChapterId?.let { loadChapter(it) }
-    }
+    fun goToNextChapter() = _state.value.nextChapterId?.let { loadChapter(it, false) }
 
     private var lastKnownScrollPosition: Int = 0
 
@@ -286,10 +290,8 @@ class ReaderViewModel @Inject constructor(
     }
 
     fun getScrollRatio(): Float {
-        val chapter = currentChapter ?: return 0f
-        return if (chapter.lastScrollPosition > 0) {
-            chapter.lastScrollPosition / 1000f
-        } else 0f
+        if (currentChapter == null) return 0f
+        return lastKnownScrollPosition.coerceIn(0, 1000) / 1000f
     }
 
     fun showSettings() {

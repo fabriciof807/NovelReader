@@ -3,14 +3,28 @@ package com.novelreader.domain.usecase
 import com.google.common.truth.Truth.assertThat
 import com.novelreader.data.local.preferences.ImportPreferences
 import com.novelreader.data.worker.ImportWorkScheduler
+import com.novelreader.data.worker.ObserverCallbacks
 import com.novelreader.data.worker.WorkCompletionObserver
-import io.mockk.coEvery
 import io.mockk.coVerify
+import io.mockk.coEvery
+import io.mockk.every
 import io.mockk.mockk
+import io.mockk.slot
+import io.mockk.verify
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.async
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import org.junit.Before
 import org.junit.Test
 import java.util.UUID
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class BackgroundImportManagerTest {
 
     private val scheduler: ImportWorkScheduler = mockk(relaxed = true)
@@ -18,6 +32,13 @@ class BackgroundImportManagerTest {
     private val importPrefs: ImportPreferences = mockk(relaxed = true)
 
     private val manager = BackgroundImportManager(scheduler, completionObserver, importPrefs)
+
+    @Before
+    fun setUp() {
+        coEvery { completionObserver.withSchedulingLock(any()) } coAnswers {
+            firstArg<suspend () -> Unit>().invoke()
+        }
+    }
 
     @Test
     fun `startImport delegates to scheduler with spec`() = runTest {
@@ -35,6 +56,17 @@ class BackgroundImportManagerTest {
     }
 
     @Test
+    fun `startImport propagates favorite metadata to scheduled spec`() = runTest {
+        manager.startImport(
+            novelTitle = "Favorite Novel",
+            links = listOf(ChapterLink("c1", "u1", 1)),
+            isFavorite = false
+        )
+
+        coVerify { scheduler.schedule(match { it.isFavorite == false }) }
+    }
+
+    @Test
     fun `startImport with multiple batches creates multiple specs`() = runTest {
         val links = (1..250).map { ChapterLink("c$it", "u$it", it) }
         manager.startImport("Multi", links)
@@ -45,27 +77,178 @@ class BackgroundImportManagerTest {
     }
 
     @Test
-    fun `cancel resets state and cancels each job for the current novel`() = runTest {
-        val jobId = UUID.randomUUID()
-        coEvery { importPrefs.getJobsByNovelTitle("Test Novel") } returns listOf(
-            ImportJobSpec(id = jobId, novelTitle = "Test Novel", links = listOf("u1"), chapterNumbers = listOf(1), coverUrl = null, enqueuedAt = 0L)
-        )
+    fun `onAllIdle leaves import running while split jobs remain`() = runTest {
+        val links = (1..250).map { ChapterLink("c$it", "u$it", it) }
+        manager.startImport("Multi", links)
+        val callbacks = slot<ObserverCallbacks>()
+        verify { completionObserver.callbacks = capture(callbacks) }
+
+        callbacks.captured.onAllIdle()
+
+        assertThat(manager.state.value.running).isTrue()
+        assertThat(manager.state.value.completed).isFalse()
+    }
+
+    @Test
+    fun `onAllIdle cannot complete new import before pending splits are visible`() = runTest {
+        val callbacks = slot<ObserverCallbacks>()
+        verify { completionObserver.callbacks = capture(callbacks) }
+        val observer = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            manager.state.drop(1).collect { state ->
+                if (state.novelTitle == "New" && state.running) {
+                    callbacks.captured.onAllIdle()
+                }
+            }
+        }
+
         manager.startImport(
-            novelTitle = "Test Novel",
-            links = listOf(ChapterLink("c1", "u1", 1))
+            "New",
+            (1..250).map { ChapterLink("c$it", "u$it", it) }
         )
+        observer.cancel()
+
+        assertThat(manager.state.value.running).isTrue()
+        assertThat(manager.state.value.completed).isFalse()
+    }
+
+    @Test
+    fun `stale idle callback does not complete a new import`() = runTest {
+        manager.startImport("Old", listOf(ChapterLink("old", "old", 1)))
+        val callbacks = slot<ObserverCallbacks>()
+        verify { completionObserver.callbacks = capture(callbacks) }
+
+        manager.clearCompleted()
+        manager.startImport("New", listOf(ChapterLink("new", "new", 1)))
+
+        callbacks.captured.onAllIdle()
+
+        assertThat(manager.state.value.novelTitle).isEqualTo("New")
+        assertThat(manager.state.value.running).isTrue()
+        assertThat(manager.state.value.completed).isFalse()
+    }
+
+    @Test
+    fun `final terminal callback completes import`() = runTest {
+        every { importPrefs.pendingQueue } returns flowOf(emptyList())
+        manager.startImport("Only", listOf(ChapterLink("c", "u", 1)))
+        val callbacks = slot<ObserverCallbacks>()
+        verify { completionObserver.callbacks = capture(callbacks) }
+
+        callbacks.captured.onJobTerminal(manager.state.value.id!!, success = true)
+
+        assertThat(manager.state.value.running).isFalse()
+        assertThat(manager.state.value.completed).isTrue()
+    }
+
+    @Test
+    fun `cancel current novel preserves queue and adopts next novel`() = runTest {
+        val nextId = UUID.randomUUID()
+        val next = ImportJobSpec(
+            id = nextId,
+            novelTitle = "Novel B",
+            links = listOf("https://b/1"),
+            chapterNumbers = listOf(1),
+            coverUrl = null,
+            enqueuedAt = 2L
+        )
+        every { importPrefs.pendingQueue } returns flowOf(listOf(next))
+        manager.startImport("Novel A", listOf(ChapterLink("A1", "https://a/1", 1)))
+        val actualCurrentId = manager.state.value.id!!
+        val callbacks = slot<ObserverCallbacks>()
+        verify { completionObserver.callbacks = capture(callbacks) }
 
         manager.cancel()
 
-        coVerify { scheduler.cancel(jobId) }
-        coVerify(exactly = 0) { scheduler.cancelAll() }
+        coVerify { scheduler.cancel(actualCurrentId) }
+        coVerify { importPrefs.removeJobsByNovelTitle("Novel A") }
+        verify { completionObserver.tryScheduleNext() }
+        assertThat(manager.state.value.id).isEqualTo(nextId)
+        assertThat(manager.state.value.novelTitle).isEqualTo("Novel B")
+        assertThat(manager.state.value.running).isTrue()
+
+        callbacks.captured.onAllIdle()
+        assertThat(manager.state.value.running).isTrue()
+        assertThat(manager.state.value.completed).isFalse()
+
+        callbacks.captured.onProgress(actualCurrentId, processed = 99, total = 99, currentChapter = 99)
+        assertThat(manager.state.value.importedCount).isEqualTo(0)
+        callbacks.captured.onProgress(nextId, processed = 1, total = 1, currentChapter = 1)
+        assertThat(manager.state.value.importedCount).isEqualTo(1)
+    }
+
+    @Test
+    fun `cancel last novel resets id and running state`() = runTest {
+        every { importPrefs.pendingQueue } returns flowOf(emptyList())
+        manager.startImport("Only", listOf(ChapterLink("C1", "https://c/1", 1)))
+
+        manager.cancel()
+
+        assertThat(manager.state.value.id).isNull()
         assertThat(manager.state.value.running).isFalse()
         assertThat(manager.state.value.completed).isFalse()
-        assertThat(manager.state.value.novelTitle).isEmpty()
+    }
+
+    @Test
+    fun `cancel waits for scheduling lock before handing off to the next novel`() = runTest {
+        val next = ImportJobSpec(
+            id = UUID.randomUUID(),
+            novelTitle = "Novel B",
+            links = listOf("https://b/1"),
+            chapterNumbers = listOf(1),
+            coverUrl = null,
+            enqueuedAt = 2L
+        )
+        every { importPrefs.pendingQueue } returns flowOf(listOf(next))
+        manager.startImport("Novel A", listOf(ChapterLink("A1", "https://a/1", 1)))
+
+        val entered = CompletableDeferred<Unit>()
+        val release = CompletableDeferred<Unit>()
+        coEvery { completionObserver.withSchedulingLock(any()) } coAnswers {
+            entered.complete(Unit)
+            release.await()
+            firstArg<suspend () -> Unit>().invoke()
+        }
+
+        val cancellation = backgroundScope.async { manager.cancel() }
+        entered.await()
+        coVerify(exactly = 0) { importPrefs.removeJobsByNovelTitle("Novel A") }
+
+        release.complete(Unit)
+        cancellation.await()
+
+        coVerify { importPrefs.removeJobsByNovelTitle("Novel A") }
+        verify { completionObserver.tryScheduleNext() }
+        assertThat(manager.state.value.id).isEqualTo(next.id)
+        assertThat(manager.state.value.novelTitle).isEqualTo("Novel B")
+    }
+
+    @Test
+    fun `startImport waits for scheduling lock before enqueueing splits`() = runTest {
+        val entered = CompletableDeferred<Unit>()
+        val release = CompletableDeferred<Unit>()
+        coEvery { completionObserver.withSchedulingLock(any()) } coAnswers {
+            entered.complete(Unit)
+            release.await()
+            firstArg<suspend () -> Unit>().invoke()
+        }
+
+        val start = backgroundScope.async {
+            manager.startImport(
+                "Novel A",
+                (1..250).map { ChapterLink("A$it", "https://a/$it", it) }
+            )
+        }
+        entered.await()
+        coVerify(exactly = 0) { scheduler.schedule(any()) }
+
+        release.complete(Unit)
+        start.await()
+        coVerify(exactly = 3) { scheduler.schedule(any()) }
     }
 
     @Test
     fun `cancel with no active title does nothing`() = runTest {
+        every { importPrefs.pendingQueue } returns flowOf(emptyList())
         manager.cancel()
         coVerify(exactly = 0) { scheduler.cancelAll() }
         coVerify(exactly = 0) { scheduler.cancel(any()) }

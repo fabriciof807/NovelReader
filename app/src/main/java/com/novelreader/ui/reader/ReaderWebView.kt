@@ -13,30 +13,36 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.viewinterop.AndroidView
 
-private class ReaderJsInterface(
-    private val onTextSelected: (String) -> Unit,
-    private val onTap: () -> Unit,
-    private val onSwipe: (String) -> Unit,
-    private val onAutoScrollReachedEnd: () -> Unit
+internal class ReaderJsInterface(
+    private val onTextSelectedCallback: (String) -> Unit,
+    private val onTapCallback: () -> Unit,
+    private val onSwipeCallback: (String, String) -> Unit,
+    private val onAutoScrollReachedEndCallback: () -> Unit,
+    private val onScrollRestoreCompleteCallback: (Int) -> Unit
 ) {
     @JavascriptInterface
     fun onTextSelected(text: String) {
-        onTextSelected(text)
+        onTextSelectedCallback(text)
     }
 
     @JavascriptInterface
     fun onTap() {
-        onTap()
+        onTapCallback()
     }
 
     @JavascriptInterface
-    fun onSwipe(direction: String) {
-        onSwipe(direction)
+    fun onSwipe(direction: String, axis: String) {
+        onSwipeCallback(direction, axis)
     }
 
     @JavascriptInterface
     fun onAutoScrollReachedEnd() {
-        onAutoScrollReachedEnd()
+        onAutoScrollReachedEndCallback()
+    }
+
+    @JavascriptInterface
+    fun onScrollRestoreComplete(token: Int) {
+        onScrollRestoreCompleteCallback(token)
     }
 }
 
@@ -45,10 +51,11 @@ private class ReaderJsInterface(
 fun ReaderWebView(
     onTextSelected: (String) -> Unit,
     onScrollChanged: (Float) -> Unit,
-    onPageFinished: (WebView, Float) -> Unit,
+    onPageFinished: (WebView, String?) -> Unit,
     onWebViewReady: (WebView) -> Unit,
+    onScrollRestoreComplete: (Int) -> Unit = {},
     onTap: () -> Unit = {},
-    onSwipe: (String) -> Unit = {},
+    onSwipe: (String, String) -> Unit = { _, _ -> },
     onAutoScrollReachedEnd: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
@@ -98,7 +105,7 @@ fun ReaderWebView(
                             // Invoked asynchronously on the WebView's thread; the
                             // composable's lambda captures Compose State<T> and
                             // relies on its stable identity to read current values.
-                            onPageFinished(wv, 0f)
+                            onPageFinished(wv, url)
                         }
                     }
                 }
@@ -135,7 +142,13 @@ fun ReaderWebView(
                     }
                 }
                 addJavascriptInterface(
-                    ReaderJsInterface(onTextSelected, onTap, onSwipe, onAutoScrollReachedEnd),
+                    ReaderJsInterface(
+                        onTextSelected,
+                        onTap,
+                        onSwipe,
+                        onAutoScrollReachedEnd,
+                        { token -> post { onScrollRestoreComplete(token) } }
+                    ),
                     "Android"
                 )
                 onWebViewReady(this)

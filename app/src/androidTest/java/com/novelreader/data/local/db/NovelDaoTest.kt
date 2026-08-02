@@ -57,6 +57,15 @@ class NovelDaoTest {
     }
 
     @Test
+    fun updateFavoritePersistsBothStates() = runTest {
+        val id = dao.insert(NovelEntity(title = "Favorite", totalChapters = 0))
+        dao.updateFavorite(id, true)
+        assertThat(dao.getNovelById(id)?.isFavorite).isTrue()
+        dao.updateFavorite(id, false)
+        assertThat(dao.getNovelById(id)?.isFavorite).isFalse()
+    }
+
+    @Test
     fun deleteByIdRemovesNovel() = runTest {
         val id = dao.insert(NovelEntity(title = "Y", totalChapters = 0))
         dao.deleteById(id)

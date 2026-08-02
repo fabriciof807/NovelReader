@@ -39,7 +39,7 @@ class SpecFileStoreTest {
                 "https://example.com/chapter-3"
             ),
             numbers = listOf(1, 2, 3)
-        )
+        ).copy(isFavorite = true)
 
         store.write(spec)
         val read = store.read(spec.id)
@@ -54,6 +54,7 @@ class SpecFileStoreTest {
         assertThat(read.splitIndex).isEqualTo(spec.splitIndex)
         assertThat(read.splitCount).isEqualTo(spec.splitCount)
         assertThat(read.sourceUrl).isEqualTo(spec.sourceUrl)
+        assertThat(read.isFavorite).isTrue()
     }
 
     @Test fun `write then read preserves coverUrl when null`() {
@@ -64,6 +65,16 @@ class SpecFileStoreTest {
 
         assertThat(read).isNotNull()
         assertThat(read!!.coverUrl).isNull()
+    }
+
+    @Test fun `write then read preserves false and absent favorite metadata`() {
+        val falseSpec = sampleSpec().copy(isFavorite = false)
+        store.write(falseSpec)
+        assertThat(store.read(falseSpec.id)!!.isFavorite).isFalse()
+
+        val absentSpec = sampleSpec().copy(isFavorite = null)
+        store.write(absentSpec)
+        assertThat(store.read(absentSpec.id)!!.isFavorite).isNull()
     }
 
     @Test fun `write accepts spec with hundreds of long URLs without size-based failure`() {

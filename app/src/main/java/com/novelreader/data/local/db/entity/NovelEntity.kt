@@ -1,6 +1,7 @@
 package com.novelreader.data.local.db.entity
 
 import androidx.compose.runtime.Immutable
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
@@ -19,5 +20,6 @@ data class NovelEntity(
     val sourceUrl: String = "",
     val lastCheckedAt: Long = 0,
     val autoUpdate: Boolean = false,
-    val hasUpdates: Boolean = false
+    val hasUpdates: Boolean = false,
+    @ColumnInfo(defaultValue = "0") val isFavorite: Boolean = false
 )

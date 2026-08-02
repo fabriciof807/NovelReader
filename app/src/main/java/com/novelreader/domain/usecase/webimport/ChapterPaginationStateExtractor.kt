@@ -30,7 +30,17 @@ fun extractChapterPaginationState(doc: Document): ChapterPaginationState? {
             pageSize = pageSize
         )
     }
-    return null
+
+    val pagination = doc.selectFirst("#indexListPage") ?: return null
+    val totalChapters = pagination.attr("data-total-chapters").toIntOrNull() ?: 0
+    val totalPage = pagination.attr("data-total-page").toIntOrNull() ?: 0
+    val pageSize = pagination.attr("data-page-size").toIntOrNull() ?: 0
+    if (totalPage == 0 && totalChapters == 0) return null
+    return ChapterPaginationState(
+        totalChapters = totalChapters,
+        totalPage = totalPage,
+        pageSize = pageSize
+    )
 }
 
 private val SCRIPT_INT_FIELD_REGEX = Regex("""([A-Za-z_][A-Za-z0-9_]*)\s*:\s*(\d+)""")
