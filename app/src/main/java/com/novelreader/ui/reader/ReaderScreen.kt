@@ -590,8 +590,12 @@ fun ReaderScreen(
                     },
                     onTap = { isControlsVisible = !isControlsVisible },
                     onSwipe = { direction, axis ->
-                        saveScroll()
                         pendingSwipeTransition = chapterTransitionFor(direction, axis)
+                        when {
+                            axis == "v" && direction == "next" -> viewModel.saveScrollPosition(1f)
+                            axis == "v" && direction == "prev" -> viewModel.saveScrollPosition(0f)
+                            else -> saveScroll()
+                        }
                         if (direction == "prev") {
                             viewModel.goToPrevChapter()
                         } else {
