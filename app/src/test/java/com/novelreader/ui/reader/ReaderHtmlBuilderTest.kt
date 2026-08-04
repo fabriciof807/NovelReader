@@ -195,7 +195,8 @@ class ReaderHtmlBuilderTest {
         val html = buildReaderHtml("<p>x</p>", ReaderConfig(swipeDirection = "vertical"))
         assertThat(html).contains("_swipeDir = 'vertical'")
         assertThat(html).contains("_swipeDir === 'vertical' || _swipeDir === 'both'")
-        assertThat(html).contains("dy < 0 ? 'next' : 'prev'")
+        assertThat(html).contains("dy < 0 && isAtEnd()")
+        assertThat(html).contains("dy > 0 && isAtStart()")
     }
 
     @Test
@@ -210,8 +211,18 @@ class ReaderHtmlBuilderTest {
     fun `buildReaderHtml with swipeDirection both contains both vertical and horizontal guards`() {
         val html = buildReaderHtml("<p>x</p>", ReaderConfig(swipeDirection = "both"))
         assertThat(html).contains("_swipeDir = 'both'")
-        assertThat(html).contains("dy < 0 ? 'next' : 'prev'")
+        assertThat(html).contains("dy < 0 && isAtEnd()")
         assertThat(html).contains("dx < 0 ? 'next' : 'prev'")
+    }
+
+    @Test
+    fun `buildReaderHtml emits chapter boundary helpers for vertical swipe navigation`() {
+        val html = buildReaderHtml("<p>x</p>", ReaderConfig(swipeDirection = "both"))
+        assertThat(html).contains("function isAtStart()")
+        assertThat(html).contains("return window.scrollY <= 20;")
+        assertThat(html).contains("function isAtEnd()")
+        assertThat(html).contains("document.body.scrollHeight - window.scrollY - window.innerHeight")
+        assertThat(html).contains("return remaining <= 20;")
     }
 
     @Test

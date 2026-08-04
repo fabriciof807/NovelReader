@@ -212,6 +212,11 @@ fun buildReaderHtml(
             });
 
             var _swipeDir = '${config.swipeDirection}';
+            function isAtStart() { return window.scrollY <= 20; }
+            function isAtEnd() {
+                var remaining = document.body.scrollHeight - window.scrollY - window.innerHeight;
+                return remaining <= 20;
+            }
             (function() {
                 var _ts = {x:0, y:0, t:0};
                 document.addEventListener('touchstart', function(e) {
@@ -229,7 +234,8 @@ fun buildReaderHtml(
                     var dir = null;
                     if ((_swipeDir === 'vertical' || _swipeDir === 'both') &&
                         Math.abs(dy) > 60 && Math.abs(dy) > Math.abs(dx) * 1.5) {
-                        dir = dy < 0 ? 'next' : 'prev';
+                        if (dy < 0 && isAtEnd()) { dir = 'next'; }
+                        else if (dy > 0 && isAtStart()) { dir = 'prev'; }
                     }
                     if (dir === null &&
                         (_swipeDir === 'horizontal' || _swipeDir === 'both') &&
