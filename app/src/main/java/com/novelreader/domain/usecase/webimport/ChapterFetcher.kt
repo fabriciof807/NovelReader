@@ -118,29 +118,6 @@ class ChapterFetcher @Inject constructor(
                 throw e
             } catch (e: RateLimitedException) {
                 throw e
-            } catch (e: HttpStatusException) {
-                lastException = e
-                lastStatusCode = e.statusCode
-                if (attempt >= maxRetries) {
-                    if (e.statusCode == 429) {
-                        Log.w(
-                            FAILURE_TAG,
-                            "url=$url attempt=$attempt/$maxRetries status=${e.statusCode} errType=rate_limited errMsg=giving_up"
-                        )
-                        throw RateLimitedException(url = url, attempts = attempt, lastStatusCode = e.statusCode)
-                    }
-                    Log.w(
-                        FAILURE_TAG,
-                        "url=$url attempt=$attempt/$maxRetries status=${e.statusCode} errType=network errMsg=giving_up"
-                    )
-                    throw e
-                }
-                Log.w(
-                    FAILURE_TAG,
-                    "url=$url attempt=$attempt/$maxRetries status=${e.statusCode} errType=network errMsg=will_retry"
-                )
-                val retryDelay = retryDelayFn(attempt, e.statusCode)
-                if (retryDelay > 0L) delay(retryDelay)
             } catch (e: Exception) {
                 lastException = e
                 Log.w(

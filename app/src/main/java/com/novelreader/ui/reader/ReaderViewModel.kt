@@ -174,9 +174,10 @@ class ReaderViewModel @Inject constructor(
         lastKnownScrollPosition = (ratio * 1000).toInt()
     }
 
-    fun saveScrollPosition() {
+    fun saveScrollPosition(ratio: Float? = null) {
         val chapter = currentChapter ?: return
-        val position = lastKnownScrollPosition
+        val position = if (ratio != null) (ratio * 1000).toInt() else lastKnownScrollPosition
+        if (ratio != null) lastKnownScrollPosition = position
         viewModelScope.launch {
             try {
                 chapterDao.markAsRead(chapter.id, position)
@@ -212,32 +213,6 @@ class ReaderViewModel @Inject constructor(
         val index = ((scrollPos / 1000f) * paragraphs.size).toInt()
             .coerceIn(0, paragraphs.size - 1)
         return paragraphs[index].text().take(120)
-    }
-
-    fun saveScrollPosition(scrollRatio: Float) {
-        val chapter = currentChapter ?: return
-        val position = (scrollRatio * 1000).toInt()
-        lastKnownScrollPosition = position
-        viewModelScope.launch {
-            try {
-                chapterDao.markAsRead(chapter.id, position)
-            } catch (e: Exception) {
-                retryAction = {
-                    val pos = lastKnownScrollPosition
-                    viewModelScope.launch {
-                        try {
-                            chapterDao.markAsRead(chapter.id, pos)
-                            retryAction = null
-                            _retryAvailable.value = false
-                        } catch (e2: Exception) {
-                            _errorEvents.tryEmit(context.getString(R.string.reader_action_failed, e2.message ?: "Erro"))
-                        }
-                    }
-                }
-                _retryAvailable.value = true
-                _errorEvents.emit(e.message ?: e.toString())
-            }
-        }
     }
 
     fun showBookmarkDialog() {
