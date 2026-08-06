@@ -2,7 +2,7 @@
 
 ## Overview
 
-NovelReader (v2.4.0) is an offline-first Android novel reader. It imports HTML/MHT files from local storage or fetches chapters from web novel sites. All data stays on the device.
+NovelReader (v2.5.4) is an offline-first Android novel reader. It imports HTML/MHT files from local storage or fetches chapters from web novel sites. All data stays on the device.
 
 The app is end-user focused: 100% offline, no analytics, no account, no cloud.
 
@@ -10,7 +10,7 @@ The app is end-user focused: 100% offline, no analytics, no account, no cloud.
 
 - Kotlin 2.2.10, AGP 9.2.1, JVM 17
 - Jetpack Compose (BOM 2024.12.01) + Material3
-- Room 2.8.4 (SQLite, FTS4 for full-text search) — **v8** (7 entities)
+- Room 2.8.4 (SQLite, FTS4 for full-text search) — **v8** (7 entities, 5 DAOs + FailedChapterDao)
 - Hilt 2.59.2 (DI with multibinding for parsers)
 - Jsoup 1.22.1 (HTML parsing)
 - Coil 2.7.0 (image loading)
@@ -41,10 +41,12 @@ app/src/main/java/com/novelreader/
   domain/usecase/          -- Business logic
     webimport/             -- ChapterCrawler, ChapterFetcher, CoverDownloader, NovelImporter
     importnovel/           -- FileCharsetDetector, NovelGrouper, ChapterSorter, ChapterInserter
+    BackgroundImportManager -- Tracks import state, queue, cancel per novel (via ImportPreferences.getJobsByNovelTitle)
     RetryChapterUseCase    -- Re-fetches failed chapter by URL
     ScanMissingChaptersUseCase -- Scans for missing/empty chapters (web via re-crawl, local via range)
     ChapterOrderNormalizer -- Re-orders chapters by extracted number
-    CharacterManagementUseCase, CoverManagementUseCase, ExportDataUseCase
+    CharacterManagementUseCase, CoverManagementUseCase, ExportDataUseCase, ImportDataUseCase
+    ReimportChapterContentUseCase -- Parses MHT/HTML and updates existing chapter content
   ui/
     navigation/NavGraph.kt -- 6 routes; library accepts optional selectedNovelId arg
     navigation/DeepLinkBus.kt -- SharedFlow connecting MainActivity intent handling to NavGraph
@@ -52,11 +54,12 @@ app/src/main/java/com/novelreader/
       tabs/                  -- LibraryTab, ChaptersTab, PersonagensTab
       components/            -- NovelCard, NovelListItem, CharacterCard, ScanRangeDialog, DeleteDialogs
       mvi/                   -- LibraryIntent, LibraryState
-    reader/                -- WebView-based reader with bookmarks, FTS search, settings
+    reader/                -- WebView-based reader with bookmarks, FTS search, settings,
+                               EmptyChapterState (MHT recovery), auto-hide controls
     import_novel/          -- Local file import screen
     webimport/             -- Web import ViewModel
     favorites/             -- Bookmarks screen
-    settings/              -- Theme, language, queue mode
+    settings/              -- Theme, language, queue mode, JSON import/export
     about/                 -- App info
     theme/                 -- Colors, Typography, Theme composable
   util/                    -- LocaleHelper
@@ -141,7 +144,7 @@ Parsers are bound via `@Binds @IntoSet` in `ParserModule`. `ParserRegistry` disp
 
 ### Background Import
 
-`ImportWorkScheduler` -> `ChapterImportWorker` -> `WebImportUseCase.importChapters`. Supports SEQUENTIAL (queue-based) and PARALLEL modes via `ImportPreferences`. `WorkCompletionObserver` tracks progress and triggers next job. `WorkManager` shows a foreground notification during import.
+`ImportWorkScheduler` -> `ChapterImportWorker` -> `WebImportUseCase.importChapters`. Supports SEQUENTIAL (queue-based) and PARALLEL modes via `ImportPreferences`. `WorkCompletionObserver` tracks progress and triggers next job. `WorkManager` shows a foreground notification during import. `BackgroundImportManager` tracks import state, queue, cancel per novel (via `ImportPreferences.getJobsByNovelTitle`).
 
 ### Failed Chapter Recovery
 
@@ -174,18 +177,38 @@ Custom Material 3 colors in `ui/theme/Color.kt` and `ui/theme/Theme.kt`. Light t
 - **Instrumented tests**: Room in-memory DB, Compose Test Rule, Espresso
 - Parser tests use real HTML fixtures
 - ViewModel tests inject mocked DAOs/use cases
-- **Current count: 104 unit tests** (99 baseline + 5 added in v2.4.0)
+- **Current count: 322 unit tests** (305 baseline + 17 added in v2.5.3/v2.5.4)
 - **Always run `./gradlew :app:compileDebugKotlin :app:testDebugUnitTest` before pushing**
 
 ## Recent Sessions
 
 See git log and `handoff-*.md` files for session handoffs. The handoff file is intentionally gitignored — it documents the active state across AI sessions.
 
-Design specs and implementation plans produced by AI sessions live under `docs/superpowers/specs/` and `docs/superpowers/plans/`.
+Design specs and implementation plans from past AI sessions are preserved in git history; deferred follow-ups are tracked as GitHub issues.
 
 ## Current Version
 
-v2.5.2 (versionCode 20). See [README.md](README.md) (English) and [README_PT.md](README_PT.md) (Portuguese) for the user-facing documentation. Full release history in `git log`.
+v2.5.4 (versionCode 22). See [README.md](README.md) (English) and [README_PT.md](README_PT.md) (Portuguese) for the user-facing documentation. Full release history in `git log`.
+
+### v2.5.4 highlights
+
+- Fix: `BackgroundImportManager.cancel()` now cancels all splits for the current novel by title (not just one UUID), and clears stale progress callbacks by resetting `id=null` — no more progress bar reappearing after cancel.
+- Fix: Import result dialog in Settings after JSON import shows queued novels, failures (with per-title list), and pending bookmarks/characters.
+- Feat: `ImportPreferences.getJobsByNovelTitle` / `removeJobsByNovelTitle` for targeted queue management.
+- 322+ unit tests passing (319 baseline + 3 new in SettingsViewModelTest).
+
+### v2.5.3 highlights
+
+- Feat: Novel card 3-dot buttons visible on NovelCard/NovelListItem (was only long-press).
+- Feat: Empty chapter state in reader with MHT import recovery (ReimportChapterContentUseCase).
+- Feat: Reader DB errors now surface via Snackbar with Retry action.
+- Feat: Auto-hide reader controls after 4s of inactivity.
+- Feat: "Chapters" option in the 3-dot novel menu.
+- Fix: Remove SwipeToDismiss from CharacterCard (deleted without confirmation).
+- Fix: Haptics standardized — LongPress only for real long-press, removed from taps and route changes.
+- Fix: Cover URL dialog shows inline HTTPS error (stays open); file picker cancel clears request.
+- New: `ReimportChapterContentUseCase`, `ChapterDao.updateContent`, `EmptyChapterState` composable.
+- 319+ unit tests passing (was 305).
 
 ### v2.5.2 highlights
 
