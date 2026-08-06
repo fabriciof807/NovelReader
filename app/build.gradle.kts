@@ -17,8 +17,6 @@ android {
         targetSdk = 34
         versionCode = 23
         versionName = "2.6.0"
-
-        buildConfigField("String", "MVLEMPYR_API_URL", "\"https://chap.heliosarchive.online/wp-json/wp/v2/mvl-characters?per_page=15000\"")
     }
 
     signingConfigs {
@@ -139,23 +137,15 @@ dependencies {
     testImplementation(libs.mockwebserver)
 
     androidTestImplementation(libs.androidx.test.core)
-    androidTestImplementation(libs.mockwebserver)
-    androidTestImplementation(libs.espresso.core)
-    androidTestImplementation(libs.espresso.intents)
-    androidTestImplementation(libs.test.rules)
     androidTestImplementation(libs.test.ext.junit)
 
     androidTestImplementation(libs.androidx.test.runner)
     androidTestImplementation(libs.junit)
     androidTestImplementation(libs.truth)
     androidTestImplementation(libs.coroutines.test)
-    androidTestImplementation(libs.mockk)
-    androidTestImplementation(libs.robolectric)
     androidTestImplementation(platform(libs.compose.bom))
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
-    androidTestImplementation(libs.hilt.android.testing)
     androidTestImplementation(libs.room.testing)
     androidTestImplementation(libs.androidx.work.testing)
-    androidTestImplementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.1")
     kspAndroidTest(libs.hilt.compiler)
 }

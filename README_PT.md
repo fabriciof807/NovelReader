@@ -127,7 +127,7 @@ Sem migração de dados necessária.
 
 ## Próximos passos
 
-Veja [`docs/ARCHITECTURE-REVIEW.md`](docs/ARCHITECTURE-REVIEW.md) para o histórico de melhorias arquiteturais e os arquivos `handoff-*.md` (gitignored) para o estado atual do projeto.
+Veja o `git log` para o histórico de melhorias arquiteturais e os arquivos `handoff-*.md` (gitignored) para o estado atual do projeto.
 
 ---
 

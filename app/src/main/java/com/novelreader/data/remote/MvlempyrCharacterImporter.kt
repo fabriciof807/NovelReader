@@ -1,7 +1,6 @@
 package com.novelreader.data.remote
 
 import android.content.Context
-import com.novelreader.BuildConfig
 import com.novelreader.R
 import com.novelreader.data.local.db.dao.CharacterDao
 import com.novelreader.data.local.db.dao.CharacterPhotoDao
@@ -18,6 +17,9 @@ import java.io.File
 import java.net.URL
 import javax.inject.Inject
 import javax.inject.Singleton
+
+private const val MVLEMPYR_API_URL =
+    "https://chap.heliosarchive.online/wp-json/wp/v2/mvl-characters?per_page=15000"
 
 @Singleton
 class MvlempyrCharacterImporter @Inject constructor(
@@ -42,7 +44,7 @@ class MvlempyrCharacterImporter @Inject constructor(
         val bookId = bookIdRegex.find(html)?.groupValues?.get(1)
             ?: throw Exception(context.getString(R.string.mvlempyr_book_id_not_found))
 
-        val json = URL(BuildConfig.MVLEMPYR_API_URL).readText()
+        val json = URL(MVLEMPYR_API_URL).readText()
         val allCharacters = JSONArray(json)
 
         val filtered = (0 until allCharacters.length())

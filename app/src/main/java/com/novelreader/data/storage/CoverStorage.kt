@@ -11,20 +11,13 @@ import java.net.URL
 import javax.inject.Inject
 import javax.inject.Singleton
 
-interface CoverStorage {
-    suspend fun saveFromUri(novelId: Long, uri: Uri): String?
-    suspend fun saveFromUrl(novelId: Long, url: String): String?
-    suspend fun deleteCoverIfOwnedByApp(novelId: Long, coverPath: String?): Boolean
-    suspend fun deleteCharacterFolder(novelId: Long): Boolean
-}
-
 @Singleton
-class CoverStorageImpl @Inject constructor(
+class CoverStorage @Inject constructor(
     @ApplicationContext private val context: Context,
     @IoDispatcher private val io: CoroutineDispatcher
-) : CoverStorage {
+) {
 
-    override suspend fun saveFromUri(novelId: Long, uri: Uri): String? = withContext(io) {
+    suspend fun saveFromUri(novelId: Long, uri: Uri): String? = withContext(io) {
         try {
             val dest = coverFile(novelId)
             context.contentResolver.openInputStream(uri)?.use { input ->
@@ -38,7 +31,7 @@ class CoverStorageImpl @Inject constructor(
         }
     }
 
-    override suspend fun saveFromUrl(novelId: Long, url: String): String? = withContext(io) {
+    suspend fun saveFromUrl(novelId: Long, url: String): String? = withContext(io) {
         try {
             if (!url.startsWith("https://")) return@withContext null
             val connection = URL(url).openConnection()
@@ -58,7 +51,7 @@ class CoverStorageImpl @Inject constructor(
         }
     }
 
-    override suspend fun deleteCoverIfOwnedByApp(novelId: Long, coverPath: String?): Boolean = withContext(io) {
+    suspend fun deleteCoverIfOwnedByApp(novelId: Long, coverPath: String?): Boolean = withContext(io) {
         val path = coverPath ?: return@withContext false
         val file = File(path)
         val appRoot = context.filesDir.canonicalPath
@@ -67,7 +60,7 @@ class CoverStorageImpl @Inject constructor(
         } else false
     }
 
-    override suspend fun deleteCharacterFolder(novelId: Long): Boolean = withContext(io) {
+    suspend fun deleteCharacterFolder(novelId: Long): Boolean = withContext(io) {
         val dir = File(context.filesDir, "characters/$novelId")
         if (dir.exists()) dir.deleteRecursively() else false
     }

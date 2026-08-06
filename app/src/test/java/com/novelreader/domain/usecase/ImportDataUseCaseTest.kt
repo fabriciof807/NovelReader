@@ -4,7 +4,6 @@ import android.content.ContentResolver
 import android.content.Context
 import android.net.Uri
 import com.google.common.truth.Truth.assertThat
-import com.novelreader.data.local.preferences.PendingImportPreferences
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -26,7 +25,6 @@ class ImportDataUseCaseTest {
     private val uri: Uri = mockk()
     private val webImportUseCase: WebImportUseCase = mockk()
     private val backgroundImportManager: BackgroundImportManager = mockk(relaxed = true)
-    private val pendingImportPreferences: PendingImportPreferences = mockk(relaxed = true)
 
     private lateinit var useCase: ImportDataUseCase
 
@@ -45,7 +43,6 @@ class ImportDataUseCaseTest {
             context = context,
             webImportUseCase = webImportUseCase,
             backgroundImportManager = backgroundImportManager,
-            pendingImportPreferences = pendingImportPreferences,
             ioDispatcher = Dispatchers.Unconfined
         )
     }

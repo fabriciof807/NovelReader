@@ -2,7 +2,6 @@ package com.novelreader.domain.usecase
 
 import android.content.Context
 import android.net.Uri
-import com.novelreader.data.local.preferences.PendingImportPreferences
 import com.novelreader.di.qualifiers.IoDispatcher
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineDispatcher
@@ -37,7 +36,6 @@ class ImportDataUseCase @Inject constructor(
     @ApplicationContext private val context: Context,
     private val webImportUseCase: WebImportUseCase,
     private val backgroundImportManager: BackgroundImportManager,
-    private val pendingImportPreferences: PendingImportPreferences,
     @IoDispatcher private val ioDispatcher: CoroutineDispatcher
 ) {
     suspend fun previewImport(uri: Uri): ImportPreview = withContext(ioDispatcher) {
@@ -104,32 +102,11 @@ class ImportDataUseCase @Inject constructor(
             }
         }
 
-        val pendingBookmarks = mutableListOf<String>()
-        for (i in 0 until bookmarksArr.length()) {
-            pendingBookmarks.add(
-                PendingImportPreferences.encodeBookmark(bookmarksArr.getJSONObject(i))
-            )
-        }
-
-        val pendingCharacters = mutableListOf<String>()
-        for (i in 0 until charactersArr.length()) {
-            pendingCharacters.add(
-                PendingImportPreferences.encodeCharacter(charactersArr.getJSONObject(i))
-            )
-        }
-
-        if (pendingBookmarks.isNotEmpty()) {
-            pendingImportPreferences.savePendingBookmarks(pendingBookmarks)
-        }
-        if (pendingCharacters.isNotEmpty()) {
-            pendingImportPreferences.savePendingCharacters(pendingCharacters)
-        }
-
         ImportResult(
             novelsQueued = queued,
             novelsFailed = failed,
-            bookmarksPending = pendingBookmarks.size,
-            charactersPending = pendingCharacters.size
+            bookmarksPending = bookmarksArr.length(),
+            charactersPending = charactersArr.length()
         )
     }
 

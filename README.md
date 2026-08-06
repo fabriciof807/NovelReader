@@ -129,7 +129,7 @@ No data migration required.
 
 ## What's next
 
-See [`docs/ARCHITECTURE-REVIEW.md`](docs/ARCHITECTURE-REVIEW.md) for the history of architectural improvements and the `handoff-*.md` files (gitignored) for the current project state.
+See `git log` for the history of architectural improvements and the `handoff-*.md` files (gitignored) for the current project state.
 
 ---
 

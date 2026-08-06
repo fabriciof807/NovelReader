@@ -9,6 +9,7 @@
 /build
 /app/build
 /release
+/app/release
 .DS_Store
 Thumbs.db
 *.apk
@@ -16,6 +17,7 @@ Thumbs.db
 *.keystore
 local.properties
 .opencode
+/.worktrees/
 /scripts/
 
 # Landing page build output
