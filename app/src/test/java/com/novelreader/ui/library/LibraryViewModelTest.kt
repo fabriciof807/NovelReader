@@ -27,7 +27,6 @@ import com.novelreader.domain.usecase.ScanMissingChaptersUseCase
 import com.novelreader.domain.usecase.WebImportUseCase
 import com.novelreader.domain.usecase.importnovel.ChapterInserter
 import com.novelreader.domain.usecase.importnovel.FileCharsetDetector
-import com.novelreader.ui.library.mvi.LibraryIntent
 import com.novelreader.ui.library.tabs.filterNovels
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -140,7 +139,7 @@ class LibraryViewModelTest {
 
     @Test
     fun `ToggleNovelFavorite intent updates novel favorite`() = runTest {
-        viewModel.onIntent(LibraryIntent.ToggleNovelFavorite(42L, true))
+        viewModel.toggleNovelFavorite(42L, true)
 
         coVerify { novelDao.updateFavorite(42L, true) }
     }
@@ -189,7 +188,7 @@ class LibraryViewModelTest {
         viewModel.selectNovel(novel)
         assertThat(viewModel.selectedNovel.value).isEqualTo(novel)
 
-        viewModel.onIntent(LibraryIntent.DeselectNovel)
+        viewModel.deselectNovel()
 
         assertThat(viewModel.selectedNovel.value).isNull()
         assertThat(viewModel.selectedTab.value).isEqualTo(0)
@@ -250,7 +249,7 @@ class LibraryViewModelTest {
 
         viewModel.novels.test {
             awaitItem()
-            viewModel.onIntent(LibraryIntent.RequestDelete(7))
+            viewModel.requestDeleteById(7)
             assertThat(viewModel.showDeleteDialog.value).isEqualTo(novel)
             cancelAndConsumeRemainingEvents()
         }
@@ -288,7 +287,7 @@ class LibraryViewModelTest {
 
         viewModel.novels.test {
             awaitItem()
-            viewModel.onIntent(LibraryIntent.RequestDelete(7))
+            viewModel.requestDeleteById(7)
             viewModel.confirmDelete()
             assertThat(viewModel.showDeleteDialog.value).isNull()
             coVerify { coverManagement.deleteNovelCovers(7, null) }

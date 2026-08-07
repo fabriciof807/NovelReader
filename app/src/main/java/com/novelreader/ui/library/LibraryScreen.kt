@@ -51,7 +51,6 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.novelreader.R
 import com.novelreader.ui.library.components.CoverUrlDialog
 import com.novelreader.ui.library.components.DeleteNovelDialog
-import com.novelreader.ui.library.mvi.LibraryIntent
 import com.novelreader.ui.library.tabs.ChaptersTab
 import com.novelreader.ui.library.tabs.LibraryTab
 import com.novelreader.ui.library.tabs.PersonagensTab
@@ -89,7 +88,7 @@ fun LibraryScreen(
     val context = LocalContext.current
 
     BackHandler(enabled = selectedNovel != null) {
-        viewModel.onIntent(LibraryIntent.DeselectNovel)
+        viewModel.deselectNovel()
     }
 
     var showSortMenu by remember { mutableStateOf(false) }
@@ -104,7 +103,7 @@ fun LibraryScreen(
     ) { uri: Uri? ->
         val novel = coverTarget ?: return@rememberLauncherForActivityResult
         if (uri != null) {
-            viewModel.onIntent(LibraryIntent.ChangeCover(novel.id, uri))
+            viewModel.saveCover(novel.id, uri)
         } else {
             viewModel.clearCoverRequest()
         }
@@ -119,7 +118,7 @@ fun LibraryScreen(
     LaunchedEffect(coverError) {
         coverError?.let {
             snackbarHostState.showSnackbar(it)
-            viewModel.onIntent(LibraryIntent.ClearCoverError)
+            viewModel.clearCoverError()
         }
     }
 
@@ -139,8 +138,8 @@ fun LibraryScreen(
 
     urlDialogTarget?.let { novel ->
         CoverUrlDialog(
-            onConfirm = { url -> viewModel.onIntent(LibraryIntent.SaveCoverFromUrl(novel.id, url)) },
-            onDismiss = { viewModel.onIntent(LibraryIntent.CancelUrlDialog) }
+            onConfirm = { url -> viewModel.saveCoverFromUrl(novel.id, url) },
+            onDismiss = { viewModel.cancelUrlDialog() }
         )
     }
 
@@ -148,7 +147,7 @@ fun LibraryScreen(
         DeleteNovelDialog(
             novelTitle = novel.title,
             onConfirm = { viewModel.confirmDelete() },
-            onDismiss = { viewModel.onIntent(LibraryIntent.CancelDelete) }
+            onDismiss = { viewModel.cancelDelete() }
         )
     }
 
@@ -177,7 +176,7 @@ fun LibraryScreen(
                     },
                     navigationIcon = {
                         if (selectedTab == 1 || selectedTab == 2) {
-                            IconButton(onClick = { viewModel.onIntent(LibraryIntent.DeselectNovel) }) {
+                            IconButton(onClick = { viewModel.deselectNovel() }) {
                                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                             }
                         } else if (isSearchActive) {
@@ -211,17 +210,17 @@ fun LibraryScreen(
                                 ) {
                                     DropdownMenuItem(
                                         text = { Text(stringResource(R.string.sort_title)) },
-                                        onClick = { viewModel.onIntent(LibraryIntent.SortNovels("TITLE")); showSortMenu = false },
+                                        onClick = { viewModel.setSortOrder(SortOrder.TITLE); showSortMenu = false },
                                         leadingIcon = { Icon(Icons.Filled.SortByAlpha, contentDescription = null) }
                                     )
                                     DropdownMenuItem(
                                         text = { Text(stringResource(R.string.sort_date)) },
-                                        onClick = { viewModel.onIntent(LibraryIntent.SortNovels("CREATED_AT")); showSortMenu = false },
+                                        onClick = { viewModel.setSortOrder(SortOrder.CREATED_AT); showSortMenu = false },
                                         leadingIcon = { Icon(Icons.Default.DateRange, contentDescription = null) }
                                     )
                                     DropdownMenuItem(
                                         text = { Text(stringResource(R.string.sort_last_read)) },
-                                        onClick = { viewModel.onIntent(LibraryIntent.SortNovels("LAST_READ")); showSortMenu = false },
+                                        onClick = { viewModel.setSortOrder(SortOrder.LAST_READ); showSortMenu = false },
                                         leadingIcon = { Icon(Icons.AutoMirrored.Filled.Sort, contentDescription = null) }
                                     )
                                 }
@@ -229,8 +228,7 @@ fun LibraryScreen(
                         }
                         if (selectedTab == 0) {
                             IconButton(onClick = {
-                                val newMode = if (viewMode == ViewMode.GRID) "LIST" else "GRID"
-                                viewModel.onIntent(LibraryIntent.SetViewMode(newMode))
+                                viewModel.setViewMode(if (viewMode == ViewMode.GRID) ViewMode.LIST else ViewMode.GRID)
                             }) {
                                 Icon(
                                     if (viewMode == ViewMode.GRID) Icons.AutoMirrored.Filled.ViewList else Icons.Default.GridView,
@@ -251,18 +249,18 @@ fun LibraryScreen(
                 TabRow(selectedTabIndex = selectedTab) {
                     Tab(
                         selected = selectedTab == 0,
-                        onClick = { viewModel.onIntent(LibraryIntent.DeselectNovel) },
+                        onClick = { viewModel.deselectNovel() },
                         text = { Text(stringResource(R.string.library)) }
                     )
                     if (selectedNovel != null) {
                         Tab(
                             selected = selectedTab == 1,
-                            onClick = { viewModel.onIntent(LibraryIntent.SelectTab(1)) },
+                            onClick = { viewModel.selectTab(1) },
                             text = { Text(stringResource(R.string.chapters)) }
                         )
                         Tab(
                             selected = selectedTab == 2,
-                            onClick = { viewModel.onIntent(LibraryIntent.SelectTab(2)) },
+                            onClick = { viewModel.selectTab(2) },
                             text = { Text(stringResource(R.string.characters)) }
                         )
                     }
@@ -293,23 +291,23 @@ fun LibraryScreen(
                         if (novel.lastChapterId != null) {
                             onChapterClick(novel.id, novel.lastChapterId)
                         } else {
-                            viewModel.onIntent(LibraryIntent.SelectNovel(novel))
+                            viewModel.selectNovel(novel)
                         }
                     },
-                    onLongClick = { viewModel.onIntent(LibraryIntent.RequestDelete(it.id)) },
-                    onToggleAutoUpdate = { viewModel.onIntent(LibraryIntent.ToggleAutoUpdate(it.id)) },
-                    onCheckForUpdates = { viewModel.onIntent(LibraryIntent.CheckForUpdates(it.id)) },
-                    onResyncChapters = { viewModel.onIntent(LibraryIntent.ResyncChapters(it.id)) },
-                    onChapters = { viewModel.onIntent(LibraryIntent.SelectNovel(it)) },
+                    onLongClick = { viewModel.requestDeleteById(it.id) },
+                    onToggleAutoUpdate = { viewModel.toggleAutoUpdate(it.id) },
+                    onCheckForUpdates = { viewModel.checkForUpdates(it.id) },
+                    onResyncChapters = { viewModel.resyncChapters(it.id) },
+                    onChapters = { viewModel.selectNovel(it) },
                     onToggleFavorite = { novel ->
-                        viewModel.onIntent(LibraryIntent.ToggleNovelFavorite(novel.id, novel.isFavorite))
+                        viewModel.toggleNovelFavorite(novel.id, novel.isFavorite)
                     },
-                    onRequestChangeCover = { viewModel.onIntent(LibraryIntent.RequestChangeCover(it.id)) },
-                    onRequestCoverByUrl = { viewModel.onIntent(LibraryIntent.RequestCoverByUrl(it.id)) },
+                    onRequestChangeCover = { viewModel.requestChangeCoverById(it.id) },
+                    onRequestCoverByUrl = { viewModel.requestCoverByUrlById(it.id) },
                     onContinueReading = { novel ->
                         novel.lastChapterId?.let { onChapterClick(novel.id, it) }
                     },
-                    onCancelImport = { viewModel.onIntent(LibraryIntent.CancelBackgroundImport) },
+                    onCancelImport = { viewModel.cancelBackgroundImport() },
                     onImportLocal = { onImportClick() },
                     onImportWeb = { onImportClick() }
                 )
@@ -319,17 +317,17 @@ fun LibraryScreen(
                     chapters = chapters,
                     bookmarkCounts = bookmarkCounts,
                     sortOrder = chapterSortOrder,
-                    onToggleSort = { viewModel.onIntent(LibraryIntent.ToggleChapterSortOrder) },
+                    onToggleSort = { viewModel.toggleChapterSortOrder() },
                     failedChapters = failedChapters,
-                    onRetryFailed = { viewModel.onIntent(LibraryIntent.RetryFailedChapter(it.id)) },
+                    onRetryFailed = { viewModel.retryFailedChapter(it.id) },
                     onRetryAllFailed = { viewModel.retryAllFailedChapters(it) },
                     onRetryFailedManually = { failed, uri ->
-                        viewModel.onIntent(LibraryIntent.RetryFailedChapterManually(failed.id, uri))
+                        viewModel.retryFailedChapterManually(failed.id, uri)
                     },
-                    onDismissFailed = { viewModel.onIntent(LibraryIntent.DismissFailedChapter(it.id)) },
-                    onScanWeb = { id -> viewModel.onIntent(LibraryIntent.ScanMissingChapters(id)) },
+                    onDismissFailed = { viewModel.dismissFailedChapter(it.id) },
+                    onScanWeb = { id -> viewModel.scanMissingChapters(id) },
                     onScanLocal = { id, from, to ->
-                        viewModel.onIntent(LibraryIntent.ScanMissingChaptersLocal(id, from, to))
+                        viewModel.scanMissingChaptersLocal(id, from, to)
                     },
                     sourceUrlAvailable = selectedNovel?.sourceUrl?.isNotBlank() == true,
                     maxChapterNumber = chapters.maxOfOrNull { it.orderIndex } ?: 0,
@@ -350,18 +348,18 @@ fun LibraryScreen(
                     selectedNovel = selectedNovel,
                     isImporting = isImportingCharacters,
                     importResult = characterImportResult,
-                    onClearImportResult = { viewModel.onIntent(LibraryIntent.ClearCharacterImportResult) },
+                    onClearImportResult = { viewModel.clearCharacterImportResult() },
                     onAddCharacter = { name, photoPath ->
-                        selectedNovel?.let { viewModel.onIntent(LibraryIntent.AddCharacter(it.id, name, photoPath)) }
+                        selectedNovel?.let { viewModel.addCharacter(it.id, name, photoPath) }
                     },
-                    onDeleteCharacter = { id -> viewModel.onIntent(LibraryIntent.DeleteCharacter(id)) },
-                    onAddCharacterPhoto = { charId, path -> viewModel.onIntent(LibraryIntent.AddCharacterPhoto(charId, path)) },
-                    onBatchAddCharacterPhotos = { charId, paths -> viewModel.onIntent(LibraryIntent.BatchAddCharacterPhotos(charId, paths)) },
-                    onDeleteCharacterPhoto = { photoId, charId -> viewModel.onIntent(LibraryIntent.DeleteCharacterPhoto(photoId, charId)) },
-                    onUpdateCharacterName = { charId, name -> viewModel.onIntent(LibraryIntent.UpdateCharacterName(charId, name)) },
-                    onUpdateCharacterNotes = { charId, notes -> viewModel.onIntent(LibraryIntent.UpdateCharacterNotes(charId, notes)) },
-                    onToggleCharacterFavorite = { charId, fav -> viewModel.onIntent(LibraryIntent.ToggleCharacterFavorite(charId, fav)) },
-                    onImportCharacters = { url -> viewModel.onIntent(LibraryIntent.ImportCharactersFromUrl(url)) }
+                    onDeleteCharacter = { id -> viewModel.deleteCharacter(id) },
+                    onAddCharacterPhoto = { charId, path -> viewModel.addCharacterPhoto(charId, path) },
+                    onBatchAddCharacterPhotos = { charId, paths -> viewModel.batchAddCharacterPhotos(charId, paths) },
+                    onDeleteCharacterPhoto = { photoId, charId -> viewModel.deleteCharacterPhoto(photoId, charId) },
+                    onUpdateCharacterName = { charId, name -> viewModel.updateCharacterName(charId, name) },
+                    onUpdateCharacterNotes = { charId, notes -> viewModel.updateCharacterNotes(charId, notes) },
+                    onToggleCharacterFavorite = { charId, fav -> viewModel.toggleCharacterFavorite(charId, fav) },
+                    onImportCharacters = { url -> viewModel.importCharactersFromUrl(url) }
                 )
             }
         }

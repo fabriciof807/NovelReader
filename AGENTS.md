@@ -53,7 +53,7 @@ app/src/main/java/com/novelreader/
     library/               -- Library screen with tabs (novels, chapters, characters)
       tabs/                  -- LibraryTab, ChaptersTab, PersonagensTab
       components/            -- NovelCard, NovelListItem, CharacterCard, ScanRangeDialog, DeleteDialogs
-      mvi/                   -- LibraryIntent, LibraryState
+      mvi/                   -- LibraryState
     reader/                -- WebView-based reader with bookmarks, FTS search, settings,
                                EmptyChapterState (MHT recovery), auto-hide controls
     import_novel/          -- Local file import screen
@@ -89,7 +89,7 @@ Compose -> ViewModel -> UseCase -> DAO
 - `errorEvents: SharedFlow<String>` with `BufferOverflow.DROP_OLDEST`
 - Injected dispatchers via `@IoDispatcher` qualifier
 - `StateFlow` for UI state, `MutableStateFlow` for internal
-- Intent-based MVI in some screens (e.g., `LibraryIntent` / `LibraryState` / `LibraryViewModel.onIntent(intent)`)
+- ViewModels expose typed methods; the library screen calls them directly (no `*Intent` dispatcher)
 
 ### Database
 
@@ -134,7 +134,7 @@ Users see these in the `ChaptersTab` "Failed chapters" section (below the chapte
 - Jsoup for HTML parsing
 - Coroutines + Flow for async operations
 - PT-BR comments where unavoidable; strings always bilingual (pt + en)
-- MVI in some screens (Library) via `*Intent` sealed interface
+- ViewModels expose typed methods called directly by Compose (no `*Intent` sealed dispatch)
 
 ## Key Patterns
 

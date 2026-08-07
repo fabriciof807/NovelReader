@@ -37,7 +37,6 @@ import com.novelreader.domain.usecase.CoverManagementUseCase
 import com.novelreader.domain.usecase.RetryChapterUseCase
 import com.novelreader.domain.usecase.WebImportUseCase
 import kotlinx.coroutines.CoroutineDispatcher
-import com.novelreader.ui.library.mvi.LibraryIntent
 import com.novelreader.ui.library.mvi.LibraryState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -294,51 +293,6 @@ class LibraryViewModel @Inject constructor(
         }
     }
 
-    fun onIntent(intent: LibraryIntent) {
-        when (intent) {
-            is LibraryIntent.Init -> {}
-            is LibraryIntent.LoadNovels -> {}
-            is LibraryIntent.SortNovels -> setSortOrder(try { SortOrder.valueOf(intent.sortType) } catch (_: Exception) { SortOrder.LAST_READ })
-            is LibraryIntent.SetViewMode -> setViewMode(try { ViewMode.valueOf(intent.viewMode) } catch (_: Exception) { ViewMode.GRID })
-            is LibraryIntent.DeleteNovel -> confirmDeleteById(intent.novelId)
-            is LibraryIntent.RequestDelete -> requestDeleteById(intent.novelId)
-            is LibraryIntent.CancelDelete -> cancelDelete()
-            is LibraryIntent.ChangeCover -> saveCover(intent.novelId, intent.uri)
-            is LibraryIntent.RequestChangeCover -> requestChangeCoverById(intent.novelId)
-            is LibraryIntent.RequestCoverByUrl -> requestCoverByUrlById(intent.novelId)
-            is LibraryIntent.SaveCoverFromUrl -> saveCoverFromUrl(intent.novelId, intent.url)
-            is LibraryIntent.CancelUrlDialog -> cancelUrlDialog()
-            is LibraryIntent.ClearCoverError -> clearCoverError()
-            is LibraryIntent.ToggleAutoUpdate -> toggleAutoUpdate(intent.novelId)
-            is LibraryIntent.ToggleNovelFavorite -> toggleNovelFavorite(intent.novelId, intent.isFavorite)
-            is LibraryIntent.CheckForUpdates -> checkForUpdates(intent.novelId)
-            is LibraryIntent.ResyncChapters -> resyncChapters(intent.novelId)
-            is LibraryIntent.CancelBackgroundImport -> cancelBackgroundImport()
-            is LibraryIntent.SelectNovel -> selectNovel(intent.novel)
-            is LibraryIntent.DeselectNovel -> deselectNovel()
-            is LibraryIntent.LoadChapters -> loadChapters(intent.novelId)
-            is LibraryIntent.ToggleChapterSortOrder -> toggleChapterSortOrder()
-            is LibraryIntent.LoadCharacters -> loadCharacters(intent.novelId)
-            is LibraryIntent.AddCharacter -> addCharacter(intent.novelId, intent.name, intent.photoPath)
-            is LibraryIntent.DeleteCharacter -> deleteCharacter(intent.id)
-            is LibraryIntent.UpdateCharacterPhoto -> updateCharacterPhoto(intent.id, intent.path)
-            is LibraryIntent.BatchAddCharacterPhotos -> batchAddCharacterPhotos(intent.characterId, intent.photoPaths)
-            is LibraryIntent.AddCharacterPhoto -> addCharacterPhoto(intent.characterId, intent.photoPath)
-            is LibraryIntent.DeleteCharacterPhoto -> deleteCharacterPhoto(intent.photoId, intent.characterId)
-            is LibraryIntent.UpdateCharacterName -> updateCharacterName(intent.characterId, intent.name)
-            is LibraryIntent.UpdateCharacterNotes -> updateCharacterNotes(intent.characterId, intent.notes)
-            is LibraryIntent.ToggleCharacterFavorite -> toggleCharacterFavorite(intent.characterId, intent.isFavorite)
-            is LibraryIntent.ImportCharactersFromUrl -> importCharactersFromUrl(intent.url)
-            is LibraryIntent.ClearCharacterImportResult -> clearCharacterImportResult()
-            is LibraryIntent.RetryFailedChapter -> retryFailedChapter(intent.failedId)
-            is LibraryIntent.RetryFailedChapterManually -> retryFailedChapterManually(intent.failedId, intent.uri)
-            is LibraryIntent.DismissFailedChapter -> dismissFailedChapter(intent.failedId)
-            is LibraryIntent.ScanMissingChapters -> scanMissingChapters(intent.novelId)
-            is LibraryIntent.ScanMissingChaptersLocal -> scanMissingChaptersLocal(intent.novelId, intent.from, intent.to)
-            is LibraryIntent.SelectTab -> selectTab(intent.index)
-        }
-    }
-
     fun selectTab(index: Int) { _selectedTab.value = index }
 
     fun selectNovel(novel: NovelEntity) {
@@ -350,13 +304,13 @@ class LibraryViewModel @Inject constructor(
         loadChapters(novel.id)
     }
 
-    private fun deselectNovel() {
+    fun deselectNovel() {
         _selectedNovel.value = null
         _selectedTab.value = 0
         _failedChapters.value = emptyList()
     }
 
-    private fun loadChapters(novelId: Long) {
+    fun loadChapters(novelId: Long) {
         viewModelScope.launch {
             val raw = chapterDao.getChaptersByNovelSync(novelId)
             _chapters.value = when (_chapterSortOrder.value) {
@@ -374,7 +328,7 @@ class LibraryViewModel @Inject constructor(
         }
     }
 
-    private fun loadCharacters(novelId: Long) {
+    fun loadCharacters(novelId: Long) {
         viewModelScope.launch { refreshCharacters(novelId) }
     }
 
@@ -400,7 +354,7 @@ class LibraryViewModel @Inject constructor(
 
     fun requestDelete(novel: NovelEntity) { _showDeleteDialog.value = novel }
 
-    private fun requestDeleteById(novelId: Long) {
+    fun requestDeleteById(novelId: Long) {
         val novel = novels.value.find { it.id == novelId } ?: return
         _showDeleteDialog.value = novel
     }
@@ -421,7 +375,7 @@ class LibraryViewModel @Inject constructor(
         }
     }
 
-    private fun confirmDeleteById(novelId: Long) {
+    fun confirmDeleteById(novelId: Long) {
         val novel = _showDeleteDialog.value ?: return
         if (novel.id != novelId) return
         confirmDelete()
@@ -429,14 +383,14 @@ class LibraryViewModel @Inject constructor(
 
     fun requestChangeCover(novel: NovelEntity) { _coverTargetNovel.value = novel }
 
-    private fun requestChangeCoverById(novelId: Long) {
+    fun requestChangeCoverById(novelId: Long) {
         val novel = novels.value.find { it.id == novelId } ?: return
         _coverTargetNovel.value = novel
     }
 
     fun requestCoverByUrl(novel: NovelEntity) { _showUrlDialog.value = novel }
 
-    private fun requestCoverByUrlById(novelId: Long) {
+    fun requestCoverByUrlById(novelId: Long) {
         val novel = novels.value.find { it.id == novelId } ?: return
         _showUrlDialog.value = novel
     }
