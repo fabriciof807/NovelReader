@@ -89,7 +89,8 @@ class NovelImporter @Inject constructor(
                 title = chapter.title,
                 fileName = chapter.fileName,
                 orderIndex = chapter.orderIndex,
-                content = chapter.content
+                content = chapter.content,
+                isNew = true
             )
         })
         chapterOrderNormalizer.normalize(novelId)

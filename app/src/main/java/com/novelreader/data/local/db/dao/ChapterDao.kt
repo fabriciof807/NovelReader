@@ -5,6 +5,7 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import com.novelreader.data.local.db.entity.ChapterEntity
+import com.novelreader.data.local.db.entity.NewChapterItem
 import com.novelreader.data.local.db.entity.NovelReadCount
 import kotlinx.coroutines.flow.Flow
 
@@ -46,4 +47,17 @@ interface ChapterDao {
 
     @Query("DELETE FROM chapters WHERE novelId = :novelId AND fileName = :fileName")
     suspend fun deleteByNovelIdAndFileName(novelId: Long, fileName: String): Int
+
+    @Query(
+        "SELECT n.title AS novelTitle, n.id AS novelId, c.title AS chapterTitle " +
+            "FROM chapters c INNER JOIN novels n ON c.novelId = n.id " +
+            "WHERE c.isNew = 1 ORDER BY n.lastReadAt DESC, c.orderIndex ASC"
+    )
+    fun getNewChaptersFlow(): Flow<List<NewChapterItem>>
+
+    @Query("SELECT COUNT(*) FROM chapters WHERE isNew = 1")
+    suspend fun countNewChapters(): Int
+
+    @Query("UPDATE chapters SET isNew = 0")
+    suspend fun clearAllNewFlags()
 }

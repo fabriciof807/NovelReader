@@ -1,6 +1,7 @@
 package com.novelreader.data.local.db.entity
 
 import androidx.compose.runtime.Immutable
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
@@ -27,10 +28,17 @@ data class ChapterEntity(
     val orderIndex: Int,
     val content: String,
     val isRead: Boolean = false,
-    val lastScrollPosition: Int = 0
+    val lastScrollPosition: Int = 0,
+    @ColumnInfo(defaultValue = "0") val isNew: Boolean = false
 )
 
 data class NovelReadCount(
     val novelId: Long,
     val readCount: Int
+)
+
+data class NewChapterItem(
+    val novelTitle: String,
+    val novelId: Long,
+    val chapterTitle: String
 )

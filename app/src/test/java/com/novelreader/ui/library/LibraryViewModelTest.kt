@@ -76,6 +76,7 @@ class LibraryViewModelTest {
         Dispatchers.setMain(testDispatcher)
         every { novelDao.getAllNovels() } returns flowOf(emptyList())
         every { bookmarkDao.getAll() } returns flowOf(emptyList())
+        every { chapterDao.getNewChaptersFlow() } returns flowOf(emptyList())
         every { prefs.sortOrder } returns flowOf("LAST_READ")
         every { prefs.chapterSortOrder } returns flowOf("ASCENDING")
         every { prefs.viewMode } returns flowOf("GRID")
@@ -403,5 +404,70 @@ class LibraryViewModelTest {
 
         viewModel.clearCoverRequest()
         assertThat(viewModel.coverTargetNovel.value).isNull()
+    }
+
+    @Test
+    fun `init shows whats new when there are new chapters`() = runTest {
+        coEvery { chapterDao.countNewChapters() } returns 3
+        viewModel = LibraryViewModel(
+            context = context,
+            savedStateHandle = savedState,
+            novelDao = novelDao,
+            chapterDao = chapterDao,
+            bookmarkDao = bookmarkDao,
+            backgroundImportManager = bgManager,
+            libraryPreferences = prefs,
+            characterManagementUseCase = charManagement,
+            coverManagementUseCase = coverManagement,
+            characterPhotoDao = charPhotoDao,
+            mvlempyrCharacterImporter = importer,
+            updateCheckScheduler = updateCheckScheduler,
+            webImportUseCase = webImportUseCase,
+            failedChapterDao = failedChapterDao,
+            retryChapterUseCase = retryChapterUseCase,
+            scanMissingChaptersUseCase = scanMissingChaptersUseCase,
+            chapterInserter = chapterInserter,
+            parserRegistry = parserRegistry,
+            mhtParser = mhtParser,
+            fileCharsetDetector = fileCharsetDetector,
+            io = kotlinx.coroutines.Dispatchers.Unconfined
+        )
+        assertThat(viewModel.showWhatsNew.value).isTrue()
+    }
+
+    @Test
+    fun `init hides whats new when there are no new chapters`() = runTest {
+        coEvery { chapterDao.countNewChapters() } returns 0
+        viewModel = LibraryViewModel(
+            context = context,
+            savedStateHandle = savedState,
+            novelDao = novelDao,
+            chapterDao = chapterDao,
+            bookmarkDao = bookmarkDao,
+            backgroundImportManager = bgManager,
+            libraryPreferences = prefs,
+            characterManagementUseCase = charManagement,
+            coverManagementUseCase = coverManagement,
+            characterPhotoDao = charPhotoDao,
+            mvlempyrCharacterImporter = importer,
+            updateCheckScheduler = updateCheckScheduler,
+            webImportUseCase = webImportUseCase,
+            failedChapterDao = failedChapterDao,
+            retryChapterUseCase = retryChapterUseCase,
+            scanMissingChaptersUseCase = scanMissingChaptersUseCase,
+            chapterInserter = chapterInserter,
+            parserRegistry = parserRegistry,
+            mhtParser = mhtParser,
+            fileCharsetDetector = fileCharsetDetector,
+            io = kotlinx.coroutines.Dispatchers.Unconfined
+        )
+        assertThat(viewModel.showWhatsNew.value).isFalse()
+    }
+
+    @Test
+    fun `dismissWhatsNew hides sheet and clears new flags`() = runTest {
+        viewModel.dismissWhatsNew()
+        assertThat(viewModel.showWhatsNew.value).isFalse()
+        coVerify { chapterDao.clearAllNewFlags() }
     }
 }

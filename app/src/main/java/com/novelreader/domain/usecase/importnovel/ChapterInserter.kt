@@ -50,7 +50,8 @@ class ChapterInserter @Inject constructor(
                         title = entry.chapterTitle,
                         fileName = entry.fileName,
                         orderIndex = index,
-                        content = entry.content
+                        content = entry.content,
+                        isNew = true
                     )
                 )
             }

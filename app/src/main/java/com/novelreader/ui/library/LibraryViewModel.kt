@@ -67,6 +67,13 @@ data class LibraryStats(
     val totalBookmarks: Int = 0
 )
 
+data class WhatsNewGroup(
+    val novelId: Long,
+    val novelTitle: String,
+    val count: Int,
+    val chapterTitles: List<String>
+)
+
 @HiltViewModel
 class LibraryViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
@@ -187,6 +194,22 @@ class LibraryViewModel @Inject constructor(
     private val _isCheckingUpdates = MutableStateFlow(false)
     val isCheckingUpdates: StateFlow<Boolean> = _isCheckingUpdates
 
+    private val _showWhatsNew = MutableStateFlow(false)
+    val showWhatsNew: StateFlow<Boolean> = _showWhatsNew
+
+    val whatsNewGroups: StateFlow<List<WhatsNewGroup>> = chapterDao.getNewChaptersFlow()
+        .map { items ->
+            items.groupBy { it.novelId }.map { (novelId, chapters) ->
+                WhatsNewGroup(
+                    novelId = novelId,
+                    novelTitle = chapters.first().novelTitle,
+                    count = chapters.size,
+                    chapterTitles = chapters.map { it.chapterTitle }
+                )
+            }
+        }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
     val backgroundImportState: StateFlow<BackgroundImportState> = backgroundImportManager.state
 
     val readProgress: StateFlow<Map<Long, Float>> = novelDao.getAllNovels().map { novels ->
@@ -271,6 +294,11 @@ class LibraryViewModel @Inject constructor(
         }
         viewModelScope.launch {
             updateCheckScheduler.rescheduleIfNeeded()
+        }
+        viewModelScope.launch {
+            if (chapterDao.countNewChapters() > 0) {
+                _showWhatsNew.value = true
+            }
         }
         viewModelScope.launch {
             val saved = libraryPreferences.chapterSortOrder.first()
@@ -727,6 +755,13 @@ class LibraryViewModel @Inject constructor(
                     context.getString(R.string.failed_chapters_retry_failed, e.message ?: "Erro")
                 )
             }
+        }
+    }
+
+    fun dismissWhatsNew() {
+        _showWhatsNew.value = false
+        viewModelScope.launch {
+            chapterDao.clearAllNewFlags()
         }
     }
 

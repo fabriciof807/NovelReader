@@ -51,6 +51,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.novelreader.R
 import com.novelreader.ui.library.components.CoverUrlDialog
 import com.novelreader.ui.library.components.DeleteNovelDialog
+import com.novelreader.ui.library.components.WhatsNewBottomSheet
 import com.novelreader.ui.library.tabs.ChaptersTab
 import com.novelreader.ui.library.tabs.LibraryTab
 import com.novelreader.ui.library.tabs.PersonagensTab
@@ -85,6 +86,8 @@ fun LibraryScreen(
     val failedChapters by viewModel.failedChapters.collectAsState()
     val scrollToFailedRequest by viewModel.scrollToFailedRequest.collectAsState()
     val viewMode by viewModel.viewMode.collectAsState()
+    val showWhatsNew by viewModel.showWhatsNew.collectAsState()
+    val whatsNewGroups by viewModel.whatsNewGroups.collectAsState()
     val context = LocalContext.current
 
     BackHandler(enabled = selectedNovel != null) {
@@ -148,6 +151,13 @@ fun LibraryScreen(
             novelTitle = novel.title,
             onConfirm = { viewModel.confirmDelete() },
             onDismiss = { viewModel.cancelDelete() }
+        )
+    }
+
+    if (showWhatsNew && whatsNewGroups.isNotEmpty()) {
+        WhatsNewBottomSheet(
+            groups = whatsNewGroups,
+            onDismiss = { viewModel.dismissWhatsNew() }
         )
     }
 

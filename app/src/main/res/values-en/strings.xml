@@ -37,6 +37,8 @@
     <string name="reading">Continue</string>
     <string name="library_reading_with_time">Reading · %1$s</string>
     <string name="library_new_chapters_badge">New chapters</string>
+    <string name="whats_new_title">What\'s New</string>
+    <string name="whats_new_chapters_count">%1$d new chapters</string>
     <string name="import_merging_into_existing">Merging chapters into existing \"%1$s\"</string>
     <string name="sort">Sort</string>
     <string name="sort_title">Title</string>
