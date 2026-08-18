@@ -134,8 +134,25 @@ fun ReaderScreen(
         if (uri != null) pendingCharacterPhoto = uri
     }
 
-    fun saveScroll() {
-        viewModel.saveScrollPosition()
+    fun saveScroll(callback: () -> Unit = {}) {
+        val wv = webView
+        if (wv != null) {
+            wv.evaluateJavascript(
+                bookmarkCaptureRatioJs(),
+                ValueCallback { value ->
+                    val ratio = value?.trim('"')?.toFloatOrNull()
+                    if (ratio != null) {
+                        viewModel.saveScrollPosition(ratio)
+                    } else {
+                        viewModel.saveScrollPosition()
+                    }
+                    callback()
+                }
+            )
+        } else {
+            viewModel.saveScrollPosition()
+            callback()
+        }
     }
 
     LaunchedEffect(state.chapter, webView) {
@@ -301,10 +318,11 @@ fun ReaderScreen(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .clickable {
-                                        saveScroll()
-                                        viewModel.loadChapter(chapter.id, restorePosition = true)
-                                        chapterSearchQuery = ""
-                                        showChapterList = false
+                                        saveScroll {
+                                            viewModel.loadChapter(chapter.id, restorePosition = true)
+                                            chapterSearchQuery = ""
+                                            showChapterList = false
+                                        }
                                     }
                                     .background(
                                         if (isCurrent) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
@@ -373,8 +391,7 @@ fun ReaderScreen(
                             }
                         } else {
                             IconButton(onClick = {
-                                saveScroll()
-                                onBack()
+                                saveScroll { onBack() }
                             }) {
                                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                             }
@@ -432,8 +449,7 @@ fun ReaderScreen(
                         ) {
                             IconButton(
                                 onClick = {
-                                    saveScroll()
-                                    viewModel.goToPrevChapter()
+                                    saveScroll { viewModel.goToPrevChapter() }
                                 },
                                 enabled = state.prevChapterId != null
                             ) {
@@ -502,8 +518,7 @@ fun ReaderScreen(
 
                             IconButton(
                                 onClick = {
-                                    saveScroll()
-                                    viewModel.goToNextChapter()
+                                    saveScroll { viewModel.goToNextChapter() }
                                 },
                                 enabled = state.nextChapterId != null
                             ) {
@@ -541,7 +556,7 @@ fun ReaderScreen(
                                 color = MaterialTheme.colorScheme.error
                             )
                             Spacer(modifier = Modifier.height(16.dp))
-                            Button(onClick = { saveScroll(); onBack() }) {
+                            Button(onClick = { saveScroll { onBack() } }) {
                                 Text(stringResource(R.string.back))
                             }
                         }
@@ -550,7 +565,7 @@ fun ReaderScreen(
                 state.isEmpty -> {
                     EmptyChapterState(
                         onImportMht = { viewModel.importMhtForChapter(it) },
-                        onBack = { saveScroll(); onBack() }
+                        onBack = { saveScroll { onBack() } }
                     )
                 }
                 else -> {
@@ -591,15 +606,17 @@ fun ReaderScreen(
                     onTap = { isControlsVisible = !isControlsVisible },
                     onSwipe = { direction, axis ->
                         pendingSwipeTransition = chapterTransitionFor(direction, axis)
-                        when {
-                            axis == "v" && direction == "next" -> viewModel.saveScrollPosition(1f)
-                            axis == "v" && direction == "prev" -> viewModel.saveScrollPosition(0f)
-                            else -> saveScroll()
+                        val navigate: () -> Unit = {
+                            if (direction == "prev") {
+                                viewModel.goToPrevChapter()
+                            } else {
+                                viewModel.goToNextChapter()
+                            }
                         }
-                        if (direction == "prev") {
-                            viewModel.goToPrevChapter()
-                        } else {
-                            viewModel.goToNextChapter()
+                        when {
+                            axis == "v" && direction == "next" -> { viewModel.saveScrollPosition(1f); navigate() }
+                            axis == "v" && direction == "prev" -> { viewModel.saveScrollPosition(0f); navigate() }
+                            else -> saveScroll(navigate)
                         }
                     },
                     modifier = Modifier.fillMaxSize()
@@ -641,7 +658,7 @@ fun ReaderScreen(
         val observer = LifecycleEventObserver { _, event ->
             when (event) {
                 Lifecycle.Event.ON_PAUSE -> {
-                    viewModel.saveScrollPosition()
+                    saveScroll()
                     webView?.onPause()
                 }
                 Lifecycle.Event.ON_RESUME -> {
