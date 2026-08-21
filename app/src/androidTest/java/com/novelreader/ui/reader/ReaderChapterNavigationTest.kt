@@ -27,7 +27,6 @@ class ReaderChapterNavigationTest {
 
         composeRule.setContent {
             ReaderWebView(
-                onTextSelected = {},
                 onScrollChanged = {},
                 onPageFinished = { wv, url ->
                     if (!loadToken.shouldAccept(url)) return@ReaderWebView

@@ -82,6 +82,9 @@ fun buildReaderHtml(
             padding: 0;
             box-sizing: border-box;
             background-color: transparent !important;
+            -webkit-user-select: none;
+            user-select: none;
+            -webkit-touch-callout: none;
         }
         html {
             background-color: var(--bg-color) !important;
@@ -141,24 +144,24 @@ fun buildReaderHtml(
             50%  { background-color: rgba(255, 235, 59, 1.0); }
             100% { background-color: rgba(255, 235, 59, 0.3); }
         }
-        #content.enter-from-right { animation: enterFromRight 0.3s ease-out; }
-        #content.enter-from-left { animation: enterFromLeft 0.3s ease-out; }
-        #content.enter-from-top { animation: enterFromTop 0.3s ease-out; }
-        #content.enter-from-bottom { animation: enterFromBottom 0.3s ease-out; }
+        #content.enter-from-right { animation: enterFromRight 0.4s cubic-bezier(0.22, 0.61, 0.36, 1); }
+        #content.enter-from-left { animation: enterFromLeft 0.4s cubic-bezier(0.22, 0.61, 0.36, 1); }
+        #content.enter-from-top { animation: enterFromTop 0.4s cubic-bezier(0.22, 0.61, 0.36, 1); }
+        #content.enter-from-bottom { animation: enterFromBottom 0.4s cubic-bezier(0.22, 0.61, 0.36, 1); }
         @keyframes enterFromRight {
-            from { opacity: 0; transform: translateX(40px); }
+            from { opacity: 0; transform: translateX(80px); }
             to   { opacity: 1; transform: translateX(0); }
         }
         @keyframes enterFromLeft {
-            from { opacity: 0; transform: translateX(-40px); }
+            from { opacity: 0; transform: translateX(-80px); }
             to   { opacity: 1; transform: translateX(0); }
         }
         @keyframes enterFromTop {
-            from { opacity: 0; transform: translateY(-40px); }
+            from { opacity: 0; transform: translateY(-80px); }
             to   { opacity: 1; transform: translateY(0); }
         }
         @keyframes enterFromBottom {
-            from { opacity: 0; transform: translateY(40px); }
+            from { opacity: 0; transform: translateY(80px); }
             to   { opacity: 1; transform: translateY(0); }
         }
     """.trimIndent()
@@ -205,11 +208,7 @@ fun buildReaderHtml(
                          frame-ancestors 'none';">
             <style>$css</style>
             <script>
-            var _lastSel = '';
-            document.addEventListener('selectionchange', function() {
-                var sel = window.getSelection().toString().trim();
-                if (sel !== _lastSel) { _lastSel = sel; Android.onTextSelected(sel); }
-            });
+            document.addEventListener('selectstart', function(e) { e.preventDefault(); });
 
             var _swipeDir = '${config.swipeDirection}';
             function isAtStart() { return window.scrollY <= 20; }
@@ -219,17 +218,29 @@ fun buildReaderHtml(
             }
             (function() {
                 var _ts = {x:0, y:0, t:0};
+                var _lpTimer = null;
+                function clearLongPress() {
+                    if (_lpTimer) { clearTimeout(_lpTimer); _lpTimer = null; }
+                }
                 document.addEventListener('touchstart', function(e) {
                     var t = e.touches[0]; _ts = {x: t.clientX, y: t.clientY, t: Date.now()};
+                    clearLongPress();
+                    _lpTimer = setTimeout(function() {
+                        _lpTimer = null;
+                        try { Android.onTap(); } catch(e) {}
+                    }, 2000);
+                });
+                document.addEventListener('touchmove', function(e) {
+                    var t = e.touches[0];
+                    if (Math.abs(t.clientX - _ts.x) > 40 || Math.abs(t.clientY - _ts.y) > 40) {
+                        clearLongPress();
+                    }
                 });
                 document.addEventListener('touchend', function(e) {
+                    clearLongPress();
                     var dx = e.changedTouches[0].clientX - _ts.x;
                     var dy = e.changedTouches[0].clientY - _ts.y;
                     var dt = Date.now() - _ts.t;
-                    if (Math.abs(dx) < 15 && Math.abs(dy) < 15 && dt < 300) {
-                        try { Android.onTap(); } catch(e) {}
-                        return;
-                    }
                     if (dt > 500) return;
                     var dir = null;
                     if ((_swipeDir === 'vertical' || _swipeDir === 'both') &&
@@ -246,6 +257,7 @@ fun buildReaderHtml(
                         try { Android.onSwipe(dir, Math.abs(dx) > Math.abs(dy) ? 'h' : 'v'); } catch(e) {}
                     }
                 });
+                document.addEventListener('touchcancel', clearLongPress);
             })();
 
             function applyConfig(cfg) {

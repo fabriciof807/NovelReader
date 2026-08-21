@@ -7,7 +7,6 @@ import app.cash.turbine.test
 import com.google.common.truth.Truth.assertThat
 import com.novelreader.data.local.db.dao.BookmarkDao
 import com.novelreader.data.local.db.dao.ChapterDao
-import com.novelreader.data.local.db.dao.CharacterDao
 import com.novelreader.data.local.db.dao.NovelDao
 import com.novelreader.data.local.db.entity.BookmarkEntity
 import com.novelreader.data.local.db.entity.ChapterEntity
@@ -43,7 +42,6 @@ class ReaderViewModelTest {
     private val chapterDao: ChapterDao = mockk(relaxed = true)
     private val bookmarkDao: BookmarkDao = mockk(relaxed = true)
     private val readerPrefs: ReaderPreferences = mockk(relaxed = true)
-    private val charDao: CharacterDao = mockk(relaxed = true)
     private val ftsSearchService: FtsSearchService = mockk(relaxed = true)
     private val reimportChapterContentUseCase: ReimportChapterContentUseCase = mockk(relaxed = true)
 
@@ -68,7 +66,6 @@ class ReaderViewModelTest {
         chapterDao = chapterDao,
         bookmarkDao = bookmarkDao,
         readerPreferences = readerPrefs,
-        characterDao = charDao,
         ftsSearchService = ftsSearchService,
         reimportChapterContentUseCase = reimportChapterContentUseCase
     )

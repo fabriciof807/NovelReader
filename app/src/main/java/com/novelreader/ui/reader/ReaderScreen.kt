@@ -1,10 +1,7 @@
 package com.novelreader.ui.reader
 
-import android.net.Uri
 import android.webkit.ValueCallback
 import android.webkit.WebView
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -29,17 +26,16 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowBackIos
 import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
+import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.List
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -95,8 +91,6 @@ fun ReaderScreen(
     var webView by remember { mutableStateOf<WebView?>(null) }
     var isControlsVisible by remember { mutableStateOf(true) }
     var scrollRatio by remember { mutableStateOf(0f) }
-    var showCreateCharacterDialog by remember { mutableStateOf(false) }
-    var pendingCharacterPhoto by remember { mutableStateOf<Uri?>(null) }
     var lastInitialSearchQuery by remember { mutableStateOf(initialSearchQuery) }
     val pendingSearchQueryState = remember { mutableStateOf(initialSearchQuery) }
     var pendingSearchQuery by pendingSearchQueryState
@@ -108,6 +102,7 @@ fun ReaderScreen(
     var bookmarkToDelete by remember { mutableStateOf<Long?>(null) }
     var showChapterList by remember { mutableStateOf(false) }
     var chapterSearchQuery by remember { mutableStateOf("") }
+    var reverseChapterOrder by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
 
     val view = LocalView.current
@@ -126,12 +121,6 @@ fun ReaderScreen(
     if (initialSearchQuery != lastInitialSearchQuery) {
         lastInitialSearchQuery = initialSearchQuery
         pendingSearchQuery = initialSearchQuery
-    }
-
-    val photoPickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
-    ) { uri ->
-        if (uri != null) pendingCharacterPhoto = uri
     }
 
     fun saveScroll(callback: () -> Unit = {}) {
@@ -249,28 +238,12 @@ fun ReaderScreen(
         )
     }
 
-    if (showCreateCharacterDialog) {
-        CreateCharacterDialog(
-            selectedName = state.selectedText,
-            photoUri = pendingCharacterPhoto,
-            onPhotoPick = { photoPickerLauncher.launch("image/*") },
-            onDismiss = {
-                showCreateCharacterDialog = false
-                pendingCharacterPhoto = null
-            },
-            onCreate = { name ->
-                viewModel.createCharacter(name, pendingCharacterPhoto?.toString())
-                showCreateCharacterDialog = false
-                pendingCharacterPhoto = null
-            }
-        )
-    }
-
     if (showChapterList && state.allChapters.isNotEmpty()) {
         val chapterListSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
         val filtered = remember(chapterSearchQuery, state.allChapters) {
             filterChaptersByQuery(state.allChapters, chapterSearchQuery)
         }
+        val displayList = if (reverseChapterOrder) filtered.asReversed() else filtered
         ModalBottomSheet(
             onDismissRequest = {
                 chapterSearchQuery = ""
@@ -288,15 +261,32 @@ fun ReaderScreen(
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 8.dp)
                 )
-                Text(
-                    text = if (chapterSearchQuery.isNotBlank())
-                        stringResource(R.string.chapters_count_filtered, filtered.size, state.allChapters.size)
-                    else
-                        stringResource(R.string.chapters_count, state.allChapters.size),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(end = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = if (chapterSearchQuery.isNotBlank())
+                            stringResource(R.string.chapters_count_filtered, filtered.size, state.allChapters.size)
+                        else
+                            stringResource(R.string.chapters_count, state.allChapters.size),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(horizontal = 16.dp, vertical = 8.dp)
+                    )
+                    IconButton(onClick = { reverseChapterOrder = !reverseChapterOrder }) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.Sort,
+                            contentDescription = stringResource(R.string.chapter_list_reverse_order),
+                            tint = if (reverseChapterOrder) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
                 if (chapterSearchQuery.isNotBlank() && filtered.isEmpty()) {
                     Box(
                         modifier = Modifier
@@ -312,7 +302,7 @@ fun ReaderScreen(
                     }
                 } else {
                     LazyColumn(modifier = Modifier.fillMaxWidth()) {
-                        items(filtered, key = { it.id }) { chapter ->
+                        items(displayList, key = { it.id }) { chapter ->
                             val isCurrent = chapter.id == state.chapter?.id
                             Row(
                                 modifier = Modifier
@@ -570,7 +560,6 @@ fun ReaderScreen(
                 }
                 else -> {
                     ReaderWebView(
-                    onTextSelected = { viewModel.onTextSelected(it) },
                     onScrollChanged = { ratio ->
                         if (isPageLoaded) {
                             scrollRatio = ratio
@@ -632,21 +621,6 @@ fun ReaderScreen(
                         },
                         onClose = { viewModel.deactivateSearch() }
                     )
-                }
-
-                if (state.selectedText.isNotBlank() && !state.isSearchActive) {
-                    FloatingActionButton(
-                        onClick = { showCreateCharacterDialog = true },
-                        modifier = Modifier
-                            .align(Alignment.BottomEnd)
-                            .padding(16.dp),
-                        containerColor = MaterialTheme.colorScheme.primary
-                    ) {
-                        Icon(
-                            Icons.Default.Person,
-                            contentDescription = stringResource(R.string.create_character)
-                        )
-                    }
                 }
                 }
             }

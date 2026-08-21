@@ -14,17 +14,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.viewinterop.AndroidView
 
 internal class ReaderJsInterface(
-    private val onTextSelectedCallback: (String) -> Unit,
     private val onTapCallback: () -> Unit,
     private val onSwipeCallback: (String, String) -> Unit,
     private val onAutoScrollReachedEndCallback: () -> Unit,
     private val onScrollRestoreCompleteCallback: (Int) -> Unit
 ) {
-    @JavascriptInterface
-    fun onTextSelected(text: String) {
-        onTextSelectedCallback(text)
-    }
-
     @JavascriptInterface
     fun onTap() {
         onTapCallback()
@@ -49,7 +43,6 @@ internal class ReaderJsInterface(
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
 fun ReaderWebView(
-    onTextSelected: (String) -> Unit,
     onScrollChanged: (Float) -> Unit,
     onPageFinished: (WebView, String?) -> Unit,
     onWebViewReady: (WebView) -> Unit,
@@ -84,6 +77,7 @@ fun ReaderWebView(
                 settings.blockNetworkLoads = true
                 settings.safeBrowsingEnabled = true
                 setBackgroundColor(Color.TRANSPARENT)
+                setOnLongClickListener { true }
                 setOnScrollChangeListener { _, _, _, _, _ ->
                     val totalH = (contentHeight * scale).toInt()
                     val visibleH = height
@@ -143,7 +137,6 @@ fun ReaderWebView(
                 }
                 addJavascriptInterface(
                     ReaderJsInterface(
-                        onTextSelected,
                         onTap,
                         onSwipe,
                         onAutoScrollReachedEnd,

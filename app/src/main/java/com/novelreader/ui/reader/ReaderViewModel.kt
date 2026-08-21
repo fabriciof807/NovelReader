@@ -9,10 +9,8 @@ import com.novelreader.R
 import com.novelreader.data.local.db.FtsSearchService
 import com.novelreader.data.local.db.dao.BookmarkDao
 import com.novelreader.data.local.db.dao.ChapterDao
-import com.novelreader.data.local.db.dao.CharacterDao
 import com.novelreader.data.local.db.dao.NovelDao
 import com.novelreader.data.local.db.entity.BookmarkEntity
-import com.novelreader.data.local.db.entity.CharacterEntity
 import com.novelreader.data.local.db.entity.ChapterEntity
 import com.novelreader.data.local.db.entity.NovelEntity
 import com.novelreader.data.local.preferences.ReaderConfig
@@ -46,8 +44,7 @@ data class ReaderState(
     val config: ReaderConfig = ReaderConfig(),
     val isSearchActive: Boolean = false,
     val searchQuery: String = "",
-    val searchResults: List<ChapterEntity> = emptyList(),
-    val selectedText: String = ""
+    val searchResults: List<ChapterEntity> = emptyList()
 )
 
 @HiltViewModel
@@ -58,7 +55,6 @@ class ReaderViewModel @Inject constructor(
     private val chapterDao: ChapterDao,
     private val bookmarkDao: BookmarkDao,
     private val readerPreferences: ReaderPreferences,
-    private val characterDao: CharacterDao,
     private val ftsSearchService: FtsSearchService,
     private val reimportChapterContentUseCase: ReimportChapterContentUseCase
 ) : ViewModel() {
@@ -330,14 +326,6 @@ class ReaderViewModel @Inject constructor(
         }
     }
 
-    fun onTextSelected(text: String) {
-        _state.value = _state.value.copy(selectedText = text)
-    }
-
-    fun clearSelection() {
-        _state.value = _state.value.copy(selectedText = "")
-    }
-
     fun importMhtForChapter(uri: Uri) {
         viewModelScope.launch {
             val chapter = _state.value.chapter ?: return@launch
@@ -347,27 +335,6 @@ class ReaderViewModel @Inject constructor(
             } else {
                 val msg = context.getString(R.string.empty_chapter_import_failed, result.exceptionOrNull()?.message ?: "Erro")
                 _errorEvents.emit(msg)
-            }
-        }
-    }
-
-    fun createCharacter(name: String, photoPath: String?) {
-        viewModelScope.launch {
-            try {
-                characterDao.insert(
-                    CharacterEntity(
-                        novelId = novelId,
-                        name = name,
-                        photoPath = photoPath
-                    )
-                )
-                _state.value = _state.value.copy(selectedText = "")
-                retryAction = null
-                _retryAvailable.value = false
-            } catch (e: Exception) {
-                retryAction = { viewModelScope.launch { createCharacter(name, photoPath) } }
-                _retryAvailable.value = true
-                _errorEvents.emit(e.message ?: e.toString())
             }
         }
     }

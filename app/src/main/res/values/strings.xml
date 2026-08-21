@@ -311,6 +311,7 @@
 
     <!-- Chapter list search -->
     <string name="chapter_list_search_hint">Buscar capítulo...</string>
+    <string name="chapter_list_reverse_order">Inverter ordem</string>
     <string name="chapters_count_filtered">%1$d de %2$d capítulos</string>
     <string name="chapter_list_no_matches">Nenhum capítulo encontrado</string>
 
