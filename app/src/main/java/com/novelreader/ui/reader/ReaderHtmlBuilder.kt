@@ -5,6 +5,7 @@ import com.novelreader.data.local.preferences.ReaderConfig
 import org.json.JSONArray
 import org.json.JSONObject
 import org.jsoup.Jsoup
+import org.jsoup.nodes.Document
 import org.jsoup.safety.Safelist
 
 enum class ChapterTransition { NONE, FROM_RIGHT, FROM_LEFT, FROM_TOP, FROM_BOTTOM }
@@ -59,10 +60,11 @@ fun themeVars(config: ReaderConfig): Map<String, String> = when (config.theme) {
 fun buildReaderHtml(
     content: String,
     config: ReaderConfig,
-    transition: ChapterTransition = ChapterTransition.NONE
+    transition: ChapterTransition = ChapterTransition.NONE,
+    chapterTitle: String = ""
 ): String {
     val sanitized = Jsoup.clean(content, READER_SAFELIST)
-    val finalContent = stripJunkContent(sanitized)
+    val finalContent = stripJunkContent(sanitized, chapterTitle)
 
     val themeCss = themeVars(config).entries.joinToString("\n            ") { (k, v) ->
         val cssVar = k.replace(Regex("([A-Z])")) { "-${it.value.lowercase()}" }
@@ -228,7 +230,7 @@ fun buildReaderHtml(
                     _lpTimer = setTimeout(function() {
                         _lpTimer = null;
                         try { Android.onTap(); } catch(e) {}
-                    }, 2000);
+                    }, 700);
                 });
                 document.addEventListener('touchmove', function(e) {
                     var t = e.touches[0];
@@ -319,8 +321,10 @@ private fun transitionName(transition: ChapterTransition): String = when (transi
     ChapterTransition.NONE -> ""
 }
 
-private fun stripJunkContent(html: String): String {
+private fun stripJunkContent(html: String, chapterTitle: String = ""): String {
     val doc = Jsoup.parseBodyFragment(html)
+
+    stripHeadingDuplicatingTitle(doc, chapterTitle)
 
     for (p in doc.select("p").toList()) {
         val text = p.text().trim()
@@ -361,6 +365,18 @@ private fun stripJunkContent(html: String): String {
 
     return doc.body().html()
 }
+
+private fun stripHeadingDuplicatingTitle(doc: Document, chapterTitle: String) {
+    val needle = chapterTitle.trim()
+    if (needle.length <= 20) return
+    val heading = doc.body().children().firstOrNull { child ->
+        child.tagName() in HEADING_TAGS &&
+            child.text().trim().contains(needle, ignoreCase = true)
+    } ?: return
+    heading.remove()
+}
+
+private val HEADING_TAGS = setOf("h1", "h2", "h3", "h4", "h5", "h6")
 
 fun buildJs(code: String, params: Map<String, Any> = emptyMap()): String {
     val args = params.entries.joinToString(",") { (k, v) -> "\"$k\":${jsonLiteral(v)}" }

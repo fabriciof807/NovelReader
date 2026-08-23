@@ -68,6 +68,7 @@
     <string name="select_files">Select HTML / MHT files</string>
     <string name="files_selected">%d file(s) selected</string>
     <string name="importing">Importing…</string>
+    <string name="import_queued_label">Waiting to import</string>
 
     <!-- Favorites -->
     <string name="no_favorites">No bookmarks yet</string>

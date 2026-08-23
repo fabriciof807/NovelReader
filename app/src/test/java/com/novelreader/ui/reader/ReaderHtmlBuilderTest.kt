@@ -235,6 +235,48 @@ class ReaderHtmlBuilderTest {
     }
 
     @Test
+    fun `buildReaderHtml strips the first heading that contains the chapter title`() {
+        val html = buildReaderHtml(
+            content = "<h4>Chapter 1: Chapter 1: What Bad Intentions Could an Uncle Have?</h4><p>Body.</p>",
+            config = ReaderConfig(),
+            chapterTitle = "Chapter 1: What Bad Intentions Could an Uncle Have?"
+        )
+        assertThat(html).doesNotContain("Chapter 1: Chapter 1:")
+        assertThat(html).contains("<p>Body.</p>")
+    }
+
+    @Test
+    fun `buildReaderHtml keeps a heading that does not duplicate the chapter title`() {
+        val html = buildReaderHtml(
+            content = "<h2>Prologue</h2><p>Body.</p>",
+            config = ReaderConfig(),
+            chapterTitle = "Chapter 1: What Bad Intentions Could an Uncle Have?"
+        )
+        assertThat(html).contains("<h2>Prologue</h2>")
+        assertThat(html).contains("<p>Body.</p>")
+    }
+
+    @Test
+    fun `buildReaderHtml keeps a heading when the chapter title is too short to match safely`() {
+        val html = buildReaderHtml(
+            content = "<h4>Chapter 1: Opening</h4><p>Body.</p>",
+            config = ReaderConfig(),
+            chapterTitle = "Chapter 1"
+        )
+        assertThat(html).contains("<h4>Chapter 1: Opening</h4>")
+    }
+
+    @Test
+    fun `buildReaderHtml leaves content untouched when there is no heading`() {
+        val html = buildReaderHtml(
+            content = "<p>Just body.</p>",
+            config = ReaderConfig(),
+            chapterTitle = "Chapter 1: What Bad Intentions Could an Uncle Have?"
+        )
+        assertThat(html).contains("<p>Just body.</p>")
+    }
+
+    @Test
     fun `applyConfigJs passes swipeDirection to applyConfig`() {
         val js = applyConfigJs(ReaderConfig(swipeDirection = "horizontal"))
         assertThat(js).contains("\"swipeDirection\":\"horizontal\"")

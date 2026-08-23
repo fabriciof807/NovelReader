@@ -88,6 +88,7 @@ fun LibraryScreen(
     val viewMode by viewModel.viewMode.collectAsState()
     val showWhatsNew by viewModel.showWhatsNew.collectAsState()
     val whatsNewGroups by viewModel.whatsNewGroups.collectAsState()
+    val newChapterCounts by viewModel.newChapterCounts.collectAsState()
     val context = LocalContext.current
 
     BackHandler(enabled = selectedNovel != null) {
@@ -294,6 +295,7 @@ fun LibraryScreen(
                     backgroundImportState = backgroundImportState,
                     viewMode = viewMode,
                     readProgress = readProgress,
+                    newChapterCounts = newChapterCounts,
                     searchQuery = searchQuery,
                     filterChip = filterChip,
                     onFilterChipChange = { filterChip = it },

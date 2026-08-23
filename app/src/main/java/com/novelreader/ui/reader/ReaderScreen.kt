@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -156,7 +157,9 @@ fun ReaderScreen(
                 val html = buildReaderHtml(
                     content = chapter.content,
                     config = state.config,
-                    transition = transition
+                    transition = transition,
+                    chapterTitle = com.novelreader.data.parser.TitleExtractor
+                        .cleanChapterTitleForDisplay(chapter.title, state.novel?.title)
                 )
                 wv.loadDataWithBaseURL(loadToken.baseUrl(issued), html, "text/html", "UTF-8", null)
             }
@@ -240,10 +243,15 @@ fun ReaderScreen(
 
     if (showChapterList && state.allChapters.isNotEmpty()) {
         val chapterListSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        val chapterListState = rememberLazyListState()
         val filtered = remember(chapterSearchQuery, state.allChapters) {
             filterChaptersByQuery(state.allChapters, chapterSearchQuery)
         }
         val displayList = if (reverseChapterOrder) filtered.asReversed() else filtered
+        LaunchedEffect(Unit) {
+            val index = displayList.indexOfFirst { it.id == state.chapter?.id }
+            if (index >= 0) chapterListState.scrollToItem(index)
+        }
         ModalBottomSheet(
             onDismissRequest = {
                 chapterSearchQuery = ""
@@ -301,7 +309,7 @@ fun ReaderScreen(
                         )
                     }
                 } else {
-                    LazyColumn(modifier = Modifier.fillMaxWidth()) {
+                    LazyColumn(state = chapterListState, modifier = Modifier.fillMaxWidth()) {
                         items(displayList, key = { it.id }) { chapter ->
                             val isCurrent = chapter.id == state.chapter?.id
                             Row(

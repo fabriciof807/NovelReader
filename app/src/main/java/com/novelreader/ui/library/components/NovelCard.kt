@@ -51,6 +51,7 @@ import com.novelreader.util.formatRelativeTime
 fun NovelCard(
     novel: NovelEntity,
     readProgress: Float = 0f,
+    newChapterCount: Int = 0,
     bgState: BackgroundImportState,
     onClick: () -> Unit,
     onLongClick: () -> Unit,
@@ -94,6 +95,20 @@ fun NovelCard(
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+                if (bgState.queuedNovelTitles.any { it.equals(novel.title, ignoreCase = true) }) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.45f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = stringResource(R.string.import_queued_label),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Color.White
                         )
                     }
                 }
@@ -146,15 +161,34 @@ fun NovelCard(
                 }
                 if (novel.hasUpdates) {
                     val updatesLabel = stringResource(R.string.library_new_chapters_badge)
-                    Box(
-                        modifier = Modifier
-                            .align(Alignment.TopEnd)
-                            .padding(6.dp)
-                            .size(12.dp)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.primary)
-                            .semantics { contentDescription = updatesLabel }
-                    )
+                    if (newChapterCount > 0) {
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .padding(6.dp)
+                                .clip(RoundedCornerShape(50))
+                                .background(MaterialTheme.colorScheme.primary)
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                                .semantics { contentDescription = updatesLabel },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = newChapterCount.toString(),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onPrimary
+                            )
+                        }
+                    } else {
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .padding(6.dp)
+                                .size(12.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.primary)
+                                .semantics { contentDescription = updatesLabel }
+                        )
+                    }
                 }
             }
 

@@ -17,6 +17,7 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Delete
@@ -29,6 +30,8 @@ import androidx.compose.material.icons.filled.Sort
 import androidx.compose.material.icons.filled.SortByAlpha
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.Star
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilterChip
@@ -46,6 +49,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.novelreader.R
 import com.novelreader.data.local.db.entity.NovelEntity
@@ -81,6 +85,9 @@ internal fun filterNovels(
     }
 }
 
+internal fun queuedNovelsNotShown(queuedTitles: List<String>, novels: List<NovelEntity>): List<String> =
+    queuedTitles.filter { q -> novels.none { it.title.equals(q, ignoreCase = true) } }
+
 internal fun favoriteIcon(isFavorite: Boolean) =
     if (isFavorite) Icons.Filled.Star else Icons.Outlined.Star
 
@@ -92,6 +99,7 @@ fun LibraryTab(
     backgroundImportState: BackgroundImportState,
     viewMode: ViewMode = ViewMode.GRID,
     readProgress: Map<Long, Float> = emptyMap(),
+    newChapterCounts: Map<Long, Int> = emptyMap(),
     searchQuery: String = "",
     filterChip: NovelFilter = NovelFilter.ALL,
     onFilterChipChange: (NovelFilter) -> Unit = {},
@@ -111,6 +119,10 @@ fun LibraryTab(
     modifier: Modifier = Modifier
 ) {
     val chipFiltered = filterNovels(novels, searchQuery, filterChip, readProgress)
+
+    val queuedNotShown = remember(backgroundImportState.queuedNovelTitles, novels) {
+        queuedNovelsNotShown(backgroundImportState.queuedNovelTitles, novels)
+    }
 
     val listState = rememberSaveable(saver = LazyListState.Saver) { LazyListState() }
 
@@ -147,6 +159,18 @@ fun LibraryTab(
                 label = { Text(stringResource(R.string.filter_favorite_novels)) }
             )
         }
+        if (queuedNotShown.isNotEmpty()) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp, vertical = 4.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                queuedNotShown.forEach { title ->
+                    QueuedNovelRow(title = title)
+                }
+            }
+        }
         if (novels.isEmpty()) {
             LibraryEmptyState(
                 onImportLocal = onImportLocal,
@@ -172,6 +196,7 @@ fun LibraryTab(
                     NovelCard(
                         novel = novel,
                         readProgress = readProgress[novel.id] ?: 0f,
+                        newChapterCount = newChapterCounts[novel.id] ?: 0,
                         bgState = backgroundImportState,
                         onClick = { onNovelClick(novel) },
                         onLongClick = { showMenu = true },
@@ -205,6 +230,7 @@ fun LibraryTab(
                     NovelListItem(
                         novel = novel,
                         readProgress = readProgress[novel.id] ?: 0f,
+                        newChapterCount = newChapterCounts[novel.id] ?: 0,
                         bgState = backgroundImportState,
                         onClick = { onNovelClick(novel) },
                         onLongClick = { showMenu = true },
@@ -355,5 +381,38 @@ private fun NovelMenu(
                 Icon(Icons.Default.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error)
             }
         )
+    }
+}
+
+@Composable
+private fun QueuedNovelRow(title: String) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyMedium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.weight(1f)
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = stringResource(R.string.import_queued_label),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.primary
+            )
+        }
     }
 }

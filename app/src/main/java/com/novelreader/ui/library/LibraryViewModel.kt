@@ -210,6 +210,10 @@ class LibraryViewModel @Inject constructor(
         }
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
+    val newChapterCounts: StateFlow<Map<Long, Int>> = whatsNewGroups
+        .map { groups -> groups.associate { it.novelId to it.count } }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyMap())
+
     val backgroundImportState: StateFlow<BackgroundImportState> = backgroundImportManager.state
 
     val readProgress: StateFlow<Map<Long, Float>> = novelDao.getAllNovels().map { novels ->

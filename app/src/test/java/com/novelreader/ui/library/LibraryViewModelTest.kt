@@ -11,6 +11,7 @@ import com.novelreader.data.local.db.dao.FailedChapterDao
 import com.novelreader.data.local.db.dao.NovelDao
 import com.novelreader.data.local.db.entity.ChapterEntity
 import com.novelreader.data.local.db.entity.FailedChapterEntity
+import com.novelreader.data.local.db.entity.NewChapterItem
 import com.novelreader.data.local.db.entity.NovelEntity
 import com.novelreader.data.local.preferences.LibraryPreferences
 import com.novelreader.data.parser.MhtParser
@@ -28,6 +29,7 @@ import com.novelreader.domain.usecase.WebImportUseCase
 import com.novelreader.domain.usecase.importnovel.ChapterInserter
 import com.novelreader.domain.usecase.importnovel.FileCharsetDetector
 import com.novelreader.ui.library.tabs.filterNovels
+import com.novelreader.ui.library.tabs.queuedNovelsNotShown
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -469,5 +471,52 @@ class LibraryViewModelTest {
         viewModel.dismissWhatsNew()
         assertThat(viewModel.showWhatsNew.value).isFalse()
         coVerify { chapterDao.clearAllNewFlags() }
+    }
+
+    @Test
+    fun `newChapterCounts groups new chapters per novel`() = runTest {
+        every { chapterDao.getNewChaptersFlow() } returns flowOf(
+            listOf(
+                NewChapterItem(novelTitle = "A", novelId = 1, chapterTitle = "c1"),
+                NewChapterItem(novelTitle = "A", novelId = 1, chapterTitle = "c2"),
+                NewChapterItem(novelTitle = "B", novelId = 2, chapterTitle = "c1")
+            )
+        )
+        viewModel = LibraryViewModel(
+            context = context,
+            savedStateHandle = savedState,
+            novelDao = novelDao,
+            chapterDao = chapterDao,
+            bookmarkDao = bookmarkDao,
+            backgroundImportManager = bgManager,
+            libraryPreferences = prefs,
+            characterManagementUseCase = charManagement,
+            coverManagementUseCase = coverManagement,
+            characterPhotoDao = charPhotoDao,
+            mvlempyrCharacterImporter = importer,
+            updateCheckScheduler = updateCheckScheduler,
+            webImportUseCase = webImportUseCase,
+            failedChapterDao = failedChapterDao,
+            retryChapterUseCase = retryChapterUseCase,
+            scanMissingChaptersUseCase = scanMissingChaptersUseCase,
+            chapterInserter = chapterInserter,
+            parserRegistry = parserRegistry,
+            mhtParser = mhtParser,
+            fileCharsetDetector = fileCharsetDetector,
+            io = kotlinx.coroutines.Dispatchers.Unconfined
+        )
+        assertThat(viewModel.newChapterCounts.value).isEqualTo(mapOf(1L to 2, 2L to 1))
+    }
+
+    @Test
+    fun `queuedNovelsNotShown returns only queued titles absent from the library`() {
+        val novels = listOf(
+            NovelEntity(id = 1, title = "Cultivation", sourceFolder = "", totalChapters = 10),
+            NovelEntity(id = 2, title = "Other Novel", sourceFolder = "", totalChapters = 5)
+        )
+        assertThat(queuedNovelsNotShown(listOf("Cultivation", "Brand New"), novels))
+            .containsExactly("Brand New")
+        assertThat(queuedNovelsNotShown(listOf("CULTIVATION"), novels)).isEmpty()
+        assertThat(queuedNovelsNotShown(emptyList(), novels)).isEmpty()
     }
 }
