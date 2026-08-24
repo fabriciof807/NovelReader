@@ -8,9 +8,11 @@ import com.novelreader.data.local.db.dao.BookmarkDao
 import com.novelreader.data.local.db.dao.ChapterDao
 import com.novelreader.data.local.db.dao.CharacterPhotoDao
 import com.novelreader.data.local.db.dao.FailedChapterDao
+import com.novelreader.data.local.db.dao.FolderDao
 import com.novelreader.data.local.db.dao.NovelDao
 import com.novelreader.data.local.db.entity.ChapterEntity
 import com.novelreader.data.local.db.entity.FailedChapterEntity
+import com.novelreader.data.local.db.entity.FolderEntity
 import com.novelreader.data.local.db.entity.NewChapterItem
 import com.novelreader.data.local.db.entity.NovelEntity
 import com.novelreader.data.local.preferences.LibraryPreferences
@@ -64,6 +66,7 @@ class LibraryViewModelTest {
     private val updateCheckScheduler: UpdateCheckScheduler = mockk(relaxed = true)
     private val webImportUseCase: WebImportUseCase = mockk(relaxed = true)
     private val failedChapterDao: FailedChapterDao = mockk(relaxed = true)
+    private val folderDao: FolderDao = mockk(relaxed = true)
     private val retryChapterUseCase: RetryChapterUseCase = mockk(relaxed = true)
     private val scanMissingChaptersUseCase: ScanMissingChaptersUseCase = mockk(relaxed = true)
     private val chapterInserter: ChapterInserter = mockk(relaxed = true)
@@ -79,6 +82,8 @@ class LibraryViewModelTest {
         every { novelDao.getAllNovels() } returns flowOf(emptyList())
         every { bookmarkDao.getAll() } returns flowOf(emptyList())
         every { chapterDao.getNewChaptersFlow() } returns flowOf(emptyList())
+        every { folderDao.getAll() } returns flowOf(emptyList())
+        every { folderDao.getFolderCounts() } returns flowOf(emptyList())
         every { prefs.sortOrder } returns flowOf("LAST_READ")
         every { prefs.chapterSortOrder } returns flowOf("ASCENDING")
         every { prefs.viewMode } returns flowOf("GRID")
@@ -98,6 +103,7 @@ class LibraryViewModelTest {
             updateCheckScheduler = updateCheckScheduler,
             webImportUseCase = webImportUseCase,
             failedChapterDao = failedChapterDao,
+            folderDao = folderDao,
             retryChapterUseCase = retryChapterUseCase,
             scanMissingChaptersUseCase = scanMissingChaptersUseCase,
             chapterInserter = chapterInserter,
@@ -241,6 +247,7 @@ class LibraryViewModelTest {
             updateCheckScheduler = updateCheckScheduler,
             webImportUseCase = webImportUseCase,
             failedChapterDao = failedChapterDao,
+            folderDao = folderDao,
             retryChapterUseCase = retryChapterUseCase,
             scanMissingChaptersUseCase = scanMissingChaptersUseCase,
             chapterInserter = chapterInserter,
@@ -278,6 +285,7 @@ class LibraryViewModelTest {
             updateCheckScheduler = updateCheckScheduler,
             webImportUseCase = webImportUseCase,
             failedChapterDao = failedChapterDao,
+            folderDao = folderDao,
             retryChapterUseCase = retryChapterUseCase,
             scanMissingChaptersUseCase = scanMissingChaptersUseCase,
             chapterInserter = chapterInserter,
@@ -426,6 +434,7 @@ class LibraryViewModelTest {
             updateCheckScheduler = updateCheckScheduler,
             webImportUseCase = webImportUseCase,
             failedChapterDao = failedChapterDao,
+            folderDao = folderDao,
             retryChapterUseCase = retryChapterUseCase,
             scanMissingChaptersUseCase = scanMissingChaptersUseCase,
             chapterInserter = chapterInserter,
@@ -455,6 +464,7 @@ class LibraryViewModelTest {
             updateCheckScheduler = updateCheckScheduler,
             webImportUseCase = webImportUseCase,
             failedChapterDao = failedChapterDao,
+            folderDao = folderDao,
             retryChapterUseCase = retryChapterUseCase,
             scanMissingChaptersUseCase = scanMissingChaptersUseCase,
             chapterInserter = chapterInserter,
@@ -497,6 +507,7 @@ class LibraryViewModelTest {
             updateCheckScheduler = updateCheckScheduler,
             webImportUseCase = webImportUseCase,
             failedChapterDao = failedChapterDao,
+            folderDao = folderDao,
             retryChapterUseCase = retryChapterUseCase,
             scanMissingChaptersUseCase = scanMissingChaptersUseCase,
             chapterInserter = chapterInserter,
@@ -518,5 +529,94 @@ class LibraryViewModelTest {
             .containsExactly("Brand New")
         assertThat(queuedNovelsNotShown(listOf("CULTIVATION"), novels)).isEmpty()
         assertThat(queuedNovelsNotShown(emptyList(), novels)).isEmpty()
+    }
+
+    @Test
+    fun `folders flow exposes folders from dao`() = runTest {
+        val folders = listOf(FolderEntity(id = 1, name = "Reading"), FolderEntity(id = 2, name = "Done"))
+        every { folderDao.getAll() } returns flowOf(folders)
+        viewModel = LibraryViewModel(
+            context = context,
+            savedStateHandle = savedState,
+            novelDao = novelDao,
+            chapterDao = chapterDao,
+            bookmarkDao = bookmarkDao,
+            backgroundImportManager = bgManager,
+            libraryPreferences = prefs,
+            characterManagementUseCase = charManagement,
+            coverManagementUseCase = coverManagement,
+            characterPhotoDao = charPhotoDao,
+            mvlempyrCharacterImporter = importer,
+            updateCheckScheduler = updateCheckScheduler,
+            webImportUseCase = webImportUseCase,
+            failedChapterDao = failedChapterDao,
+            folderDao = folderDao,
+            retryChapterUseCase = retryChapterUseCase,
+            scanMissingChaptersUseCase = scanMissingChaptersUseCase,
+            chapterInserter = chapterInserter,
+            parserRegistry = parserRegistry,
+            mhtParser = mhtParser,
+            fileCharsetDetector = fileCharsetDetector,
+            io = kotlinx.coroutines.Dispatchers.Unconfined
+        )
+        assertThat(viewModel.folders.value).isEqualTo(folders)
+    }
+
+    @Test
+    fun `createFolder inserts a folder via dao`() = runTest {
+        viewModel.createFolder("My Collection")
+        coVerify { folderDao.insert(match { it.name == "My Collection" }) }
+    }
+
+    @Test
+    fun `createFolder ignores blank names`() = runTest {
+        viewModel.createFolder("   ")
+        coVerify(exactly = 0) { folderDao.insert(any()) }
+    }
+
+    @Test
+    fun `togglePin pins when under the cap`() = runTest {
+        coEvery { folderDao.countPinned() } returns 2
+        viewModel.togglePin(FolderEntity(id = 1, name = "F"))
+        coVerify { folderDao.setPinned(1, true) }
+    }
+
+    @Test
+    fun `togglePin refuses to pin a fourth and emits error`() = runTest {
+        coEvery { folderDao.countPinned() } returns 3
+        viewModel.errorEvents.test {
+            viewModel.togglePin(FolderEntity(id = 1, name = "F", isPinned = false))
+            assertThat(awaitItem()).isNotNull()
+        }
+        coVerify(exactly = 0) { folderDao.setPinned(any(), any()) }
+    }
+
+    @Test
+    fun `togglePin always allows unpin`() = runTest {
+        coEvery { folderDao.countPinned() } returns 3
+        viewModel.togglePin(FolderEntity(id = 1, name = "F", isPinned = true))
+        coVerify { folderDao.setPinned(1, false) }
+    }
+
+    @Test
+    fun `setNovelFolders delegates diff to dao`() = runTest {
+        viewModel.setNovelFolders(5, setOf(1L, 2L))
+        coVerify { folderDao.setNovelFolders(5, setOf(1L, 2L)) }
+    }
+
+    @Test
+    fun `addNovelsToFolder delegates to dao`() = runTest {
+        viewModel.addNovelsToFolder(7, listOf(1L, 2L))
+        coVerify { folderDao.addNovelsToFolder(7, listOf(1L, 2L)) }
+    }
+
+    @Test
+    fun `selectNovel clears the selected folder`() = runTest {
+        val novel = NovelEntity(id = 1, title = "N", sourceFolder = "", totalChapters = 1)
+        every { novelDao.getAllNovels() } returns flowOf(listOf(novel))
+        viewModel.openFolder(FolderEntity(id = 9, name = "F"))
+        assertThat(viewModel.selectedFolder.value).isNotNull()
+        viewModel.selectNovel(novel)
+        assertThat(viewModel.selectedFolder.value).isNull()
     }
 }

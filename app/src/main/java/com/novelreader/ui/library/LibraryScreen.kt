@@ -49,10 +49,13 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.novelreader.R
+import com.novelreader.ui.library.components.AddToCollectionDialog
+import com.novelreader.ui.library.components.CollectionNameDialog
 import com.novelreader.ui.library.components.CoverUrlDialog
 import com.novelreader.ui.library.components.DeleteNovelDialog
 import com.novelreader.ui.library.components.WhatsNewBottomSheet
 import com.novelreader.ui.library.tabs.ChaptersTab
+import com.novelreader.ui.library.tabs.CollectionsTab
 import com.novelreader.ui.library.tabs.LibraryTab
 import com.novelreader.ui.library.tabs.PersonagensTab
 
@@ -89,6 +92,19 @@ fun LibraryScreen(
     val showWhatsNew by viewModel.showWhatsNew.collectAsState()
     val whatsNewGroups by viewModel.whatsNewGroups.collectAsState()
     val newChapterCounts by viewModel.newChapterCounts.collectAsState()
+    val folders by viewModel.folders.collectAsState()
+    val folderCounts by viewModel.folderCounts.collectAsState()
+    val selectedFolder by viewModel.selectedFolder.collectAsState()
+    val novelsInFolder by viewModel.novelsInFolder.collectAsState()
+    var showCreateFolderDialog by remember { mutableStateOf(false) }
+    var addToCollectionTarget by remember { mutableStateOf<com.novelreader.data.local.db.entity.NovelEntity?>(null) }
+    var addToCollectionSelected by remember { mutableStateOf<Set<Long>>(emptySet()) }
+
+    LaunchedEffect(addToCollectionTarget) {
+        addToCollectionTarget?.let {
+            addToCollectionSelected = viewModel.getFolderIdsForNovel(it.id)
+        }
+    }
     val context = LocalContext.current
 
     BackHandler(enabled = selectedNovel != null) {
@@ -274,6 +290,12 @@ fun LibraryScreen(
                             onClick = { viewModel.selectTab(2) },
                             text = { Text(stringResource(R.string.characters)) }
                         )
+                    } else {
+                        Tab(
+                            selected = selectedTab == 1,
+                            onClick = { viewModel.selectTab(1) },
+                            text = { Text(stringResource(R.string.collections)) }
+                        )
                     }
                 }
             }
@@ -281,6 +303,10 @@ fun LibraryScreen(
         floatingActionButton = {
             if (selectedTab == 0) {
                 FloatingActionButton(onClick = onImportClick) {
+                    Text("+", style = MaterialTheme.typography.titleLarge)
+                }
+            } else if (selectedTab == 1 && selectedNovel == null) {
+                FloatingActionButton(onClick = { showCreateFolderDialog = true }) {
                     Text("+", style = MaterialTheme.typography.titleLarge)
                 }
             }
@@ -311,6 +337,7 @@ fun LibraryScreen(
                     onCheckForUpdates = { viewModel.checkForUpdates(it.id) },
                     onResyncChapters = { viewModel.resyncChapters(it.id) },
                     onChapters = { viewModel.selectNovel(it) },
+                    onAddToCollection = { addToCollectionTarget = it },
                     onToggleFavorite = { novel ->
                         viewModel.toggleNovelFavorite(novel.id, novel.isFavorite)
                     },
@@ -323,7 +350,32 @@ fun LibraryScreen(
                     onImportLocal = { onImportClick() },
                     onImportWeb = { onImportClick() }
                 )
-                1 -> ChaptersTab(
+                1 -> if (selectedNovel == null) {
+                    CollectionsTab(
+                        folders = folders,
+                        folderCounts = folderCounts,
+                        novelsInSelectedFolder = novelsInFolder,
+                        allNovels = novels,
+                        selectedFolder = selectedFolder,
+                        onRenameFolder = { id, name -> viewModel.renameFolder(id, name) },
+                        onDeleteFolder = { viewModel.deleteFolder(it) },
+                        onOpenFolder = { viewModel.openFolder(it) },
+                        onCloseFolder = { viewModel.closeFolder() },
+                        onTogglePin = { viewModel.togglePin(it) },
+                        onAddNovelsToFolder = { id, ids -> viewModel.addNovelsToFolder(id, ids) },
+                        onRemoveNovelFromFolder = { novelId ->
+                            selectedFolder?.let { viewModel.removeNovelFromFolder(it.id, novelId) }
+                        },
+                        onNovelClick = { novel ->
+                            if (novel.lastChapterId != null) {
+                                onChapterClick(novel.id, novel.lastChapterId)
+                            } else {
+                                viewModel.selectNovel(novel)
+                            }
+                        }
+                    )
+                } else {
+                    ChaptersTab(
                     novelId = selectedNovel?.id ?: 0L,
                     novelTitle = selectedNovel?.title,
                     chapters = chapters,
@@ -354,6 +406,7 @@ fun LibraryScreen(
                     pendingScrollToFailedNovelId = scrollToFailedRequest,
                     onConsumeScrollToFailed = { viewModel.consumeScrollToFailed() }
                 )
+                }
                 2 -> PersonagensTab(
                     characters = characters,
                     characterPhotos = characterPhotos,
@@ -375,5 +428,21 @@ fun LibraryScreen(
                 )
             }
         }
+    }
+
+    if (showCreateFolderDialog) {
+        CollectionNameDialog(
+            title = stringResource(R.string.create_collection),
+            onConfirm = { name -> viewModel.createFolder(name); showCreateFolderDialog = false },
+            onDismiss = { showCreateFolderDialog = false }
+        )
+    }
+    addToCollectionTarget?.let { novel ->
+        AddToCollectionDialog(
+            folders = folders,
+            initialSelected = addToCollectionSelected,
+            onConfirm = { ids -> viewModel.setNovelFolders(novel.id, ids); addToCollectionTarget = null },
+            onDismiss = { addToCollectionTarget = null }
+        )
     }
 }

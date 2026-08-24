@@ -8,6 +8,7 @@ import com.novelreader.data.local.db.dao.CharacterDao
 import com.novelreader.data.local.db.dao.CharacterPhotoDao
 import com.novelreader.data.local.db.dao.ChapterDao
 import com.novelreader.data.local.db.dao.FailedChapterDao
+import com.novelreader.data.local.db.dao.FolderDao
 import com.novelreader.data.local.db.dao.NovelDao
 import com.novelreader.data.local.db.dao.NovelSourceDao
 import dagger.Module
@@ -38,7 +39,8 @@ object DatabaseModule {
             NovelDatabase.MIGRATION_7_8,
             NovelDatabase.MIGRATION_8_9,
             NovelDatabase.MIGRATION_9_10,
-            NovelDatabase.MIGRATION_10_11
+            NovelDatabase.MIGRATION_10_11,
+            NovelDatabase.MIGRATION_11_12
         ).build()
     }
 
@@ -62,4 +64,7 @@ object DatabaseModule {
 
     @Provides
     fun provideNovelSourceDao(database: NovelDatabase): NovelSourceDao = database.novelSourceDao()
+
+    @Provides
+    fun provideFolderDao(database: NovelDatabase): FolderDao = database.folderDao()
 }

@@ -18,6 +18,9 @@ interface ChapterDao {
     @Query("SELECT * FROM chapters WHERE id = :id")
     suspend fun getChapterById(id: Long): ChapterEntity?
 
+    @Query("SELECT * FROM chapters WHERE novelId = :novelId AND fileName = :fileName LIMIT 1")
+    suspend fun getChapterByNovelAndFileName(novelId: Long, fileName: String): ChapterEntity?
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAll(chapters: List<ChapterEntity>)
 

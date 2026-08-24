@@ -7,6 +7,7 @@ import com.novelreader.data.local.db.dao.BookmarkDao
 import com.novelreader.data.local.db.dao.ChapterDao
 import com.novelreader.data.local.db.dao.CharacterPhotoDao
 import com.novelreader.data.local.db.dao.FailedChapterDao
+import com.novelreader.data.local.db.dao.FolderDao
 import com.novelreader.data.local.db.dao.NovelDao
 import com.novelreader.data.local.preferences.LibraryPreferences
 import com.novelreader.data.parser.MhtParser
@@ -61,6 +62,7 @@ class LibraryViewModelScrollTest {
     private val updateCheckScheduler: UpdateCheckScheduler = mockk(relaxed = true)
     private val webImportUseCase: WebImportUseCase = mockk(relaxed = true)
     private val failedChapterDao: FailedChapterDao = mockk(relaxed = true)
+    private val folderDao: FolderDao = mockk(relaxed = true)
     private val retryChapterUseCase: RetryChapterUseCase = mockk(relaxed = true)
     private val scanMissingChaptersUseCase: ScanMissingChaptersUseCase = mockk(relaxed = true)
     private val chapterInserter: ChapterInserter = mockk(relaxed = true)
@@ -75,6 +77,8 @@ class LibraryViewModelScrollTest {
         Dispatchers.setMain(testDispatcher)
         every { novelDao.getAllNovels() } returns flowOf(emptyList())
         every { bookmarkDao.getAll() } returns flowOf(emptyList())
+        every { folderDao.getAll() } returns flowOf(emptyList())
+        every { folderDao.getFolderCounts() } returns flowOf(emptyList())
         every { prefs.sortOrder } returns flowOf("LAST_READ")
         every { prefs.chapterSortOrder } returns flowOf("ASCENDING")
         every { prefs.viewMode } returns flowOf("GRID")
@@ -94,6 +98,7 @@ class LibraryViewModelScrollTest {
             updateCheckScheduler = updateCheckScheduler,
             webImportUseCase = webImportUseCase,
             failedChapterDao = failedChapterDao,
+            folderDao = folderDao,
             retryChapterUseCase = retryChapterUseCase,
             scanMissingChaptersUseCase = scanMissingChaptersUseCase,
             chapterInserter = chapterInserter,
@@ -178,6 +183,7 @@ class LibraryViewModelScrollTest {
             updateCheckScheduler = updateCheckScheduler,
             webImportUseCase = webImportUseCase,
             failedChapterDao = failedChapterDao,
+            folderDao = folderDao,
             retryChapterUseCase = retryChapterUseCase,
             scanMissingChaptersUseCase = scanMissingChaptersUseCase,
             chapterInserter = chapterInserter,
@@ -212,6 +218,7 @@ class LibraryViewModelScrollTest {
             updateCheckScheduler = updateCheckScheduler,
             webImportUseCase = webImportUseCase,
             failedChapterDao = failedChapterDao,
+            folderDao = folderDao,
             retryChapterUseCase = retryChapterUseCase,
             scanMissingChaptersUseCase = scanMissingChaptersUseCase,
             chapterInserter = chapterInserter,

@@ -60,6 +60,10 @@ class ReaderPreferences @Inject constructor(
         context.dataStore.edit { it[Keys.FONT_SIZE] = size }
     }
 
+    suspend fun updateFontFamily(family: String) {
+        context.dataStore.edit { it[Keys.FONT_FAMILY] = family }
+    }
+
     suspend fun updateLineHeight(height: Float) {
         context.dataStore.edit { it[Keys.LINE_HEIGHT] = height.toString() }
     }

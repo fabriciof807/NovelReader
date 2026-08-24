@@ -12,11 +12,13 @@ import com.novelreader.data.local.preferences.LibraryPreferences
 import com.novelreader.data.local.db.dao.ChapterDao
 import com.novelreader.data.local.db.dao.CharacterPhotoDao
 import com.novelreader.data.local.db.dao.FailedChapterDao
+import com.novelreader.data.local.db.dao.FolderDao
 import com.novelreader.data.local.db.dao.NovelDao
 import com.novelreader.data.local.db.entity.CharacterEntity
 import com.novelreader.data.local.db.entity.CharacterPhotoEntity
 import com.novelreader.data.local.db.entity.ChapterEntity
 import com.novelreader.data.local.db.entity.FailedChapterEntity
+import com.novelreader.data.local.db.entity.FolderEntity
 import com.novelreader.data.local.db.entity.NovelEntity
 import com.novelreader.data.parser.MhtParser
 import com.novelreader.data.parser.ParserRegistry
@@ -48,7 +50,9 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -60,6 +64,8 @@ enum class SortOrder { TITLE, CREATED_AT, LAST_READ }
 enum class ChapterSortOrder { ASCENDING, DESCENDING }
 enum class ViewMode { GRID, LIST }
 enum class NovelFilter { ALL, READING, COMPLETED, FAVORITES }
+
+const val MAX_PINNED_FOLDERS = 3
 
 data class LibraryStats(
     val totalNovels: Int = 0,
@@ -90,6 +96,7 @@ class LibraryViewModel @Inject constructor(
     private val updateCheckScheduler: UpdateCheckScheduler,
     private val webImportUseCase: WebImportUseCase,
     private val failedChapterDao: FailedChapterDao,
+    private val folderDao: FolderDao,
     private val retryChapterUseCase: RetryChapterUseCase,
     private val scanMissingChaptersUseCase: ScanMissingChaptersUseCase,
     private val chapterInserter: ChapterInserter,
@@ -214,6 +221,21 @@ class LibraryViewModel @Inject constructor(
         .map { groups -> groups.associate { it.novelId to it.count } }
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptyMap())
 
+    val folders: StateFlow<List<FolderEntity>> = folderDao.getAll()
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    val folderCounts: StateFlow<Map<Long, Int>> = folderDao.getFolderCounts()
+        .map { counts -> counts.associate { it.folderId to it.count } }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyMap())
+
+    private val _selectedFolder = MutableStateFlow<FolderEntity?>(null)
+    val selectedFolder: StateFlow<FolderEntity?> = _selectedFolder
+
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    val novelsInFolder: StateFlow<List<NovelEntity>> = _selectedFolder
+        .flatMapLatest { folder -> folder?.let { folderDao.getNovelsInFolder(it.id) } ?: emptyFlow() }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
     val backgroundImportState: StateFlow<BackgroundImportState> = backgroundImportManager.state
 
     val readProgress: StateFlow<Map<Long, Float>> = novelDao.getAllNovels().map { novels ->
@@ -329,6 +351,7 @@ class LibraryViewModel @Inject constructor(
 
     fun selectNovel(novel: NovelEntity) {
         _selectedNovel.value = novel
+        _selectedFolder.value = null
         _selectedTab.value = 1
         viewModelScope.launch {
             novelDao.setHasUpdates(novel.id, false)
@@ -340,6 +363,68 @@ class LibraryViewModel @Inject constructor(
         _selectedNovel.value = null
         _selectedTab.value = 0
         _failedChapters.value = emptyList()
+    }
+
+    fun openFolder(folder: FolderEntity) {
+        _selectedFolder.value = folder
+    }
+
+    fun closeFolder() {
+        _selectedFolder.value = null
+    }
+
+    fun createFolder(name: String) {
+        val trimmed = name.trim()
+        if (trimmed.isBlank()) return
+        viewModelScope.launch(io) {
+            folderDao.insert(FolderEntity(name = trimmed))
+        }
+    }
+
+    fun renameFolder(id: Long, name: String) {
+        val trimmed = name.trim()
+        if (trimmed.isBlank()) return
+        viewModelScope.launch(io) {
+            folderDao.rename(id, trimmed)
+        }
+    }
+
+    fun deleteFolder(id: Long) {
+        viewModelScope.launch(io) {
+            folderDao.delete(id)
+            if (_selectedFolder.value?.id == id) _selectedFolder.value = null
+        }
+    }
+
+    fun togglePin(folder: FolderEntity) {
+        viewModelScope.launch(io) {
+            if (!folder.isPinned && folderDao.countPinned() >= MAX_PINNED_FOLDERS) {
+                _errorEvents.tryEmit(context.getString(R.string.pinned_collections_limit, MAX_PINNED_FOLDERS))
+                return@launch
+            }
+            folderDao.setPinned(folder.id, !folder.isPinned)
+        }
+    }
+
+    suspend fun getFolderIdsForNovel(novelId: Long): Set<Long> =
+        folderDao.getFolderIdsForNovel(novelId).toSet()
+
+    fun setNovelFolders(novelId: Long, folderIds: Set<Long>) {
+        viewModelScope.launch(io) {
+            folderDao.setNovelFolders(novelId, folderIds)
+        }
+    }
+
+    fun addNovelsToFolder(folderId: Long, novelIds: List<Long>) {
+        viewModelScope.launch(io) {
+            folderDao.addNovelsToFolder(folderId, novelIds)
+        }
+    }
+
+    fun removeNovelFromFolder(folderId: Long, novelId: Long) {
+        viewModelScope.launch(io) {
+            folderDao.removeNovelFromFolder(folderId, novelId)
+        }
     }
 
     fun loadChapters(novelId: Long) {

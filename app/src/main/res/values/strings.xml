@@ -70,6 +70,22 @@
     <string name="importing">Importando…</string>
     <string name="import_queued_label">Aguardando importação</string>
 
+    <!-- Collections -->
+    <string name="collections">Coleções</string>
+    <string name="create_collection">Criar coleção</string>
+    <string name="collection_name">Nome da coleção</string>
+    <string name="add_to_collection">Adicionar à coleção</string>
+    <string name="add_novels_to_collection">Adicionar novels à coleção</string>
+    <string name="delete_collection">Excluir coleção</string>
+    <string name="rename_collection">Renomear coleção</string>
+    <string name="collection_empty">Nenhuma coleção. Toque em + para criar.</string>
+    <string name="collection_no_novels">Nenhum novel nesta coleção. Toque em + para adicionar.</string>
+    <string name="collection_novels_count">%d novel(s)</string>
+    <string name="pin_collection">Fixar</string>
+    <string name="unpin_collection">Desafixar</string>
+    <string name="pinned_collections_limit">Limite de %d coleções fixadas</string>
+    <string name="delete_collection_confirm">Excluir coleção? Os novels não serão removidos.</string>
+
     <!-- Favorites -->
     <string name="no_favorites">Nenhum favorito ainda</string>
     <string name="add_favorites_hint">Adicione favoritos durante a leitura</string>
@@ -285,6 +301,10 @@
     <string name="export_bookmarks_desc">Marcações, notas e posição de leitura</string>
     <string name="export_characters">Personagens</string>
     <string name="export_characters_desc">Personagens, notas e fotos</string>
+    <string name="export_collections">Coleções</string>
+    <string name="export_collections_desc">Pastas e novels vinculadas</string>
+    <string name="export_settings">Configurações</string>
+    <string name="export_settings_desc">Tema, idioma, leitor e biblioteca</string>
     <string name="export_select_at_least_one">Selecione pelo menos uma categoria para exportar</string>
     <string name="import_confirm_title">Importar dados?</string>
     <string name="import_confirm_msg">As novels com URL serão baixadas. Bookmarks e personagens pendentes serão armazenados.</string>
@@ -292,13 +312,17 @@
     <string name="import_banner_queued_title">Na fila (%d)</string>
     <string name="import_banner_chapter">Capítulo %d</string>
     <string name="import_preview_title">Preview de importação</string>
-    <string name="import_preview_count">%1$d novels · %2$d bookmarks · %3$d personagens</string>
+    <string name="import_preview_count">%1$d novels · %2$d bookmarks · %3$d personagens · %4$d coleções</string>
     <string name="import_preview_import">Importar %d selecionados</string>
+    <string name="import_preview_import_no_novels">Importar</string>
     <string name="import_result_title">Importação concluída</string>
     <string name="import_result_novels">%d novel(ns) na fila de importação</string>
     <string name="import_result_failed">%d falha(s):</string>
-    <string name="import_result_bookmarks">%d bookmark(s) pendente(s)</string>
-    <string name="import_result_characters">%d personagen(s) pendente(s)</string>
+    <string name="import_result_local">%d novel(s) local(is) não restaurável(is):</string>
+    <string name="import_result_settings">Configurações aplicadas</string>
+    <string name="import_result_bookmarks">%1$d bookmark(s) restaurado(s) · %2$d após download</string>
+    <string name="import_result_characters">%1$d personagen(s) restaurado(s) · %2$d após download</string>
+    <string name="import_result_collections">Coleções: %1$d vínculo(s) · %2$d após download</string>
 
     <!-- Personagens tab FAB labels -->
     <string name="personagens_add_label">Adicionar</string>

@@ -100,4 +100,19 @@ class ChapterDaoTest {
         chapterDao.clearAllNewFlags()
         assertThat(chapterDao.countNewChapters()).isEqualTo(0)
     }
+
+    @Test
+    fun `getChapterByNovelAndFileName matches only within the same novel`() = runTest {
+        val novelA = novelDao.insert(NovelEntity(title = "A", sourceFolder = "", totalChapters = 1))
+        val novelB = novelDao.insert(NovelEntity(title = "B", sourceFolder = "", totalChapters = 1))
+        chapterDao.insertAll(
+            listOf(
+                ChapterEntity(novelId = novelA, title = "Ch A", fileName = "ch1.html", orderIndex = 0, content = "c"),
+                ChapterEntity(novelId = novelB, title = "Ch B", fileName = "ch1.html", orderIndex = 0, content = "c")
+            )
+        )
+        val found = chapterDao.getChapterByNovelAndFileName(novelB, "ch1.html")
+        assertThat(found?.title).isEqualTo("Ch B")
+        assertThat(chapterDao.getChapterByNovelAndFileName(novelB, "missing.html")).isNull()
+    }
 }

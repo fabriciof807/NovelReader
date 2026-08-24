@@ -52,6 +52,9 @@ interface NovelDao {
     @Query("UPDATE novels SET autoUpdate = :enabled WHERE id = :novelId")
     suspend fun updateAutoUpdate(novelId: Long, enabled: Boolean)
 
+    @Query("UPDATE novels SET author = :author WHERE id = :id")
+    suspend fun updateAuthor(id: Long, author: String?)
+
     @Query("UPDATE novels SET hasUpdates = :on WHERE id = :id")
     suspend fun setHasUpdates(id: Long, on: Boolean)
 

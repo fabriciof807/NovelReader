@@ -9,6 +9,7 @@ import com.novelreader.data.local.db.dao.CharacterDao
 import com.novelreader.data.local.db.dao.CharacterPhotoDao
 import com.novelreader.data.local.db.dao.ChapterDao
 import com.novelreader.data.local.db.dao.FailedChapterDao
+import com.novelreader.data.local.db.dao.FolderDao
 import com.novelreader.data.local.db.dao.NovelDao
 import com.novelreader.data.local.db.dao.NovelSourceDao
 import com.novelreader.data.local.db.entity.BookmarkEntity
@@ -17,12 +18,14 @@ import com.novelreader.data.local.db.entity.CharacterPhotoEntity
 import com.novelreader.data.local.db.entity.ChapterEntity
 import com.novelreader.data.local.db.entity.ChapterFts
 import com.novelreader.data.local.db.entity.FailedChapterEntity
+import com.novelreader.data.local.db.entity.FolderEntity
 import com.novelreader.data.local.db.entity.NovelEntity
+import com.novelreader.data.local.db.entity.NovelFolderCrossRef
 import com.novelreader.data.local.db.entity.NovelSourceEntity
 
 @Database(
-    entities = [NovelEntity::class, ChapterEntity::class, BookmarkEntity::class, CharacterEntity::class, CharacterPhotoEntity::class, ChapterFts::class, FailedChapterEntity::class, NovelSourceEntity::class],
-    version = 11,
+    entities = [NovelEntity::class, ChapterEntity::class, BookmarkEntity::class, CharacterEntity::class, CharacterPhotoEntity::class, ChapterFts::class, FailedChapterEntity::class, NovelSourceEntity::class, FolderEntity::class, NovelFolderCrossRef::class],
+    version = 12,
     exportSchema = true
 )
 abstract class NovelDatabase : RoomDatabase() {
@@ -33,6 +36,7 @@ abstract class NovelDatabase : RoomDatabase() {
     abstract fun characterPhotoDao(): CharacterPhotoDao
     abstract fun failedChapterDao(): FailedChapterDao
     abstract fun novelSourceDao(): NovelSourceDao
+    abstract fun folderDao(): FolderDao
 
     companion object {
         val MIGRATION_1_2 = object : Migration(1, 2) {
@@ -191,6 +195,30 @@ abstract class NovelDatabase : RoomDatabase() {
         val MIGRATION_10_11 = object : Migration(10, 11) {
             override fun migrate(database: SupportSQLiteDatabase) {
                 database.execSQL("ALTER TABLE chapters ADD COLUMN isNew INTEGER NOT NULL DEFAULT 0")
+            }
+        }
+
+        val MIGRATION_11_12 = object : Migration(11, 12) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("""
+                    CREATE TABLE IF NOT EXISTS `folders` (
+                        `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        `name` TEXT NOT NULL,
+                        `isPinned` INTEGER NOT NULL DEFAULT 0,
+                        `createdAt` INTEGER NOT NULL
+                    )
+                """)
+                database.execSQL("""
+                    CREATE TABLE IF NOT EXISTS `novel_folder` (
+                        `folderId` INTEGER NOT NULL,
+                        `novelId` INTEGER NOT NULL,
+                        PRIMARY KEY(`folderId`, `novelId`),
+                        FOREIGN KEY(`folderId`) REFERENCES `folders`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE,
+                        FOREIGN KEY(`novelId`) REFERENCES `novels`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE
+                    )
+                """)
+                database.execSQL("CREATE INDEX IF NOT EXISTS `index_novel_folder_folderId` ON `novel_folder` (`folderId`)")
+                database.execSQL("CREATE INDEX IF NOT EXISTS `index_novel_folder_novelId` ON `novel_folder` (`novelId`)")
             }
         }
     }

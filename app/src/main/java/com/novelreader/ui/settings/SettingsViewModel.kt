@@ -117,11 +117,21 @@ class SettingsViewModel @Inject constructor(
                 if (result.novelsFailed.isNotEmpty()) {
                     sb.append("${result.novelsFailed.size} falha(s). ")
                 }
-                if (result.bookmarksPending > 0) {
-                    sb.append("${result.bookmarksPending} bookmark(s) pendente(s). ")
+                if (result.novelsLocal.isNotEmpty()) {
+                    sb.append("${result.novelsLocal.size} novel(s) local(is) não restaurável(is). ")
                 }
-                if (result.charactersPending > 0) {
-                    sb.append("${result.charactersPending} personagen(s) pendente(s).")
+                if (result.settingsApplied) {
+                    sb.append("Configurações aplicadas. ")
+                }
+                if (result.bookmarksRestored > 0 || result.charactersRestored > 0) {
+                    sb.append(
+                        "${result.bookmarksRestored + result.charactersRestored} item(ns) restaurado(s). "
+                    )
+                }
+                if (result.bookmarksPending + result.charactersPending > 0) {
+                    sb.append(
+                        "${result.bookmarksPending + result.charactersPending} pendente(s) para após o download."
+                    )
                 }
                 _importResult.emit(sb.toString().trimEnd())
             } catch (e: Exception) {

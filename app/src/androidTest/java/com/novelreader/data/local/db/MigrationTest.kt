@@ -150,4 +150,35 @@ class MigrationTest {
         cursor.close()
         migratedDb.close()
     }
+
+    @Test
+    fun migrate11to12_createsFoldersAndNovelFolderTables() {
+        val db = helper.createDatabase(TEST_DB, 11)
+        db.execSQL(
+            "INSERT INTO novels (title, sourceFolder, totalChapters, lastReadAt, createdAt, sourceUrl, lastCheckedAt, autoUpdate, hasUpdates, isFavorite) " +
+                "VALUES ('T', '', 0, 0, 0, '', 0, 0, 0, 0)"
+        )
+        db.close()
+
+        val migratedDb = helper.runMigrationsAndValidate(
+            TEST_DB, 12, true, NovelDatabase.MIGRATION_11_12
+        )
+
+        val foldersCursor = migratedDb.query("SELECT * FROM folders")
+        assertThat(foldersCursor.count).isEqualTo(0)
+        foldersCursor.close()
+
+        migratedDb.execSQL(
+            "INSERT INTO folders (name, isPinned, createdAt) VALUES ('Reading', 1, 0)"
+        )
+        migratedDb.execSQL(
+            "INSERT INTO novel_folder (folderId, novelId) VALUES (1, 1)"
+        )
+        val linkCursor = migratedDb.query("SELECT folderId, novelId FROM novel_folder")
+        assertThat(linkCursor.moveToFirst()).isTrue()
+        assertThat(linkCursor.getLong(0)).isEqualTo(1L)
+        assertThat(linkCursor.getLong(1)).isEqualTo(1L)
+        linkCursor.close()
+        migratedDb.close()
+    }
 }

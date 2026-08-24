@@ -15,8 +15,8 @@ android {
         applicationId = "com.novelreader"
         minSdk = 26
         targetSdk = 34
-        versionCode = 26
-        versionName = "2.7.5"
+        versionCode = 28
+        versionName = "2.9.0"
     }
 
     signingConfigs {

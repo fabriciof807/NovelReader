@@ -103,6 +103,8 @@ fun SettingsScreen(
     var exportNovels by remember { mutableStateOf(true) }
     var exportBookmarks by remember { mutableStateOf(true) }
     var exportCharacters by remember { mutableStateOf(true) }
+    var exportCollections by remember { mutableStateOf(true) }
+    var exportSettings by remember { mutableStateOf(true) }
     var showImportConfirm by remember { mutableStateOf(false) }
     var importPreview by remember { mutableStateOf<ImportPreview?>(null) }
     var selectedImportTitles by remember { mutableStateOf<Set<String>>(emptySet()) }
@@ -170,7 +172,8 @@ fun SettingsScreen(
     }
 
     if (showExportConfirm) {
-        val canExport = exportNovels || exportBookmarks || exportCharacters
+        val canExport = exportNovels || exportBookmarks || exportCharacters ||
+            exportCollections || exportSettings
         AlertDialog(
             onDismissRequest = { showExportConfirm = false },
             title = { Text(stringResource(R.string.export_confirm_title)) },
@@ -196,6 +199,18 @@ fun SettingsScreen(
                         checked = exportCharacters,
                         onCheckedChange = { exportCharacters = it }
                     )
+                    ExportOptionRow(
+                        label = stringResource(R.string.export_collections),
+                        description = stringResource(R.string.export_collections_desc),
+                        checked = exportCollections,
+                        onCheckedChange = { exportCollections = it }
+                    )
+                    ExportOptionRow(
+                        label = stringResource(R.string.export_settings),
+                        description = stringResource(R.string.export_settings_desc),
+                        checked = exportSettings,
+                        onCheckedChange = { exportSettings = it }
+                    )
                     if (!canExport) {
                         Text(
                             text = stringResource(R.string.export_select_at_least_one),
@@ -213,7 +228,9 @@ fun SettingsScreen(
                         ExportOptions(
                             novels = exportNovels,
                             bookmarks = exportBookmarks,
-                            characters = exportCharacters
+                            characters = exportCharacters,
+                            collections = exportCollections,
+                            settings = exportSettings
                         )
                     )
                 }, enabled = canExport) { Text(stringResource(R.string.confirm)) }
@@ -264,7 +281,8 @@ fun SettingsScreen(
                         R.string.import_preview_count,
                         preview.novels.size,
                         preview.bookmarksCount,
-                        preview.charactersCount
+                        preview.charactersCount,
+                        preview.collectionsCount
                     ),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -332,9 +350,12 @@ fun SettingsScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp),
-                    enabled = selectedImportTitles.isNotEmpty()
+                    enabled = selectedImportTitles.isNotEmpty() || preview.novels.isEmpty()
                 ) {
-                    Text(stringResource(R.string.import_preview_import, selectedImportTitles.size))
+                    Text(
+                        if (preview.novels.isEmpty()) stringResource(R.string.import_preview_import_no_novels)
+                        else stringResource(R.string.import_preview_import, selectedImportTitles.size)
+                    )
                 }
                 Spacer(modifier = Modifier.height(16.dp))
             }
@@ -362,9 +383,46 @@ fun SettingsScreen(
                             )
                         }
                     }
+                    if (result.novelsLocal.isNotEmpty()) {
+                        Text(
+                            stringResource(R.string.import_result_local, result.novelsLocal.size),
+                            color = MaterialTheme.colorScheme.error
+                        )
+                        result.novelsLocal.forEach { name ->
+                            Text(
+                                text = "• $name",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                    if (result.settingsApplied) {
+                        Text(stringResource(R.string.import_result_settings))
+                    }
                     Spacer(Modifier.height(8.dp))
-                    Text(stringResource(R.string.import_result_bookmarks, result.bookmarksPending))
-                    Text(stringResource(R.string.import_result_characters, result.charactersPending))
+                    Text(
+                        stringResource(
+                            R.string.import_result_bookmarks,
+                            result.bookmarksRestored,
+                            result.bookmarksPending
+                        )
+                    )
+                    Text(
+                        stringResource(
+                            R.string.import_result_characters,
+                            result.charactersRestored,
+                            result.charactersPending
+                        )
+                    )
+                    if (result.collectionLinksRestored > 0 || result.collectionLinksPending > 0) {
+                        Text(
+                            stringResource(
+                                R.string.import_result_collections,
+                                result.collectionLinksRestored,
+                                result.collectionLinksPending
+                            )
+                        )
+                    }
                 }
             },
             confirmButton = {
@@ -479,6 +537,8 @@ fun SettingsScreen(
                         exportNovels = true
                         exportBookmarks = true
                         exportCharacters = true
+                        exportCollections = true
+                        exportSettings = true
                         showExportConfirm = true
                     },
                 colors = CardDefaults.cardColors(

@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.PhotoCamera
@@ -109,6 +110,7 @@ fun LibraryTab(
     onCheckForUpdates: (NovelEntity) -> Unit,
     onResyncChapters: (NovelEntity) -> Unit,
     onChapters: (NovelEntity) -> Unit,
+    onAddToCollection: (NovelEntity) -> Unit,
     onToggleFavorite: (NovelEntity) -> Unit,
     onRequestChangeCover: (NovelEntity) -> Unit,
     onRequestCoverByUrl: (NovelEntity) -> Unit,
@@ -213,6 +215,7 @@ fun LibraryTab(
                         onCheckForUpdates = { showMenu = false; onCheckForUpdates(novel) },
                         onResyncChapters = { showMenu = false; onResyncChapters(novel) },
                         onChapters = { showMenu = false; onChapters(novel) },
+                        onAddToCollection = { showMenu = false; onAddToCollection(novel) },
                         onToggleFavorite = { updatedNovel -> onToggleFavorite(updatedNovel) },
                         onDelete = { showMenu = false; onLongClick(novel) }
                     )
@@ -246,6 +249,7 @@ fun LibraryTab(
                         onCheckForUpdates = { showMenu = false; onCheckForUpdates(novel) },
                         onResyncChapters = { showMenu = false; onResyncChapters(novel) },
                         onChapters = { showMenu = false; onChapters(novel) },
+                        onAddToCollection = { showMenu = false; onAddToCollection(novel) },
                         onToggleFavorite = { updatedNovel -> onToggleFavorite(updatedNovel) },
                         onDelete = { showMenu = false; onLongClick(novel) }
                     )
@@ -314,6 +318,7 @@ private fun NovelMenu(
     onCheckForUpdates: () -> Unit,
     onResyncChapters: () -> Unit,
     onChapters: () -> Unit,
+    onAddToCollection: () -> Unit,
     onToggleFavorite: (NovelEntity) -> Unit,
     onDelete: () -> Unit
 ) {
@@ -355,6 +360,11 @@ private fun NovelMenu(
             text = { Text(stringResource(R.string.chapters)) },
             onClick = onChapters,
             leadingIcon = { Icon(Icons.Default.List, contentDescription = null) }
+        )
+        DropdownMenuItem(
+            text = { Text(stringResource(R.string.add_to_collection)) },
+            onClick = onAddToCollection,
+            leadingIcon = { Icon(Icons.Default.Folder, contentDescription = null) }
         )
         DropdownMenuItem(
             text = {
