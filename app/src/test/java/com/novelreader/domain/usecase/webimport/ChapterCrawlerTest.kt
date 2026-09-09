@@ -47,6 +47,18 @@ class ChapterCrawlerTest {
     }
 
     @Test
+    fun makeAbsolute_upgradesHttpLinksWhenTheBaseIsHttps() {
+        val crawler = ChapterCrawler(client, emptySet(), requireHttps = false)
+
+        assertThat(crawler.makeAbsolute("http://example.com/ch1", "https://example.com/novel"))
+            .isEqualTo("https://example.com/ch1")
+        assertThat(crawler.makeAbsolute("http://example.com/ch1", "http://example.com/novel"))
+            .isEqualTo("http://example.com/ch1")
+        assertThat(crawler.makeAbsolute("/ch1", "https://example.com/novel"))
+            .isEqualTo("https://example.com/novel/ch1")
+    }
+
+    @Test
     fun crawlChapterList_dispatchesToReadNovelFullAugmenter() = runBlocking<Unit> {
         val homeHtml = java.io.File("src/test/resources/readnovelfull/novel_landing_sample.html").readText()
         val archiveHtml = java.io.File("src/test/resources/readnovelfull/chapter_archive_sample.html").readText()

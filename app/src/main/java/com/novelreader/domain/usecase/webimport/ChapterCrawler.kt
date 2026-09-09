@@ -192,8 +192,12 @@ class ChapterCrawler @Inject constructor(
         return null
     }
 
-    private fun makeAbsolute(url: String, base: String): String {
-        if (url.startsWith("http://") || url.startsWith("https://")) return url
+    @androidx.annotation.VisibleForTesting
+    internal fun makeAbsolute(url: String, base: String): String {
+        if (url.startsWith("https://")) return url
+        if (url.startsWith("http://")) {
+            return if (base.startsWith("https://")) "https://${url.removePrefix("http://")}" else url
+        }
         val baseUrl = base.trimEnd('/')
         return if (url.startsWith("/")) "$baseUrl$url" else "$baseUrl/$url"
     }
