@@ -51,6 +51,34 @@ class HttpClientTest {
     }
 
     @Test
+    fun get_rejectsBodiesLargerThanTheLimit() = runBlocking<Unit> {
+        client.maxBodyBytes = 1024
+        server.enqueue(MockResponse().setBody("x".repeat(4096)).setResponseCode(200))
+
+        org.junit.Assert.assertThrows(java.io.IOException::class.java) {
+            runBlocking { client.get("http://127.0.0.1:${server.port}/huge") }
+        }
+    }
+
+    @Test
+    fun get_rejectsDecompressionBombs() = runBlocking<Unit> {
+        client.maxDecompressedBytes = 1024
+        val bomb = java.io.ByteArrayOutputStream().also { out ->
+            java.util.zip.GZIPOutputStream(out).use { it.write("x".repeat(64 * 1024).toByteArray()) }
+        }.toByteArray()
+        server.enqueue(
+            MockResponse()
+                .setBody(okio.Buffer().write(bomb))
+                .setHeader("Content-Encoding", "gzip")
+                .setResponseCode(200)
+        )
+
+        org.junit.Assert.assertThrows(java.io.IOException::class.java) {
+            runBlocking { client.get("http://127.0.0.1:${server.port}/bomb") }
+        }
+    }
+
+    @Test
     fun get_returns4xxResponseWithoutThrowing() = runBlocking {
         val body = "<!DOCTYPE html><html><title>Just a moment...</title></html>"
         server.enqueue(MockResponse().setBody(body).setResponseCode(403))

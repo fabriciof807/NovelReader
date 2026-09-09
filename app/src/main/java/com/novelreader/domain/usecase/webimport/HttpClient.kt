@@ -8,6 +8,7 @@ import okhttp3.CookieJar
 import okhttp3.HttpUrl
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import com.novelreader.util.PublicOnlyDns
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -28,7 +29,14 @@ class HttpClient @Inject constructor(
         .followRedirects(true)
         .followSslRedirects(true)
         .cookieJar(CloudflareCookieJar(cookieStore))
+        .dns(PublicOnlyDns())
         .build()
+
+    @androidx.annotation.VisibleForTesting
+    internal var maxBodyBytes: Int = DEFAULT_MAX_BODY_BYTES
+
+    @androidx.annotation.VisibleForTesting
+    internal var maxDecompressedBytes: Int = DEFAULT_MAX_DECOMPRESSED_BYTES
 
     suspend fun get(
         url: String,
@@ -61,7 +69,7 @@ class HttpClient @Inject constructor(
                 headers = r.headers.toMap(),
                 finalUrl = finalUrl
             )
-            val raw = bodySource.bytes()
+            val raw = bodySource.byteStream().use { readBounded(it, maxBodyBytes) }
             val contentEncoding = r.header("Content-Encoding")?.lowercase()
             val decompressed = when (contentEncoding) {
                 "gzip" -> decompressGzip(raw)
@@ -79,17 +87,33 @@ class HttpClient @Inject constructor(
         }
     }
 
+    private fun readBounded(input: java.io.InputStream, limit: Int): ByteArray {
+        val out = java.io.ByteArrayOutputStream()
+        val buffer = ByteArray(8 * 1024)
+        var total = 0
+        while (true) {
+            val read = input.read(buffer)
+            if (read == -1) break
+            total += read
+            if (total > limit) throw java.io.IOException("Response body exceeds $limit bytes")
+            out.write(buffer, 0, read)
+        }
+        return out.toByteArray()
+    }
+
     private fun decompressGzip(bytes: ByteArray): ByteArray =
-        java.util.zip.GZIPInputStream(bytes.inputStream()).use { it.readBytes() }
+        java.util.zip.GZIPInputStream(bytes.inputStream()).use { readBounded(it, maxDecompressedBytes) }
 
     private fun decompressBrotli(bytes: ByteArray): ByteArray =
-        org.brotli.dec.BrotliInputStream(bytes.inputStream()).use { it.readBytes() }
+        org.brotli.dec.BrotliInputStream(bytes.inputStream()).use { readBounded(it, maxDecompressedBytes) }
 
     private fun decompressDeflate(bytes: ByteArray): ByteArray =
-        java.util.zip.InflaterInputStream(bytes.inputStream()).use { it.readBytes() }
+        java.util.zip.InflaterInputStream(bytes.inputStream()).use { readBounded(it, maxDecompressedBytes) }
 
     companion object {
         const val USER_AGENT = "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.6778.200 Mobile Safari/537.36"
+        const val DEFAULT_MAX_BODY_BYTES = 8 * 1024 * 1024
+        const val DEFAULT_MAX_DECOMPRESSED_BYTES = 16 * 1024 * 1024
     }
 }
 
