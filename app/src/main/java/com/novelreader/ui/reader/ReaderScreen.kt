@@ -70,6 +70,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.novelreader.R
 import com.novelreader.data.local.db.entity.BookmarkEntity
+import com.novelreader.data.local.db.entity.ChapterEntity
 import com.novelreader.data.local.preferences.ReaderConfig
 import kotlinx.coroutines.delay
 
@@ -102,6 +103,7 @@ fun ReaderScreen(
     val snackbarHostState = remember { SnackbarHostState() }
 
     val view = LocalView.current
+    val lastLoad = remember { mutableStateOf<Pair<ChapterEntity, WebView>?>(null) }
 
     LaunchedEffect(state.config.keepScreenOn) {
         view.keepScreenOn = state.config.keepScreenOn
@@ -141,28 +143,27 @@ fun ReaderScreen(
     }
 
     LaunchedEffect(state.chapter, webView) {
-        state.chapter?.let { chapter ->
-            webView?.let { wv ->
-                val issued = loadToken.next()
-                pendingRestoreToken = issued
-                scrollRatio = viewModel.getScrollRatio()
-                isPageLoaded = false
-                val transition = pendingSwipeTransition
-                pendingSwipeTransition = ChapterTransition.NONE
-                val html = buildReaderHtml(
-                    content = chapter.content,
-                    config = state.config,
-                    transition = transition,
-                    chapterTitle = com.novelreader.data.parser.TitleExtractor
-                        .cleanChapterTitleForDisplay(chapter.title, state.novel?.title)
-                )
-                wv.loadDataWithBaseURL(loadToken.baseUrl(issued), html, "text/html", "UTF-8", null)
-            }
-        }
+        val chapter = state.chapter ?: return@LaunchedEffect
+        val wv = webView ?: return@LaunchedEffect
+        if (lastLoad.value == (chapter to wv)) return@LaunchedEffect
+        lastLoad.value = chapter to wv
+        val issued = loadToken.next()
+        pendingRestoreToken = issued
+        scrollRatio = viewModel.getScrollRatio()
+        isPageLoaded = false
+        val transition = pendingSwipeTransition
+        pendingSwipeTransition = ChapterTransition.NONE
+        val html = buildReaderHtml(
+            content = chapter.content,
+            config = state.config,
+            transition = transition,
+            chapterTitle = com.novelreader.data.parser.TitleExtractor
+                .cleanChapterTitleForDisplay(chapter.title, state.novel?.title)
+        )
+        wv.loadDataWithBaseURL(loadToken.baseUrl(issued), html, "text/html", "UTF-8", null)
     }
 
     LaunchedEffect(state.config, webView) {
-        if (!isPageLoaded) return@LaunchedEffect
         webView?.evaluateJavascript(applyConfigJs(state.config), null)
     }
 
@@ -181,7 +182,6 @@ fun ReaderScreen(
     }
 
     LaunchedEffect(state.bookmarks, webView) {
-        if (!isPageLoaded) return@LaunchedEffect
         webView?.evaluateJavascript(applyBookmarksJs(state.bookmarks), null)
     }
 
