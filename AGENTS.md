@@ -199,6 +199,8 @@ v2.9.2 (versionCode 29). See [README.md](README.md) (English) and [README_PT.md]
 - Security: backup `sourceUrl` fetches now reject loopback/private/link-local hosts (`RemoteHostGuard`, F2); restored `photoPath` values must live inside the app's private `filesDir` (F3).
 - Security: deep-link extras are token-guarded — notification intents carry a persisted per-install token validated by `DeepLinkIntentParser` (F4); site parsers match hosts exactly via `StringUtils.hostMatchesDomain` (F5).
 - Fix: `http://` chapter links on an https page are upgraded instead of being rejected by `requireHttps`.
+- Fix: reader theme changes and bookmark/config updates now apply to the open page (the load effect no longer double-loads the chapter, so `onPageFinished` token checks pass and scroll restore works again).
+- Feat: the reader theme defaults to `auto` and follows the app theme (light/dark); an explicit choice overrides it.
 - Security: reader WebView CSP now uses a per-load nonce (no `unsafe-inline`); the Cloudflare challenge WebView validates the host before loading; `PublicOnlyDns` blocks private DNS answers; response/decompression bodies are capped at 8/16 MiB.
 - Docs: `docs/security-residual-risks.md` records the piolium findings, the hardening and the dependency CVE audit.
 - Feat: chapter title back at the top of the reader content (`<h1 class="chapter-title">`); source headings that duplicate the title are deduped, short titles included.
@@ -207,7 +209,7 @@ v2.9.2 (versionCode 29). See [README.md](README.md) (English) and [README_PT.md]
 - Feat: options bar (prev / bookmark / settings / chapters / next) opens on a single tap — the 700ms long-press timer is gone; still auto-hides after 4s.
 - Fix: reader restores the actually loaded chapter after process death instead of the stale nav argument (no more `lastChapterId` corruption).
 - Fix: the live scroll position is persisted on pause without waiting for the WebView JS callback.
-- 481 unit tests passing (was 429).
+- 497 unit tests passing (was 429).
 
 ### v2.9.0 highlights
 
