@@ -6,6 +6,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
+import org.jsoup.nodes.TextNode
 import org.jsoup.safety.Safelist
 
 enum class ChapterTransition { NONE, FROM_RIGHT, FROM_LEFT, FROM_TOP, FROM_BOTTOM }
@@ -65,6 +66,10 @@ fun buildReaderHtml(
 ): String {
     val sanitized = Jsoup.clean(content, READER_SAFELIST)
     val finalContent = stripJunkContent(sanitized, chapterTitle)
+    val titleHtml = chapterTitle.trim()
+        .takeIf { it.isNotEmpty() }
+        ?.let { "<h1 class=\"chapter-title\">${TextNode(it).outerHtml()}</h1>" }
+        ?: ""
 
     val themeCss = themeVars(config).entries.joinToString("\n            ") { (k, v) ->
         val cssVar = k.replace(Regex("([A-Z])")) { "-${it.value.lowercase()}" }
@@ -112,6 +117,11 @@ fun buildReaderHtml(
             color: var(--text-color) !important;
         }
         p:first-of-type { text-indent: 0; }
+        .chapter-title {
+            margin: 0 0 1.2em 0;
+            font-size: 1.15em;
+            line-height: 1.35;
+        }
         .bookmarked {
             border-left: 3px solid var(--accent-color);
             padding-left: 12px;
@@ -220,26 +230,10 @@ fun buildReaderHtml(
             }
             (function() {
                 var _ts = {x:0, y:0, t:0};
-                var _lpTimer = null;
-                function clearLongPress() {
-                    if (_lpTimer) { clearTimeout(_lpTimer); _lpTimer = null; }
-                }
                 document.addEventListener('touchstart', function(e) {
                     var t = e.touches[0]; _ts = {x: t.clientX, y: t.clientY, t: Date.now()};
-                    clearLongPress();
-                    _lpTimer = setTimeout(function() {
-                        _lpTimer = null;
-                        try { Android.onTap(); } catch(e) {}
-                    }, 700);
-                });
-                document.addEventListener('touchmove', function(e) {
-                    var t = e.touches[0];
-                    if (Math.abs(t.clientX - _ts.x) > 40 || Math.abs(t.clientY - _ts.y) > 40) {
-                        clearLongPress();
-                    }
                 });
                 document.addEventListener('touchend', function(e) {
-                    clearLongPress();
                     var dx = e.changedTouches[0].clientX - _ts.x;
                     var dy = e.changedTouches[0].clientY - _ts.y;
                     var dt = Date.now() - _ts.t;
@@ -257,9 +251,10 @@ fun buildReaderHtml(
                     }
                     if (dir !== null) {
                         try { Android.onSwipe(dir, Math.abs(dx) > Math.abs(dy) ? 'h' : 'v'); } catch(e) {}
+                    } else if (Math.abs(dx) < 24 && Math.abs(dy) < 24) {
+                        try { Android.onTap(); } catch(e) {}
                     }
                 });
-                document.addEventListener('touchcancel', clearLongPress);
             })();
 
             function applyConfig(cfg) {
@@ -307,7 +302,7 @@ fun buildReaderHtml(
             </script>
         </head>
         <body>
-            <div id="content"$contentClass>$finalContent</div>
+            <div id="content"$contentClass>$titleHtml$finalContent</div>
         </body>
         </html>
     """.trimIndent()
@@ -367,14 +362,25 @@ private fun stripJunkContent(html: String, chapterTitle: String = ""): String {
 }
 
 private fun stripHeadingDuplicatingTitle(doc: Document, chapterTitle: String) {
-    val needle = chapterTitle.trim()
-    if (needle.length <= 20) return
     val heading = doc.body().children().firstOrNull { child ->
-        child.tagName() in HEADING_TAGS &&
-            child.text().trim().contains(needle, ignoreCase = true)
+        child.tagName() in HEADING_TAGS && headingDuplicatesTitle(child.text(), chapterTitle)
     } ?: return
     heading.remove()
 }
+
+private val TITLE_SEPARATORS = listOf(":", "-", "–", "—", "|", "•", "·", ",", ".")
+
+private fun headingDuplicatesTitle(headingText: String, chapterTitle: String): Boolean {
+    val heading = headingText.trim().replace(WHITESPACE, " ").lowercase()
+    val title = chapterTitle.trim().replace(WHITESPACE, " ").lowercase()
+    if (title.isEmpty() || heading.isEmpty()) return false
+    if (title.length > 20 && heading.contains(title)) return true
+    if (!heading.startsWith(title)) return false
+    val remainder = heading.substring(title.length).trimStart()
+    return remainder.isEmpty() || TITLE_SEPARATORS.any { remainder.startsWith(it) }
+}
+
+private val WHITESPACE = Regex("\\s+")
 
 private val HEADING_TAGS = setOf("h1", "h2", "h3", "h4", "h5", "h6")
 

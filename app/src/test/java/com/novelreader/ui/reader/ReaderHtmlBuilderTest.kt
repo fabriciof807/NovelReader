@@ -257,13 +257,58 @@ class ReaderHtmlBuilderTest {
     }
 
     @Test
-    fun `buildReaderHtml keeps a heading when the chapter title is too short to match safely`() {
+    fun `buildReaderHtml strips a short-titled heading whose remainder is a title suffix`() {
         val html = buildReaderHtml(
             content = "<h4>Chapter 1: Opening</h4><p>Body.</p>",
             config = ReaderConfig(),
             chapterTitle = "Chapter 1"
         )
-        assertThat(html).contains("<h4>Chapter 1: Opening</h4>")
+        assertThat(html).doesNotContain("<h4>Chapter 1: Opening</h4>")
+        assertThat(html).contains("<h1 class=\"chapter-title\">Chapter 1</h1>")
+    }
+
+    @Test
+    fun `buildReaderHtml keeps a heading that only shares a number prefix`() {
+        val html = buildReaderHtml(
+            content = "<h4>Chapter 10: Later</h4><p>Body.</p>",
+            config = ReaderConfig(),
+            chapterTitle = "Chapter 1"
+        )
+        assertThat(html).contains("<h4>Chapter 10: Later</h4>")
+    }
+
+    @Test
+    fun `buildReaderHtml prepends the chapter title at the top of the content`() {
+        val html = buildReaderHtml(
+            content = "<p>Body.</p>",
+            config = ReaderConfig(),
+            chapterTitle = "Chapter 1: Opening"
+        )
+        val body = html.substringAfter("<div id=\"content\">").substringBefore("</div>")
+        assertThat(body).startsWith("<h1 class=\"chapter-title\">Chapter 1: Opening</h1>")
+        assertThat(body).contains("<p>Body.</p>")
+    }
+
+    @Test
+    fun `buildReaderHtml escapes HTML in the chapter title`() {
+        val html = buildReaderHtml(
+            content = "<p>Body.</p>",
+            config = ReaderConfig(),
+            chapterTitle = "A <b>B</b> & C"
+        )
+        assertThat(html).contains("A &lt;b&gt;B&lt;/b&gt; &amp; C")
+        assertThat(html).doesNotContain("<h1 class=\"chapter-title\">A <b>")
+    }
+
+    @Test
+    fun `buildReaderHtml omits the title heading when chapterTitle is blank`() {
+        val html = buildReaderHtml(
+            content = "<p>Body.</p>",
+            config = ReaderConfig(),
+            chapterTitle = "   "
+        )
+        assertThat(html).doesNotContain("<h1 class=\"chapter-title\">")
+        assertThat(html).contains("<p>Body.</p>")
     }
 
     @Test
@@ -274,6 +319,19 @@ class ReaderHtmlBuilderTest {
             chapterTitle = "Chapter 1: What Bad Intentions Could an Uncle Have?"
         )
         assertThat(html).contains("<p>Just body.</p>")
+    }
+
+    @Test
+    fun `buildReaderHtml fires onTap on tap release without a long-press timer`() {
+        val html = buildReaderHtml(content = "<p>x</p>", config = ReaderConfig())
+        assertThat(html).doesNotContain("_lpTimer")
+        assertThat(html).contains("Android.onTap()")
+    }
+
+    @Test
+    fun `buildReaderHtml only taps when the gesture stays inside the tap slop`() {
+        val html = buildReaderHtml(content = "<p>x</p>", config = ReaderConfig())
+        assertThat(html).contains("Math.abs(dx) < 24 && Math.abs(dy) < 24")
     }
 
     @Test

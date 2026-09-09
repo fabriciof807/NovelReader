@@ -107,6 +107,9 @@
     <string name="reader_swipe_both">Both</string>
     <string name="reader_swipe_none">Off</string>
     <string name="reader_keep_screen_on">Keep screen on</string>
+    <string name="reader_battery_label">Battery: %1$d%%</string>
+    <string name="reader_battery_charging_label">Battery: %1$d%% (charging)</string>
+    <string name="reader_chapter_read_label">Read: %1$d%%</string>
     <string name="bookmarks_count">Bookmarks (%d)</string>
     <string name="no_bookmarks_chapter">No bookmarks in this chapter</string>
     <string name="add">Add</string>

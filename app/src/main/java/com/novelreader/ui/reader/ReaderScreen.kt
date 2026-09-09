@@ -9,16 +9,18 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -40,7 +42,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
@@ -90,7 +91,7 @@ fun ReaderScreen(
 ) {
     val state by viewModel.state.collectAsState()
     var webView by remember { mutableStateOf<WebView?>(null) }
-    var isControlsVisible by remember { mutableStateOf(true) }
+    var isOptionsVisible by remember { mutableStateOf(true) }
     var scrollRatio by remember { mutableStateOf(0f) }
     var lastInitialSearchQuery by remember { mutableStateOf(initialSearchQuery) }
     val pendingSearchQueryState = remember { mutableStateOf(initialSearchQuery) }
@@ -112,10 +113,10 @@ fun ReaderScreen(
         view.keepScreenOn = state.config.keepScreenOn
     }
 
-    LaunchedEffect(isControlsVisible) {
-        if (isControlsVisible) {
+    LaunchedEffect(isOptionsVisible) {
+        if (isOptionsVisible) {
             delay(4000L)
-            isControlsVisible = false
+            isOptionsVisible = false
         }
     }
 
@@ -353,35 +354,36 @@ fun ReaderScreen(
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
-            AnimatedVisibility(
-                visible = isControlsVisible,
-                enter = fadeIn() + slideInVertically { -it },
-                exit = fadeOut() + slideOutVertically { -it }
-            ) {
-                TopAppBar(
-                    title = {
-                        if (state.isSearchActive) {
-                            OutlinedTextField(
-                                value = state.searchQuery,
-                                onValueChange = { viewModel.onSearchQueryChange(it) },
-                                placeholder = {
-                                    Text(stringResource(R.string.search_chapters_hint))
-                                },
-                                singleLine = true,
-                                modifier = Modifier.fillMaxWidth(),
-                                textStyle = MaterialTheme.typography.bodyMedium
-                            )
-                        } else {
-                            Text(
-                                com.novelreader.data.parser.TitleExtractor.cleanChapterTitleForDisplay(
-                                    state.chapter?.title ?: "",
-                                    state.novel?.title
-                                ),
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        }
-                    },
+            TopAppBar(
+                modifier = Modifier
+                    .background(MaterialTheme.colorScheme.surface)
+                    .statusBarsPadding()
+                    .height(if (state.isSearchActive) 56.dp else 52.dp),
+                windowInsets = WindowInsets(0, 0, 0, 0),
+                title = {
+                    if (state.isSearchActive) {
+                        OutlinedTextField(
+                            value = state.searchQuery,
+                            onValueChange = { viewModel.onSearchQueryChange(it) },
+                            placeholder = {
+                                Text(stringResource(R.string.search_chapters_hint))
+                            },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth(),
+                            textStyle = MaterialTheme.typography.bodyMedium
+                        )
+                    } else {
+                        Text(
+                            com.novelreader.data.parser.TitleExtractor.cleanChapterTitleForDisplay(
+                                state.chapter?.title ?: "",
+                                state.novel?.title
+                            ),
+                            style = MaterialTheme.typography.titleMedium,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                },
                     navigationIcon = {
                         if (state.isSearchActive) {
                             IconButton(onClick = { viewModel.deactivateSearch() }) {
@@ -408,36 +410,18 @@ fun ReaderScreen(
                     colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = MaterialTheme.colorScheme.surface
                     )
-                )
-            }
+            )
         },
         bottomBar = {
-            AnimatedVisibility(
-                visible = isControlsVisible,
-                enter = fadeIn() + slideInVertically { it },
-                exit = fadeOut() + slideOutVertically { it }
-            ) {
-                Column {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(MaterialTheme.colorScheme.surface)
-                            .padding(horizontal = 16.dp, vertical = 2.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        LinearProgressIndicator(
-                            progress = scrollRatio,
-                            modifier = Modifier.weight(1f).height(4.dp)
-                        )
-                        Text(
-                            text = "${(scrollRatio * 100).toInt()}%",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
-                        )
-                    }
+            Column(modifier = Modifier.navigationBarsPadding()) {
+                AnimatedVisibility(
+                    visible = isOptionsVisible,
+                    enter = fadeIn() + slideInVertically { it },
+                    exit = fadeOut() + slideOutVertically { it }
+                ) {
                     BottomAppBar(
-                        containerColor = MaterialTheme.colorScheme.surface
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        windowInsets = WindowInsets(0, 0, 0, 0)
                     ) {
                         Row(
                             modifier = Modifier
@@ -528,6 +512,10 @@ fun ReaderScreen(
                         }
                     }
                 }
+                ReaderStatusBar(
+                    battery = rememberBatteryState(),
+                    readRatio = scrollRatio
+                )
             }
         }
     ) { padding ->
@@ -600,7 +588,7 @@ fun ReaderScreen(
                     onScrollRestoreComplete = { token ->
                         if (token == pendingRestoreToken) isPageLoaded = true
                     },
-                    onTap = { isControlsVisible = !isControlsVisible },
+                    onTap = { isOptionsVisible = !isOptionsVisible },
                     onSwipe = { direction, axis ->
                         pendingSwipeTransition = chapterTransitionFor(direction, axis)
                         val navigate: () -> Unit = {
