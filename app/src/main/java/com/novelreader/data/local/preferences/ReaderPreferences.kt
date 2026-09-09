@@ -43,9 +43,9 @@ class ReaderPreferences @Inject constructor(
     val config: Flow<ReaderConfig> = context.dataStore.data.map { prefs ->
         ReaderConfig(
             fontSize = prefs[Keys.FONT_SIZE] ?: 20,
-            fontFamily = prefs[Keys.FONT_FAMILY] ?: "serif",
+            fontFamily = PreferenceAllowlists.sanitizeFontFamily(prefs[Keys.FONT_FAMILY]),
             lineHeight = prefs[Keys.LINE_HEIGHT]?.toFloatOrNull() ?: 1.8f,
-            theme = prefs[Keys.THEME] ?: "light",
+            theme = PreferenceAllowlists.sanitizeReaderTheme(prefs[Keys.THEME]),
             autoScrollSpeed = prefs[Keys.AUTO_SCROLL_SPEED]?.toFloatOrNull() ?: 0f,
             keepScreenOn = prefs[Keys.KEEP_SCREEN_ON] ?: true,
             swipeDirection = prefs[Keys.SWIPE_DIRECTION]?.takeIf { it in setOf("vertical", "horizontal", "both", "none") } ?: "vertical"
@@ -61,7 +61,7 @@ class ReaderPreferences @Inject constructor(
     }
 
     suspend fun updateFontFamily(family: String) {
-        context.dataStore.edit { it[Keys.FONT_FAMILY] = family }
+        context.dataStore.edit { it[Keys.FONT_FAMILY] = PreferenceAllowlists.sanitizeFontFamily(family) }
     }
 
     suspend fun updateLineHeight(height: Float) {
@@ -69,7 +69,7 @@ class ReaderPreferences @Inject constructor(
     }
 
     suspend fun updateTheme(theme: String) {
-        context.dataStore.edit { it[Keys.THEME] = theme }
+        context.dataStore.edit { it[Keys.THEME] = PreferenceAllowlists.sanitizeReaderTheme(theme) }
     }
 
     suspend fun updateKeepScreenOn(value: Boolean) {

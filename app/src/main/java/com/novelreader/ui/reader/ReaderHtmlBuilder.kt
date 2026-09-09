@@ -78,7 +78,7 @@ fun buildReaderHtml(
     val css = """
         :root {
             $themeCss
-            --font-family: '${config.fontFamily}', Georgia, serif;
+            --font-family: '${escapeCssString(config.fontFamily)}', Georgia, serif;
             --font-size: ${config.fontSize}px;
             --line-height: ${config.lineHeight};
             --padding: 20px;
@@ -308,6 +308,22 @@ fun buildReaderHtml(
     """.trimIndent()
 }
 
+private fun escapeCssString(value: String): String = buildString {
+    for (ch in value) {
+        when (ch) {
+            '\\' -> append("\\\\")
+            '\'' -> append("\\'")
+            '"' -> append("\\\"")
+            '<' -> append("\\3c ")
+            '>' -> append("\\3e ")
+            '\n' -> append("\\a ")
+            '\r' -> append("\\d ")
+            '\u0000' -> append("\\0 ")
+            else -> append(ch)
+        }
+    }
+}
+
 private fun transitionName(transition: ChapterTransition): String = when (transition) {
     ChapterTransition.FROM_RIGHT -> "from-right"
     ChapterTransition.FROM_LEFT -> "from-left"
@@ -409,7 +425,7 @@ private fun jsonLiteral(value: Any?): String = when (value) {
 fun applyConfigJs(config: ReaderConfig): String {
     val map = themeVars(config)
     val payload = map + mapOf(
-        "fontFamily" to config.fontFamily,
+        "fontFamily" to escapeCssString(config.fontFamily),
         "fontSize" to config.fontSize,
         "lineHeight" to config.lineHeight,
         "autoScrollSpeed" to config.autoScrollSpeed,

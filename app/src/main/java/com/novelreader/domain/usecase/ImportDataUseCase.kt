@@ -14,6 +14,7 @@ import com.novelreader.data.storage.PendingCollectionLink
 import com.novelreader.data.storage.PendingNovel
 import com.novelreader.data.storage.PendingPhoto
 import com.novelreader.data.storage.PendingRestoreStore
+import com.novelreader.util.RemoteHostGuard
 import com.novelreader.di.qualifiers.IoDispatcher
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineDispatcher
@@ -108,6 +109,15 @@ class ImportDataUseCase @Inject constructor(
             if (selectedTitles != null && title !in selectedTitles) continue
             if (sourceUrl.isBlank()) {
                 local.add(title)
+                continue
+            }
+            val host = try {
+                java.net.URI(sourceUrl).host.orEmpty()
+            } catch (_: Exception) {
+                ""
+            }
+            if (!RemoteHostGuard.isAllowed(host)) {
+                failed.add(title)
                 continue
             }
             try {

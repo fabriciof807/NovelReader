@@ -42,6 +42,7 @@ class PendingRestoreApplierTest {
         ).build()
         store = PendingRestoreStore(ApplicationProvider.getApplicationContext(), Dispatchers.Unconfined)
         applier = PendingRestoreApplier(
+            context = ApplicationProvider.getApplicationContext(),
             store = store,
             backgroundImportManager = backgroundImportManager,
             novelDao = db.novelDao(),
@@ -165,6 +166,74 @@ class PendingRestoreApplierTest {
         val character = db.characterDao().getAllCharactersSync().single()
         assertThat(character.name).isEqualTo("Hero")
         assertThat(character.photoPath).isNull()
+        assertThat(db.characterPhotoDao().getByCharacterSync(character.id)).hasSize(1)
+    }
+
+    @Test
+    fun `drops restored photo paths outside app private storage`() = runTest {
+        seedNovelWithChapter(fileName = "ch1.html", orderIndex = 0)
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        val outside = File(context.dataDir, "shared_prefs/secret.xml").apply {
+            parentFile?.mkdirs()
+            writeText("<xml/>")
+        }
+        val traversal = File(context.filesDir, "../shared_prefs/secret.xml")
+
+        store.update {
+            it.copy(
+                characters = listOf(
+                    PendingCharacter(
+                        novelTitle = "Novel",
+                        name = "Evil",
+                        notes = null,
+                        isFavorite = false,
+                        photoPath = outside.absolutePath,
+                        createdAt = 1L,
+                        photos = listOf(
+                            PendingPhoto(outside.absolutePath, 0),
+                            PendingPhoto(traversal.path, 1)
+                        )
+                    )
+                )
+            )
+        }
+
+        applier.applyPending()
+
+        val character = db.characterDao().getAllCharactersSync().single()
+        assertThat(character.photoPath).isNull()
+        assertThat(db.characterPhotoDao().getByCharacterSync(character.id)).isEmpty()
+    }
+
+    @Test
+    fun `restores photo paths inside app private storage`() = runTest {
+        seedNovelWithChapter(fileName = "ch1.html", orderIndex = 0)
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        val inside = File(context.filesDir, "characters/1/hero.jpg").apply {
+            parentFile?.mkdirs()
+            writeText("x")
+        }
+
+        store.update {
+            it.copy(
+                characters = listOf(
+                    PendingCharacter(
+                        novelTitle = "Novel",
+                        name = "Hero",
+                        notes = null,
+                        isFavorite = false,
+                        photoPath = inside.absolutePath,
+                        createdAt = 1L,
+                        photos = listOf(PendingPhoto(inside.absolutePath, 0))
+                    )
+                )
+            )
+        }
+
+        applier.applyPending()
+
+        val character = db.characterDao().getAllCharactersSync().single()
+        assertThat(character.photoPath).isEqualTo(inside.absolutePath)
         assertThat(db.characterPhotoDao().getByCharacterSync(character.id)).hasSize(1)
     }
 

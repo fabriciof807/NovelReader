@@ -25,26 +25,28 @@ class LibraryPreferences @Inject constructor(
     }
 
     val sortOrder: Flow<String> = context.libraryDataStore.data.map { prefs ->
-        prefs[Keys.SORT_ORDER] ?: "LAST_READ"
+        PreferenceAllowlists.sanitizeSortOrder(prefs[Keys.SORT_ORDER])
     }
 
     suspend fun updateSortOrder(order: String) {
-        context.libraryDataStore.edit { it[Keys.SORT_ORDER] = order }
+        context.libraryDataStore.edit { it[Keys.SORT_ORDER] = PreferenceAllowlists.sanitizeSortOrder(order) }
     }
 
     val chapterSortOrder: Flow<String> = context.libraryDataStore.data.map { prefs ->
-        prefs[Keys.CHAPTER_SORT_ORDER] ?: "ASCENDING"
+        PreferenceAllowlists.sanitizeChapterSortOrder(prefs[Keys.CHAPTER_SORT_ORDER])
     }
 
     suspend fun updateChapterSortOrder(order: String) {
-        context.libraryDataStore.edit { it[Keys.CHAPTER_SORT_ORDER] = order }
+        context.libraryDataStore.edit {
+            it[Keys.CHAPTER_SORT_ORDER] = PreferenceAllowlists.sanitizeChapterSortOrder(order)
+        }
     }
 
     val viewMode: Flow<String> = context.libraryDataStore.data.map { prefs ->
-        prefs[Keys.VIEW_MODE] ?: "GRID"
+        PreferenceAllowlists.sanitizeViewMode(prefs[Keys.VIEW_MODE])
     }
 
     suspend fun updateViewMode(mode: String) {
-        context.libraryDataStore.edit { it[Keys.VIEW_MODE] = mode }
+        context.libraryDataStore.edit { it[Keys.VIEW_MODE] = PreferenceAllowlists.sanitizeViewMode(mode) }
     }
 }

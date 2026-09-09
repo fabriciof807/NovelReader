@@ -181,6 +181,50 @@ class ImportDataUseCaseTest {
     }
 
     @Test
+    fun `private sourceUrl from a backup is not fetched`() = runTest {
+        val result = execute(
+            """{"novels":[{"title":"Evil","sourceUrl":"https://127.0.0.1/novel"}]}"""
+        )
+
+        assertThat(result.novelsFailed).containsExactly("Evil")
+        assertThat(result.novelsQueued).isEmpty()
+        coVerify(exactly = 0) { webImportUseCase.fetchChapterList(any()) }
+    }
+
+    @Test
+    fun `settings section rejects a non-allowlisted font family`() = runTest {
+        val readerPrefs = ReaderPreferences(appContext)
+        val payload = "serif;} </style><script>alert(1)</script><style>a{"
+
+        execute(
+            """
+            {
+              "novels": [],
+              "settings": {"reader": {"fontFamily": ${org.json.JSONObject.quote(payload)}}}
+            }
+            """.trimIndent()
+        )
+
+        assertThat(readerPrefs.config.first().fontFamily).isEqualTo("serif")
+    }
+
+    @Test
+    fun `settings section applies an allowlisted font family`() = runTest {
+        val readerPrefs = ReaderPreferences(appContext)
+
+        execute(
+            """
+            {
+              "novels": [],
+              "settings": {"reader": {"fontFamily": "monospace"}}
+            }
+            """.trimIndent()
+        )
+
+        assertThat(readerPrefs.config.first().fontFamily).isEqualTo("monospace")
+    }
+
+    @Test
     fun `backup without settings section reports settings not applied`() = runTest {
         val result = execute("""{"novels":[],"bookmarks":[],"characters":[]}""")
 

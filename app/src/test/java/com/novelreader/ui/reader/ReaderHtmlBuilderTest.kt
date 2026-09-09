@@ -335,6 +335,20 @@ class ReaderHtmlBuilderTest {
     }
 
     @Test
+    fun `buildReaderHtml escapes the font family in the stylesheet`() {
+        val html = buildReaderHtml(
+            content = "<p>Body.</p>",
+            config = ReaderConfig(
+                fontFamily = "serif;} </style><script>alert(1)</script><style>a{"
+            )
+        )
+
+        assertThat(html).doesNotContain("</style><script>alert(1)")
+        assertThat(html).doesNotContain("<script>alert(1)</script>")
+        assertThat(html).contains("\\3c ")
+    }
+
+    @Test
     fun `applyConfigJs passes swipeDirection to applyConfig`() {
         val js = applyConfigJs(ReaderConfig(swipeDirection = "horizontal"))
         assertThat(js).contains("\"swipeDirection\":\"horizontal\"")

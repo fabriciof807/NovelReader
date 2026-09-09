@@ -46,4 +46,20 @@ class ReaderPreferencesTest {
         prefs.updateKeepScreenOn(true)
         assertThat(prefs.config.first().keepScreenOn).isTrue()
     }
+
+    @Test
+    fun `updateFontFamily persists an allowlisted family`() = runTest {
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        val prefs = ReaderPreferences(context)
+        prefs.updateFontFamily("monospace")
+        assertThat(prefs.config.first().fontFamily).isEqualTo("monospace")
+    }
+
+    @Test
+    fun `updateFontFamily stores the default for a non-allowlisted family`() = runTest {
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        val prefs = ReaderPreferences(context)
+        prefs.updateFontFamily("serif;} </style><script>alert(1)</script><style>a{")
+        assertThat(prefs.config.first().fontFamily).isEqualTo("serif")
+    }
 }

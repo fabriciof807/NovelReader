@@ -26,21 +26,22 @@ class AppPreferences @Inject constructor(
     }
 
     val appTheme: Flow<String> = context.appDataStore.data.map { prefs ->
-        prefs[Keys.APP_THEME] ?: "system"
+        PreferenceAllowlists.sanitizeAppTheme(prefs[Keys.APP_THEME])
     }
 
     suspend fun updateAppTheme(theme: String) {
-        context.appDataStore.edit { it[Keys.APP_THEME] = theme }
+        context.appDataStore.edit { it[Keys.APP_THEME] = PreferenceAllowlists.sanitizeAppTheme(theme) }
     }
 
     val locale: Flow<String> = context.appDataStore.data.map { prefs ->
-        prefs[Keys.LOCALE] ?: "pt"
+        PreferenceAllowlists.sanitizeLocale(prefs[Keys.LOCALE])
     }
 
     suspend fun updateLocale(locale: String) {
-        context.appDataStore.edit { it[Keys.LOCALE] = locale }
+        val sanitized = PreferenceAllowlists.sanitizeLocale(locale)
+        context.appDataStore.edit { it[Keys.LOCALE] = sanitized }
         context.getSharedPreferences("locale_sync", Context.MODE_PRIVATE)
-            .edit().putString("locale", locale).apply()
+            .edit().putString("locale", sanitized).apply()
     }
 
     val dynamicColorEnabled: Flow<Boolean> = context.appDataStore.data.map { prefs ->

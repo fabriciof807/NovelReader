@@ -1,5 +1,6 @@
 package com.novelreader.domain.usecase
 
+import android.content.Context
 import com.novelreader.data.local.db.dao.BookmarkDao
 import com.novelreader.data.local.db.dao.ChapterDao
 import com.novelreader.data.local.db.dao.CharacterDao
@@ -17,6 +18,7 @@ import com.novelreader.data.storage.PendingNovel
 import com.novelreader.data.storage.PendingPhoto
 import com.novelreader.data.storage.PendingRestoreStore
 import com.novelreader.di.qualifiers.IoDispatcher
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
@@ -45,6 +47,7 @@ data class AppliedCounts(
 
 @Singleton
 class PendingRestoreApplier @Inject constructor(
+    @ApplicationContext private val context: Context,
     private val store: PendingRestoreStore,
     private val backgroundImportManager: BackgroundImportManager,
     private val novelDao: NovelDao,
@@ -58,6 +61,17 @@ class PendingRestoreApplier @Inject constructor(
     private val scope = CoroutineScope(SupervisorJob() + ioDispatcher)
     private val mutex = Mutex()
     private val started = AtomicBoolean(false)
+    private val privateRoot: String by lazy { context.filesDir.canonicalPath }
+
+    private fun isOwnedPath(path: String?): Boolean {
+        if (path.isNullOrBlank()) return false
+        return try {
+            val canonical = File(path).canonicalPath
+            canonical == privateRoot || canonical.startsWith(privateRoot + File.separator)
+        } catch (_: Exception) {
+            false
+        }
+    }
 
     fun start() {
         if (!started.compareAndSet(false, true)) return
@@ -137,14 +151,14 @@ class PendingRestoreApplier @Inject constructor(
             CharacterEntity(
                 novelId = novel.id,
                 name = c.name,
-                photoPath = c.photoPath?.takeIf { File(it).exists() },
+                photoPath = c.photoPath?.takeIf { isOwnedPath(it) && File(it).exists() },
                 notes = c.notes,
                 isFavorite = c.isFavorite,
                 createdAt = c.createdAt
             )
         )
         for (photo in c.photos) {
-            if (File(photo.photoPath).exists()) {
+            if (isOwnedPath(photo.photoPath) && File(photo.photoPath).exists()) {
                 characterPhotoDao.insert(
                     CharacterPhotoEntity(
                         characterId = id,
