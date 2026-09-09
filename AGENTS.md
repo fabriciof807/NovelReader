@@ -195,13 +195,17 @@ v2.9.2 (versionCode 29). See [README.md](README.md) (English) and [README_PT.md]
 
 ### v2.9.2 highlights
 
+- Security: backup-import `fontFamily` is allowlisted on write and read and CSS-escaped at the reader stylesheet sink (`PreferenceAllowlists`), closing a WebView HTML/JS injection (piolium F1).
+- Security: backup `sourceUrl` fetches now reject loopback/private/link-local hosts (`RemoteHostGuard`, F2); restored `photoPath` values must live inside the app's private `filesDir` (F3).
+- Security: deep-link extras are token-guarded — notification intents carry a persisted per-install token validated by `DeepLinkIntentParser` (F4); site parsers match hosts exactly via `StringUtils.hostMatchesDomain` (F5).
+- Fix: `http://` chapter links on an https page are upgraded instead of being rejected by `requireHttps`.
 - Feat: chapter title back at the top of the reader content (`<h1 class="chapter-title">`); source headings that duplicate the title are deduped, short titles included.
 - Feat: reader top bar (title + back) is always visible and shorter (52dp, 56dp while searching); the title is vertically centered with the icons (custom `ReaderTopBar`).
 - Feat: bottom status bar pinned to the screen with the battery icon + device %; replaces the old blue progress fill.
 - Feat: options bar (prev / bookmark / settings / chapters / next) opens on a single tap — the 700ms long-press timer is gone; still auto-hides after 4s.
 - Fix: reader restores the actually loaded chapter after process death instead of the stale nav argument (no more `lastChapterId` corruption).
 - Fix: the live scroll position is persisted on pause without waiting for the WebView JS callback.
-- 449 unit tests passing (was 429).
+- 481 unit tests passing (was 429).
 
 ### v2.9.0 highlights
 
