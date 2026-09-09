@@ -48,8 +48,14 @@ class ReaderPreferencesTest {
     }
 
     @Test
-    fun `updateFontFamily persists an allowlisted family`() = runTest {
+    fun `theme defaults to auto so the reader can follow the app theme`() = runTest {
         val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        val prefs = ReaderPreferences(context)
+        assertThat(prefs.config.first().theme).isEqualTo("auto")
+    }
+
+    @Test
+    fun `updateFontFamily persists an allowlisted family`() = runTest {        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
         val prefs = ReaderPreferences(context)
         prefs.updateFontFamily("monospace")
         assertThat(prefs.config.first().fontFamily).isEqualTo("monospace")

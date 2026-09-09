@@ -42,6 +42,7 @@ class ReaderViewModelTest {
     private val chapterDao: ChapterDao = mockk(relaxed = true)
     private val bookmarkDao: BookmarkDao = mockk(relaxed = true)
     private val readerPrefs: ReaderPreferences = mockk(relaxed = true)
+    private val appPreferences: com.novelreader.data.local.preferences.AppPreferences = mockk(relaxed = true)
     private val ftsSearchService: FtsSearchService = mockk(relaxed = true)
     private val reimportChapterContentUseCase: ReimportChapterContentUseCase = mockk(relaxed = true)
 
@@ -51,6 +52,7 @@ class ReaderViewModelTest {
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
         every { readerPrefs.config } returns flowOf(com.novelreader.data.local.preferences.ReaderConfig())
+        every { appPreferences.appTheme } returns flowOf("system")
         every { bookmarkDao.getByChapter(any()) } returns flowOf(emptyList())
     }
 
@@ -66,9 +68,44 @@ class ReaderViewModelTest {
         chapterDao = chapterDao,
         bookmarkDao = bookmarkDao,
         readerPreferences = readerPrefs,
+        appPreferences = appPreferences,
         ftsSearchService = ftsSearchService,
         reimportChapterContentUseCase = reimportChapterContentUseCase
     )
+
+    @Test
+    fun `reader theme follows the dark app theme when the stored theme is auto`() = runTest {
+        every { readerPrefs.config } returns flowOf(
+            com.novelreader.data.local.preferences.ReaderConfig(theme = "auto")
+        )
+        every { appPreferences.appTheme } returns flowOf("dark")
+        coEvery { chapterDao.getChapterById(10) } returns ChapterEntity(
+            id = 10, novelId = 1, title = "Ch1",
+            fileName = "ch1.html", orderIndex = 0, content = "<p>x</p>"
+        )
+        coEvery { chapterDao.getChaptersByNovelSync(1) } returns emptyList()
+
+        viewModel = createViewModel()
+
+        assertThat(viewModel.state.value.config.theme).isEqualTo("dark")
+    }
+
+    @Test
+    fun `an explicit reader theme overrides the app theme`() = runTest {
+        every { readerPrefs.config } returns flowOf(
+            com.novelreader.data.local.preferences.ReaderConfig(theme = "sepia")
+        )
+        every { appPreferences.appTheme } returns flowOf("dark")
+        coEvery { chapterDao.getChapterById(10) } returns ChapterEntity(
+            id = 10, novelId = 1, title = "Ch1",
+            fileName = "ch1.html", orderIndex = 0, content = "<p>x</p>"
+        )
+        coEvery { chapterDao.getChaptersByNovelSync(1) } returns emptyList()
+
+        viewModel = createViewModel()
+
+        assertThat(viewModel.state.value.config.theme).isEqualTo("sepia")
+    }
 
     @Test
     fun `loadChapter with missing chapter sets error in state`() = runTest {

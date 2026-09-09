@@ -45,7 +45,7 @@ class ReaderPreferences @Inject constructor(
             fontSize = prefs[Keys.FONT_SIZE] ?: 20,
             fontFamily = PreferenceAllowlists.sanitizeFontFamily(prefs[Keys.FONT_FAMILY]),
             lineHeight = prefs[Keys.LINE_HEIGHT]?.toFloatOrNull() ?: 1.8f,
-            theme = PreferenceAllowlists.sanitizeReaderTheme(prefs[Keys.THEME]),
+            theme = PreferenceAllowlists.sanitizeReaderTheme(prefs[Keys.THEME] ?: "auto"),
             autoScrollSpeed = prefs[Keys.AUTO_SCROLL_SPEED]?.toFloatOrNull() ?: 0f,
             keepScreenOn = prefs[Keys.KEEP_SCREEN_ON] ?: true,
             swipeDirection = prefs[Keys.SWIPE_DIRECTION]?.takeIf { it in setOf("vertical", "horizontal", "both", "none") } ?: "vertical"

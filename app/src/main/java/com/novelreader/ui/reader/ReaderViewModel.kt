@@ -1,6 +1,7 @@
 package com.novelreader.ui.reader
 
 import android.content.Context
+import android.content.res.Configuration
 import android.net.Uri
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
@@ -15,6 +16,7 @@ import com.novelreader.data.local.db.entity.ChapterEntity
 import com.novelreader.data.local.db.entity.NovelEntity
 import com.novelreader.data.local.preferences.ReaderConfig
 import com.novelreader.data.local.preferences.ReaderPreferences
+import com.novelreader.data.local.preferences.AppPreferences
 import com.novelreader.domain.usecase.ReimportChapterContentUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -26,6 +28,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -55,6 +58,7 @@ class ReaderViewModel @Inject constructor(
     private val chapterDao: ChapterDao,
     private val bookmarkDao: BookmarkDao,
     private val readerPreferences: ReaderPreferences,
+    private val appPreferences: AppPreferences,
     private val ftsSearchService: FtsSearchService,
     private val reimportChapterContentUseCase: ReimportChapterContentUseCase
 ) : ViewModel() {
@@ -90,16 +94,30 @@ class ReaderViewModel @Inject constructor(
     companion object {
         private const val emptyChapterThreshold = 200
         private const val keyLoadedChapterId = "loadedChapterId"
+        private const val themeAuto = "auto"
     }
 
     init {
         viewModelScope.launch {
-            readerPreferences.config.collect { config ->
+            combine(readerPreferences.config, appPreferences.appTheme) { config, appTheme ->
+                config.copy(theme = resolveTheme(config.theme, appTheme))
+            }.collect { config ->
                 _state.value = _state.value.copy(config = config)
             }
         }
         loadChapter(savedStateHandle.get<Long>(keyLoadedChapterId) ?: chapterId)
     }
+
+    private fun resolveTheme(storedTheme: String, appTheme: String): String = when {
+        storedTheme != themeAuto -> storedTheme
+        appTheme == "dark" -> "dark"
+        appTheme == "light" -> "light"
+        else -> if (isSystemDark()) "dark" else "light"
+    }
+
+    private fun isSystemDark(): Boolean =
+        (context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) ==
+            Configuration.UI_MODE_NIGHT_YES
 
     fun loadChapter(chapterId: Long, restorePosition: Boolean = true) {
         loadChapterJob?.cancel()

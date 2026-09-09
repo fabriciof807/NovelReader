@@ -2,7 +2,8 @@ package com.novelreader.data.local.preferences
 
 object PreferenceAllowlists {
     private val FONT_FAMILIES = setOf("serif", "sans-serif", "monospace", "cursive", "fantasy")
-    private val READER_THEMES = setOf("light", "dark", "sepia", "gray")
+    private val colors = setOf("light", "dark", "sepia", "gray")
+    private val READER_THEMES = colors + "auto"
     private val APP_THEMES = setOf("system", "light", "dark")
     private val LOCALES = setOf("pt", "en")
     private val SORT_ORDERS = setOf("TITLE", "CREATED_AT", "LAST_READ")

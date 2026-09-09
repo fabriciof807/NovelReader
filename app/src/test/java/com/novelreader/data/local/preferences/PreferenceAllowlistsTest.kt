@@ -31,6 +31,11 @@ class PreferenceAllowlistsTest {
     }
 
     @Test
+    fun `sanitizeReaderTheme keeps auto so the reader can follow the app theme`() {
+        assertThat(PreferenceAllowlists.sanitizeReaderTheme("auto")).isEqualTo("auto")
+    }
+
+    @Test
     fun `sanitizeAppTheme and locale fall back to their defaults`() {
         assertThat(PreferenceAllowlists.sanitizeAppTheme("dark")).isEqualTo("dark")
         assertThat(PreferenceAllowlists.sanitizeAppTheme("garbage")).isEqualTo("system")
