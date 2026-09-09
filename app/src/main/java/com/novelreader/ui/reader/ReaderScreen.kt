@@ -20,20 +20,16 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowBackIos
 import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
 import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.Bookmark
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.List
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.Button
@@ -51,8 +47,6 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -354,62 +348,17 @@ fun ReaderScreen(
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
-            TopAppBar(
-                modifier = Modifier
-                    .background(MaterialTheme.colorScheme.surface)
-                    .statusBarsPadding()
-                    .height(if (state.isSearchActive) 56.dp else 52.dp),
-                windowInsets = WindowInsets(0, 0, 0, 0),
-                title = {
-                    if (state.isSearchActive) {
-                        OutlinedTextField(
-                            value = state.searchQuery,
-                            onValueChange = { viewModel.onSearchQueryChange(it) },
-                            placeholder = {
-                                Text(stringResource(R.string.search_chapters_hint))
-                            },
-                            singleLine = true,
-                            modifier = Modifier.fillMaxWidth(),
-                            textStyle = MaterialTheme.typography.bodyMedium
-                        )
-                    } else {
-                        Text(
-                            com.novelreader.data.parser.TitleExtractor.cleanChapterTitleForDisplay(
-                                state.chapter?.title ?: "",
-                                state.novel?.title
-                            ),
-                            style = MaterialTheme.typography.titleMedium,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
-                },
-                    navigationIcon = {
-                        if (state.isSearchActive) {
-                            IconButton(onClick = { viewModel.deactivateSearch() }) {
-                                Icon(Icons.Default.Close, contentDescription = stringResource(R.string.close))
-                            }
-                        } else {
-                            IconButton(onClick = {
-                                saveScroll { onBack() }
-                            }) {
-                                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
-                            }
-                        }
-                    },
-                    actions = {
-                        if (!state.isSearchActive) {
-                            IconButton(onClick = { viewModel.activateSearch() }) {
-                                Icon(
-                                    Icons.Default.Search,
-                                    contentDescription = stringResource(R.string.search)
-                                )
-                            }
-                        }
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.surface
-                    )
+            ReaderTopBar(
+                title = com.novelreader.data.parser.TitleExtractor.cleanChapterTitleForDisplay(
+                    state.chapter?.title ?: "",
+                    state.novel?.title
+                ),
+                isSearchActive = state.isSearchActive,
+                searchQuery = state.searchQuery,
+                onSearchQueryChange = { viewModel.onSearchQueryChange(it) },
+                onBack = { saveScroll { onBack() } },
+                onCloseSearch = { viewModel.deactivateSearch() },
+                onActivateSearch = { viewModel.activateSearch() }
             )
         },
         bottomBar = {
@@ -512,10 +461,7 @@ fun ReaderScreen(
                         }
                     }
                 }
-                ReaderStatusBar(
-                    battery = rememberBatteryState(),
-                    readRatio = scrollRatio
-                )
+                ReaderStatusBar(battery = rememberBatteryState())
             }
         }
     ) { padding ->

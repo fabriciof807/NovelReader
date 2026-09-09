@@ -20,12 +20,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.novelreader.R
 
-internal fun readPercent(ratio: Float): Int = (ratio.coerceIn(0f, 1f) * 100).toInt()
-
 @Composable
 fun ReaderStatusBar(
     battery: BatteryState,
-    readRatio: Float,
     modifier: Modifier = Modifier
 ) {
     val tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
@@ -54,12 +51,6 @@ fun ReaderStatusBar(
         Spacer(Modifier.width(4.dp))
         Text(
             text = "${battery.percent}%",
-            style = MaterialTheme.typography.labelSmall,
-            color = tint
-        )
-        Spacer(Modifier.weight(1f))
-        Text(
-            text = "${readPercent(readRatio)}%",
             style = MaterialTheme.typography.labelSmall,
             color = tint
         )

@@ -196,12 +196,12 @@ v2.9.2 (versionCode 29). See [README.md](README.md) (English) and [README_PT.md]
 ### v2.9.2 highlights
 
 - Feat: chapter title back at the top of the reader content (`<h1 class="chapter-title">`); source headings that duplicate the title are deduped, short titles included.
-- Feat: reader top bar (title + back) is always visible and shorter (52dp, 56dp while searching).
-- Feat: bottom status bar pinned to the screen — battery icon + device % on the left, chapter read % on the right; replaces the old blue progress fill.
+- Feat: reader top bar (title + back) is always visible and shorter (52dp, 56dp while searching); the title is vertically centered with the icons (custom `ReaderTopBar`).
+- Feat: bottom status bar pinned to the screen with the battery icon + device %; replaces the old blue progress fill.
 - Feat: options bar (prev / bookmark / settings / chapters / next) opens on a single tap — the 700ms long-press timer is gone; still auto-hides after 4s.
 - Fix: reader restores the actually loaded chapter after process death instead of the stale nav argument (no more `lastChapterId` corruption).
 - Fix: the live scroll position is persisted on pause without waiting for the WebView JS callback.
-- 447 unit tests passing (was 429).
+- 449 unit tests passing (was 429).
 
 ### v2.9.0 highlights
 
