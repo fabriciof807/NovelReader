@@ -9,7 +9,7 @@ import javax.inject.Singleton
 class FreeWebNovelParser @Inject constructor() : AbstractNovelParser() {
 
     override fun canParse(domain: String): Boolean {
-        return domain.contains("freewebnovel.com")
+        return com.novelreader.util.StringUtils.hostMatchesDomain(domain, "freewebnovel.com")
     }
 
     override fun parse(doc: Document, fileName: String): ParsedChapter {

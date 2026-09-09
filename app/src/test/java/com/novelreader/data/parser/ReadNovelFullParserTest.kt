@@ -18,6 +18,12 @@ class ReadNovelFullParserTest {
         assertThat(parser.canParse("freewebnovel.com")).isFalse()
     }
 
+    @Test fun `canParse rejects lookalike domains`() {
+        assertThat(parser.canParse("evilreadnovelfull.com")).isFalse()
+        assertThat(parser.canParse("readnovelfull.com.evil.io")).isFalse()
+        assertThat(parser.canParse("notreadnovelfull.com")).isFalse()
+    }
+
     @Test fun `parses novel title from h3 with itemprop`() {
         val html = """
             <html><head></head><body>

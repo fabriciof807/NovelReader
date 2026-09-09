@@ -8,7 +8,7 @@ import javax.inject.Singleton
 class ReadNovelFullParser @Inject constructor() : AbstractNovelParser() {
 
     override fun canParse(domain: String): Boolean {
-        return domain.contains("readnovelfull.com")
+        return com.novelreader.util.StringUtils.hostMatchesDomain(domain, "readnovelfull.com")
     }
 
     override fun parse(doc: Document, fileName: String): ParsedChapter {

@@ -24,4 +24,10 @@ class StringUtilsTest {
         assertThat(StringUtils.hostMatchesDomain("maliciousfreewebnovel.com", "freewebnovel.com")).isFalse()
         assertThat(StringUtils.hostMatchesDomain("freewebnovel.com.evil.com", "freewebnovel.com")).isFalse()
     }
+
+    @Test fun `hostMatchesDomain ignores port and trailing dot`() {
+        assertThat(StringUtils.hostMatchesDomain("freewebnovel.com:443", "freewebnovel.com")).isTrue()
+        assertThat(StringUtils.hostMatchesDomain("FreeWebNovel.com.", "freewebnovel.com")).isTrue()
+        assertThat(StringUtils.hostMatchesDomain("m.freewebnovel.com:8080", "freewebnovel.com")).isTrue()
+    }
 }

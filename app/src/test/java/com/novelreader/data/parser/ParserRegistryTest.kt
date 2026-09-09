@@ -25,6 +25,39 @@ class ParserRegistryTest {
         assertThat(parser).isInstanceOf(GenericFallbackParser::class.java)
     }
 
+    @Test fun `routing rejects a lookalike domain and falls back`() {
+        val parser = registry.getParserForDomain("freewebnovel.com.evil.io")
+        assertThat(parser).isInstanceOf(GenericFallbackParser::class.java)
+    }
+
+    @Test fun `routing is deterministic when several parsers match`() {
+        val first = ParserRegistry(
+            parsers = setOf(MatchingParserA(), MatchingParserB()),
+            fallbackParser = fallback,
+            mhtParser = mhtParser
+        )
+        val second = ParserRegistry(
+            parsers = setOf(MatchingParserB(), MatchingParserA()),
+            fallbackParser = fallback,
+            mhtParser = mhtParser
+        )
+
+        assertThat(first.getParserForDomain("example.com")).isInstanceOf(MatchingParserA::class.java)
+        assertThat(second.getParserForDomain("example.com")).isInstanceOf(MatchingParserA::class.java)
+    }
+
+    private class MatchingParserA : NovelParser {
+        override fun canParse(domain: String): Boolean = domain == "example.com"
+        override fun parse(doc: org.jsoup.nodes.Document, fileName: String) =
+            ParsedChapter("A", "A", "A")
+    }
+
+    private class MatchingParserB : NovelParser {
+        override fun canParse(domain: String): Boolean = domain == "example.com"
+        override fun parse(doc: org.jsoup.nodes.Document, fileName: String) =
+            ParsedChapter("B", "B", "B")
+    }
+
     @Test fun `parse produces ParsedChapter with content`() {
         val html = """
             <html><head><title>Some Book | Ch 1</title></head>

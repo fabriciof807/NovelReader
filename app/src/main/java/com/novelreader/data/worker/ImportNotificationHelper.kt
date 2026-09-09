@@ -12,13 +12,15 @@ import androidx.work.ForegroundInfo
 import com.novelreader.MainActivity
 import com.novelreader.R
 import com.novelreader.domain.usecase.ImportJobSpec
+import com.novelreader.ui.navigation.DeepLinkToken
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
 class ImportNotificationHelper @Inject constructor(
-    @ApplicationContext private val context: Context
+    @ApplicationContext private val context: Context,
+    private val deepLinkToken: DeepLinkToken
 ) {
     companion object {
         const val CHANNEL_ID = "novel_import_channel"
@@ -149,6 +151,7 @@ class ImportNotificationHelper @Inject constructor(
             if (novelId != null) {
                 putExtra(MainActivity.EXTRA_DEEP_LINK_ACTION, action)
                 putExtra(MainActivity.EXTRA_NOVEL_ID, novelId)
+                putExtra(MainActivity.EXTRA_DEEP_LINK_TOKEN, deepLinkToken.value)
             }
         } ?: Intent()
         return PendingIntent.getActivity(

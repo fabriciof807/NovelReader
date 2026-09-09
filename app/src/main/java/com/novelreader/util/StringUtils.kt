@@ -31,8 +31,9 @@ object StringUtils {
     }
 
     fun hostMatchesDomain(host: String, expected: String): Boolean {
-        val h = host.lowercase().removePrefix("www.")
-        val e = expected.lowercase().removePrefix("www.")
+        val h = host.lowercase().substringBefore(':').removePrefix("www.").trimEnd('.')
+        val e = expected.lowercase().substringBefore(':').removePrefix("www.").trimEnd('.')
+        if (e.isEmpty()) return false
         return h == e || h.endsWith(".${e}")
     }
 }

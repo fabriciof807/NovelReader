@@ -18,6 +18,13 @@ class FreeWebNovelParserTest {
         assertThat(parser.canParse("novel.com.br")).isFalse()
     }
 
+    @Test fun `canParse rejects lookalike domains`() {
+        assertThat(parser.canParse("evilfreewebnovel.com")).isFalse()
+        assertThat(parser.canParse("freewebnovel.com.evil.io")).isFalse()
+        assertThat(parser.canParse("notfreewebnovel.com")).isFalse()
+        assertThat(parser.canParse("freewebnovel.com.br")).isFalse()
+    }
+
     @Test fun `parses novel title from pipe-separated title tag`() {
         val html = """
             <html><head><title>My Novel - Chapter 1 | FreeWebNovel</title></head>

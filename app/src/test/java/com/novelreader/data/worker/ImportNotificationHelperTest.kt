@@ -7,6 +7,7 @@ import androidx.test.core.app.ApplicationProvider
 import com.google.common.truth.Truth.assertThat
 import com.novelreader.MainActivity
 import com.novelreader.domain.usecase.ImportJobSpec
+import com.novelreader.ui.navigation.DeepLinkToken
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -19,7 +20,8 @@ import java.util.UUID
 class ImportNotificationHelperTest {
 
     private val context: Context = ApplicationProvider.getApplicationContext()
-    private val helper = ImportNotificationHelper(context)
+    private val deepLinkToken = DeepLinkToken(context)
+    private val helper = ImportNotificationHelper(context, deepLinkToken)
 
     @Test
     fun `foreground notification has contentIntent when targetNovelId is set`() {
@@ -43,6 +45,8 @@ class ImportNotificationHelperTest {
             .isEqualTo(MainActivity.ACTION_OPEN_NOVEL)
         assertThat(intent.getLongExtra(MainActivity.EXTRA_NOVEL_ID, -1L))
             .isEqualTo(42L)
+        assertThat(intent.getStringExtra(MainActivity.EXTRA_DEEP_LINK_TOKEN))
+            .isEqualTo(deepLinkToken.value)
     }
 
     @Test

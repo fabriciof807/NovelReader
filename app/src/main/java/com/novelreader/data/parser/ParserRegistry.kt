@@ -30,7 +30,9 @@ class ParserRegistry @Inject constructor(
     }
 
     private fun findParserForDomain(domain: String): NovelParser? {
-        return parsers.firstOrNull { it.canParse(domain) }
+        return parsers
+            .sortedBy { it::class.qualifiedName ?: "" }
+            .firstOrNull { it.canParse(domain) }
     }
 
     fun parse(html: String, fileName: String): ParsedChapter {

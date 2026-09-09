@@ -19,8 +19,9 @@ import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
 import androidx.navigation.compose.rememberNavController
 import com.novelreader.data.local.preferences.AppPreferences
-import com.novelreader.ui.navigation.DeepLinkAction
 import com.novelreader.ui.navigation.DeepLinkBus
+import com.novelreader.ui.navigation.DeepLinkIntentParser
+import com.novelreader.ui.navigation.DeepLinkToken
 import com.novelreader.ui.navigation.NovelReaderNavGraph
 import com.novelreader.ui.theme.NovelReaderTheme
 import com.novelreader.util.LocaleHelper
@@ -35,6 +36,9 @@ class MainActivity : ComponentActivity() {
 
     @Inject
     lateinit var deepLinkBus: DeepLinkBus
+
+    @Inject
+    lateinit var deepLinkToken: DeepLinkToken
 
     private val notificationPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -79,27 +83,11 @@ class MainActivity : ComponentActivity() {
 
     private fun handleIntent(intent: Intent?) {
         intent ?: return
-        val action = intent.getStringExtra(EXTRA_DEEP_LINK_ACTION) ?: return
-        if (action == ACTION_OPEN_NOVEL) {
-            val novelId = intent.getLongExtra(EXTRA_NOVEL_ID, -1L)
-            if (novelId > 0L) {
-                deepLinkBus.emit(DeepLinkAction.ViewNovel(novelId))
-                intent.removeExtra(EXTRA_DEEP_LINK_ACTION)
-                intent.removeExtra(EXTRA_NOVEL_ID)
-            }
-        } else if (action == ACTION_OPEN_CLOUDFLARE_SOLVER) {
-            val novelId = intent.getLongExtra(EXTRA_NOVEL_ID, -1L)
-            deepLinkBus.emit(DeepLinkAction.OpenCloudflareSolver(if (novelId > 0L) novelId else null))
-            intent.removeExtra(EXTRA_DEEP_LINK_ACTION)
-            intent.removeExtra(EXTRA_NOVEL_ID)
-        } else if (action == ACTION_OPEN_FAILED_CHAPTERS) {
-            val novelId = intent.getLongExtra(EXTRA_NOVEL_ID, -1L)
-            if (novelId > 0L) {
-                deepLinkBus.emit(DeepLinkAction.OpenFailedChapters(novelId))
-            }
-            intent.removeExtra(EXTRA_DEEP_LINK_ACTION)
-            intent.removeExtra(EXTRA_NOVEL_ID)
-        }
+        val action = DeepLinkIntentParser.parse(intent, deepLinkToken.value) ?: return
+        deepLinkBus.emit(action)
+        intent.removeExtra(EXTRA_DEEP_LINK_ACTION)
+        intent.removeExtra(EXTRA_NOVEL_ID)
+        intent.removeExtra(EXTRA_DEEP_LINK_TOKEN)
     }
 
     private fun requestNotificationPermissionIfNeeded() {
@@ -116,6 +104,7 @@ class MainActivity : ComponentActivity() {
     companion object {
         const val EXTRA_DEEP_LINK_ACTION = "deep_link_action"
         const val EXTRA_NOVEL_ID = "deep_link_novel_id"
+        const val EXTRA_DEEP_LINK_TOKEN = "deep_link_token"
         const val ACTION_OPEN_NOVEL = "open_novel"
         const val ACTION_OPEN_CLOUDFLARE_SOLVER = "open_cloudflare_solver"
         const val ACTION_OPEN_FAILED_CHAPTERS = "open_failed_chapters"
