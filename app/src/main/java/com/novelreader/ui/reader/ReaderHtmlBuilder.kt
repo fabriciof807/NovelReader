@@ -66,6 +66,7 @@ fun buildReaderHtml(
 ): String {
     val sanitized = Jsoup.clean(content, READER_SAFELIST)
     val finalContent = stripJunkContent(sanitized, chapterTitle)
+    val nonce = buildNonce()
     val titleHtml = chapterTitle.trim()
         .takeIf { it.isNotEmpty() }
         ?.let { "<h1 class=\"chapter-title\">${TextNode(it).outerHtml()}</h1>" }
@@ -208,8 +209,8 @@ fun buildReaderHtml(
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <meta http-equiv="Content-Security-Policy"
                 content="default-src 'none';
-                         style-src 'unsafe-inline';
-                         script-src 'unsafe-inline';
+                         style-src 'nonce-$nonce';
+                         script-src 'nonce-$nonce';
                          img-src data:;
                          font-src 'self' data:;
                          connect-src 'none';
@@ -218,8 +219,8 @@ fun buildReaderHtml(
                          form-action 'none';
                          frame-src 'none';
                          frame-ancestors 'none';">
-            <style>$css</style>
-            <script>
+            <style nonce="$nonce">$css</style>
+            <script nonce="$nonce">
             document.addEventListener('selectstart', function(e) { e.preventDefault(); });
 
             var _swipeDir = '${config.swipeDirection}';
@@ -307,6 +308,8 @@ fun buildReaderHtml(
         </html>
     """.trimIndent()
 }
+
+private fun buildNonce(): String = java.util.UUID.randomUUID().toString().replace("-", "")
 
 private fun escapeCssString(value: String): String = buildString {
     for (ch in value) {

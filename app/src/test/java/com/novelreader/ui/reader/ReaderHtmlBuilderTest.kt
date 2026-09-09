@@ -349,6 +349,28 @@ class ReaderHtmlBuilderTest {
     }
 
     @Test
+    fun `buildReaderHtml emits a per-load nonce and drops unsafe-inline`() {
+        val html = buildReaderHtml(content = "<p>x</p>", config = ReaderConfig())
+
+        val nonce = Regex("script-src 'nonce-([^']+)'")
+            .find(html)?.groupValues?.get(1)
+        assertThat(nonce).isNotNull()
+        assertThat(html).contains("<style nonce=\"$nonce\">")
+        assertThat(html).contains("<script nonce=\"$nonce\">")
+        assertThat(html).doesNotContain("'unsafe-inline'")
+    }
+
+    @Test
+    fun `buildReaderHtml uses a fresh nonce per build`() {
+        val first = Regex("script-src 'nonce-([^']+)'")
+            .find(buildReaderHtml(content = "<p>x</p>", config = ReaderConfig()))!!.groupValues[1]
+        val second = Regex("script-src 'nonce-([^']+)'")
+            .find(buildReaderHtml(content = "<p>x</p>", config = ReaderConfig()))!!.groupValues[1]
+
+        assertThat(first).isNotEqualTo(second)
+    }
+
+    @Test
     fun `applyConfigJs passes swipeDirection to applyConfig`() {
         val js = applyConfigJs(ReaderConfig(swipeDirection = "horizontal"))
         assertThat(js).contains("\"swipeDirection\":\"horizontal\"")
