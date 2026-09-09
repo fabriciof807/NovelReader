@@ -153,6 +153,7 @@
     <string name="cloudflare_challenge_action">Verificar conexão</string>
     <string name="cloudflare_challenge_cancel">Cancelar</string>
     <string name="cloudflare_challenge_waiting">O site está verificando o seu navegador. Aguarde alguns segundos…</string>
+    <string name="cloudflare_challenge_blocked">Endereço de verificação fora do domínio esperado. Por segurança, a janela não foi aberta.</string>
     <string name="cloudflare_reverify_notif_title">Verificação expirada — %s</string>
     <string name="cloudflare_reverify_notif_body">Toque para verificar e continuar recebendo novos capítulos.</string>
 

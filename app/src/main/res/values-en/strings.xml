@@ -153,6 +153,7 @@
     <string name="cloudflare_challenge_action">Verify connection</string>
     <string name="cloudflare_challenge_cancel">Cancel</string>
     <string name="cloudflare_challenge_waiting">The site is verifying your browser. Please wait a few seconds…</string>
+    <string name="cloudflare_challenge_blocked">Verification address is outside the expected domain. The window was not opened for safety.</string>
     <string name="cloudflare_reverify_notif_title">Verification expired — %s</string>
     <string name="cloudflare_reverify_notif_body">Tap to verify and continue receiving new chapters.</string>
 

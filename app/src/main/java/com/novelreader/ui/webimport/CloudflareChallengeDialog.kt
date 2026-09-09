@@ -35,6 +35,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.novelreader.R
+import com.novelreader.util.CloudflareChallengePolicy
 import com.novelreader.util.StringUtils
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -49,6 +50,9 @@ fun CloudflareChallengeDialog(
 ) {
     var isVerifying by remember { mutableStateOf(true) }
     val scope = rememberCoroutineScope()
+    val isAllowed = remember(url, expectedHost) {
+        CloudflareChallengePolicy.isAllowed(url, expectedHost)
+    }
 
     AlertDialog(
         onDismissRequest = onCancel,
@@ -72,7 +76,14 @@ fun CloudflareChallengeDialog(
                         }
                     }
                 }
-                AndroidView(
+                if (!isAllowed) {
+                    Text(
+                        text = stringResource(R.string.cloudflare_challenge_blocked),
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                } else {
+                    AndroidView(
                     factory = { context ->
                         WebView(context).apply {
                             layoutParams = ViewGroup.LayoutParams(
@@ -110,6 +121,7 @@ fun CloudflareChallengeDialog(
                     },
                     modifier = Modifier.fillMaxWidth().height(400.dp)
                 )
+                }
             }
         },
         confirmButton = {
