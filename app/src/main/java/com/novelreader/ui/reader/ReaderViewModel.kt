@@ -50,7 +50,7 @@ data class ReaderState(
 @HiltViewModel
 class ReaderViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
-    savedStateHandle: SavedStateHandle,
+    private val savedStateHandle: SavedStateHandle,
     private val novelDao: NovelDao,
     private val chapterDao: ChapterDao,
     private val bookmarkDao: BookmarkDao,
@@ -89,6 +89,7 @@ class ReaderViewModel @Inject constructor(
 
     companion object {
         private const val emptyChapterThreshold = 200
+        private const val keyLoadedChapterId = "loadedChapterId"
     }
 
     init {
@@ -97,7 +98,7 @@ class ReaderViewModel @Inject constructor(
                 _state.value = _state.value.copy(config = config)
             }
         }
-        loadChapter(chapterId)
+        loadChapter(savedStateHandle.get<Long>(keyLoadedChapterId) ?: chapterId)
     }
 
     fun loadChapter(chapterId: Long, restorePosition: Boolean = true) {
@@ -127,6 +128,7 @@ class ReaderViewModel @Inject constructor(
 
             allChapters = chaptersForNovel
             currentChapter = chapter
+            savedStateHandle[keyLoadedChapterId] = chapter.id
             lastKnownScrollPosition = if (restorePosition) chapter.lastScrollPosition else 0
             val currentIndex = allChapters.indexOfFirst { it.id == chapterId }
             val prevId = allChapters.getOrNull(currentIndex - 1)?.id

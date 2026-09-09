@@ -226,6 +226,55 @@ class ReaderViewModelTest {
     }
 
     @Test
+    fun `loadChapter persists the loaded chapter id to savedStateHandle`() = runTest {
+        val chapterA = ChapterEntity(
+            id = 10, novelId = 1, title = "Ch1",
+            fileName = "ch1.html", orderIndex = 0, content = "<p>A</p>", isRead = true
+        )
+        val chapterB = ChapterEntity(
+            id = 11, novelId = 1, title = "Ch2",
+            fileName = "ch2.html", orderIndex = 1, content = "<p>B</p>", isRead = true
+        )
+        coEvery { chapterDao.getChapterById(10) } returns chapterA
+        coEvery { chapterDao.getChapterById(11) } returns chapterB
+        coEvery { chapterDao.getChaptersByNovelSync(1) } returns listOf(chapterA, chapterB)
+        coEvery { novelDao.getNovelById(1) } returns null
+        coEvery { novelDao.updateLastRead(any(), any()) } returns Unit
+        coEvery { chapterDao.markAsRead(any(), any()) } returns Unit
+
+        viewModel = createViewModel()
+        viewModel.loadChapter(chapterB.id)
+
+        assertThat(savedState.get<Long>("loadedChapterId")).isEqualTo(11L)
+    }
+
+    @Test
+    fun `init loads the restored chapter id instead of the stale nav argument`() = runTest {
+        savedState["chapterId"] = 39L
+        savedState["loadedChapterId"] = 44L
+        val staleChapter = ChapterEntity(
+            id = 39, novelId = 1, title = "Ch39",
+            fileName = "ch39.html", orderIndex = 0, content = "<p>39</p>", isRead = true
+        )
+        val restoredChapter = ChapterEntity(
+            id = 44, novelId = 1, title = "Ch44",
+            fileName = "ch44.html", orderIndex = 5, content = "<p>44</p>", isRead = true
+        )
+        coEvery { chapterDao.getChapterById(39) } returns staleChapter
+        coEvery { chapterDao.getChapterById(44) } returns restoredChapter
+        coEvery { chapterDao.getChaptersByNovelSync(1) } returns listOf(staleChapter, restoredChapter)
+        coEvery { novelDao.getNovelById(1) } returns null
+        coEvery { novelDao.updateLastRead(any(), any()) } returns Unit
+        coEvery { chapterDao.markAsRead(any(), any()) } returns Unit
+
+        viewModel = createViewModel()
+
+        assertThat(viewModel.state.value.chapter?.id).isEqualTo(44L)
+        coVerify { novelDao.updateLastRead(1L, 44L, any()) }
+        coVerify(exactly = 0) { novelDao.updateLastRead(1L, 39L, any()) }
+    }
+
+    @Test
     fun `latest load request wins when an older chapter response completes later`() = runTest {
         val chapterB = ChapterEntity(
             id = 11, novelId = 1, title = "Ch2",
