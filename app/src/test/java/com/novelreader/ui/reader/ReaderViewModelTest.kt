@@ -226,6 +226,25 @@ class ReaderViewModelTest {
     }
 
     @Test
+    fun `onReaderPaused persists the live scroll position without the webview callback`() = runTest {
+        val chapter = ChapterEntity(
+            id = 10, novelId = 1, title = "Ch1",
+            fileName = "ch1.html", orderIndex = 0, content = "<p>hi</p>", isRead = true
+        )
+        coEvery { chapterDao.getChapterById(10) } returns chapter
+        coEvery { chapterDao.getChaptersByNovelSync(1) } returns listOf(chapter)
+        coEvery { novelDao.getNovelById(1) } returns null
+        coEvery { novelDao.updateLastRead(any(), any()) } returns Unit
+        coEvery { chapterDao.markAsRead(any(), any()) } returns Unit
+
+        viewModel = createViewModel()
+        viewModel.updateLiveScroll(0.73f)
+        viewModel.onReaderPaused()
+
+        coVerify { chapterDao.markAsRead(10, 730) }
+    }
+
+    @Test
     fun `loadChapter persists the loaded chapter id to savedStateHandle`() = runTest {
         val chapterA = ChapterEntity(
             id = 10, novelId = 1, title = "Ch1",

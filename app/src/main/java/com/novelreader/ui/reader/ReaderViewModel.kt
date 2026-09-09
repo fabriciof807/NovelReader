@@ -198,6 +198,10 @@ class ReaderViewModel @Inject constructor(
         }
     }
 
+    fun onReaderPaused() {
+        saveScrollPosition()
+    }
+
     fun getDefaultBookmarkTitle(): String {
         val chapter = currentChapter ?: return ""
         val content = chapter.content

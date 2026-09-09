@@ -640,6 +640,7 @@ fun ReaderScreen(
         val observer = LifecycleEventObserver { _, event ->
             when (event) {
                 Lifecycle.Event.ON_PAUSE -> {
+                    viewModel.onReaderPaused()
                     saveScroll()
                     webView?.onPause()
                 }
