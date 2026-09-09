@@ -199,6 +199,8 @@ v2.9.2 (versionCode 29). See [README.md](README.md) (English) and [README_PT.md]
 - Security: backup `sourceUrl` fetches now reject loopback/private/link-local hosts (`RemoteHostGuard`, F2); restored `photoPath` values must live inside the app's private `filesDir` (F3).
 - Security: deep-link extras are token-guarded — notification intents carry a persisted per-install token validated by `DeepLinkIntentParser` (F4); site parsers match hosts exactly via `StringUtils.hostMatchesDomain` (F5).
 - Fix: `http://` chapter links on an https page are upgraded instead of being rejected by `requireHttps`.
+- Security: reader WebView CSP now uses a per-load nonce (no `unsafe-inline`); the Cloudflare challenge WebView validates the host before loading; `PublicOnlyDns` blocks private DNS answers; response/decompression bodies are capped at 8/16 MiB.
+- Docs: `docs/security-residual-risks.md` records the piolium findings, the hardening and the dependency CVE audit.
 - Feat: chapter title back at the top of the reader content (`<h1 class="chapter-title">`); source headings that duplicate the title are deduped, short titles included.
 - Feat: reader top bar (title + back) is always visible and shorter (52dp, 56dp while searching); the title is vertically centered with the icons (custom `ReaderTopBar`).
 - Feat: bottom status bar pinned to the screen with the battery icon + device %; replaces the old blue progress fill.
