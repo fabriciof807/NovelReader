@@ -1,6 +1,6 @@
 # Security notes — residual risks and dependency audit
 
-Last updated: 2026-09-09 (v2.9.2).
+Last updated: 2026-09-10 (v2.9.2).
 
 This file records the security posture after the piolium lite audit and the
 follow-up hardening pass. It is a companion to the audit artifacts under
@@ -51,6 +51,45 @@ verified against the source and fixed:
 Recommended follow-up: bump jsoup to 1.23.x (verify the reader/parser fixtures
 after the bump).
 
+### 3.1 npm dependency audit (`landing-page/`, 2026-09-10)
+
+`npm audit` on the Vite landing page project reported four advisories. All are
+build-time transitive dependencies and all had a non-breaking fix, so
+`npm audit fix` (no `--force`) resolved them by updating the lockfile only —
+`package.json` ranges are unchanged and no direct dependency moved.
+
+| Dependency | Before | After | Severity |
+|---|---|---|---|
+| `postcss` | 8.5.15 | 8.5.28 | high |
+| `browserslist` | 4.28.2 | 4.28.9 | high |
+| `nanoid` | 3.3.13 | 3.3.18 | high |
+| `baseline-browser-mapping` | 2.10.38 | 2.11.21 | moderate |
+
+Advisories cleared:
+
+- `postcss` — GHSA-r28c-9q8g-f849 / GHSA-fxqj-rqcc-2cmp: path traversal in
+  `sourceMappingURL` auto-loading discloses arbitrary `.map` files.
+- `browserslist` — GHSA-c83g-rgw3-j3cx (unbounded cache growth → OOM) /
+  GHSA-73wf-gq98-2v4g (prototype write via untrusted `browserslist-stats.json`).
+- `nanoid` — GHSA-28wg-ghj8-5hjv / GHSA-2v37-7h3g-55p8: non-secure generators
+  loop indefinitely on negative or zero size.
+- `baseline-browser-mapping` — GHSA-w5vr-8v7q-w6rv: process termination on
+  invalid input (DoS).
+
+`update-browserslist-db` (1.2.3 → 1.3.2) moved with `browserslist`, and
+`caniuse-lite`, `electron-to-chromium` and `node-releases` were refreshed as a
+consequence — data-only packages. None of these reach the deployed bundle: Vite
+and PostCSS consume them at build time, so the exposure is limited to the
+build machine.
+
+`postcss` is the only advisory with a plausible path to real impact, and even
+then it needs an attacker-controlled `sourceMappingURL` in CSS the build
+ingests; the landing page builds from first-party sources only.
+
+Verification: `npm audit` now reports 0 vulnerabilities, and `npm run build`
+emits byte-identical assets (`index-BuEzwT5_.css`, `index-0s6zsQ2d.js`) before
+and after the bump, confirming the rendered output is unchanged.
+
 ## 4. Known residual risks (accepted / deferred)
 
 - **Legacy JS bridge.** `ReaderWebView` still uses
@@ -66,7 +105,9 @@ after the bump).
 - **Notification token rotation.** Notifications posted by older builds lack the
   token, so their tap no longer navigates until the notification is re-posted.
 - **Coverage.** The piolium pass was lite (grep + source read): no CodeQL/Semgrep
-  dataflow, no SpotBugs/FindSecBugs, and `landing-page/` was not audited.
+  dataflow and no SpotBugs/FindSecBugs. The `landing-page/` npm dependency tree
+  has since been audited with `npm audit` (section 3.1), but its source has still
+  not been reviewed by an audit tool.
 - **WorkManager job inputs** were read only at a glance; no untrusted-input path
   into job specs was proven or disproven.
 
