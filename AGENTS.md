@@ -17,7 +17,7 @@ The app is end-user focused: 100% offline, no analytics, no account, no cloud.
 - DataStore 1.1.3 (preferences)
 - WorkManager 2.10.0 (background chapter imports)
 - KSP 2.3.9 (annotation processing)
-- Min SDK 26, Target SDK 34, Compile SDK 35
+- Min SDK 26, Target SDK 34, Compile SDK 37
 
 ## Project Structure
 
@@ -180,7 +180,7 @@ Custom Material 3 colors in `ui/theme/Color.kt` and `ui/theme/Theme.kt`. Light t
 - **Instrumented tests**: Room in-memory DB, Compose Test Rule, Espresso
 - Parser tests use real HTML fixtures
 - ViewModel tests inject mocked DAOs/use cases
-- **Current count: 447 unit tests**
+- **Current count: 506 unit tests**
 - **Always run `./gradlew :app:compileDebugKotlin :app:testDebugUnitTest` before pushing**
 
 ## Recent Sessions
