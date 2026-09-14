@@ -101,6 +101,30 @@ and after the bump, confirming the rendered output is unchanged.
   `WebViewCompat.addWebMessageListener` would require a new `androidx.webkit`
   dependency and a bridge-contract rewrite; it is deferred rather than done
   opportunistically.
+  - Re-assessed 2026-09-14, and the migration is **not** a risk reduction here.
+    The frame/origin scoping it buys guards a configuration this WebView cannot
+    reach: it loads only `loadDataWithBaseURL("https://reader.local/load/<token>/", ...)`,
+    with `blockNetworkLoads = true`, `shouldOverrideUrlLoading` returning `true`,
+    `setSupportMultipleWindows(false)`, file/content access off and no DOM
+    storage, so no foreign origin or frame can ever be loaded into it. The only
+    bridge in the app is this one: the Cloudflare challenge dialog, which does
+    load remote content, has no `addJavascriptInterface`.
+  - A script injected into the reader page sits in the main frame of the allowed
+    origin, so `Android.postMessage(...)` would be exactly as callable as the
+    annotated methods. Origin scoping and caller attribution therefore reduce
+    nothing against the threat this stack actually faces.
+  - What the migration *would* buy is hygiene, not safety: it is the API Google
+    recommends, so it removes a permanent scanner finding, and it closes a
+    latent trap — if this WebView ever loads a remote URL or an iframe, the
+    legacy object is handed to every frame at once, while a listener would need
+    an origin match. Revisit it if that changes.
+  - Exposure ceiling if the sanitizer and the CSP nonce both failed: toggling the
+    options bar, forcing chapter navigation, stopping auto-scroll, and setting
+    `isPageLoaded`. No file, DB, network or secret access. The bridge arguments
+    are not validated (`chapterTransitionFor` maps any unknown `direction` to
+    `FROM_RIGHT` and `ReaderScreen` navigates on the `else` branch), so the
+    cheap hardening is to allowlist `direction`/`axis` at the bridge and return
+    `ChapterTransition.NONE` for unknown input — not to migrate.
 - **DNS rebinding scope.** `PublicOnlyDns` filters answers but does not pin a
   single resolved address for the connection; a re-resolving attacker could
   still race. Full protection would need connection-time IP pinning.
