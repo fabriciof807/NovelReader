@@ -105,6 +105,115 @@ Para novels de sites não listados, o parser genérico tenta extrair o conteúdo
 
 ## Histórico de versões
 
+### v2.9.3 (2026-09-14)
+
+Endurecimento de dependências, tema do leitor e acessibilidade:
+
+- **Leitor**: o sheet de configurações ganhou o chip **Auto**, então dá para voltar a seguir o tema do app depois de escolher uma cor (antes essa escolha ficava inalcançável sem limpar os dados do app)
+- **A11y**: os chips de tema são anunciados como radio buttons, e não como views marcáveis genéricas
+- **Segurança**: `jsoup` 1.22.1 → 1.23.2, fechando CVE-2026-71497 (o advisory só ocorre em safelists que permitem elementos raw-text, o que o `READER_SAFELIST` nunca permitiu); fixtures dos parsers passam sem mudança
+- **Segurança**: advisories da toolchain do landing page corrigidos no lockfile
+- **Docs**: o registro de riscos residuais explica por que migrar o bridge JS do leitor para `addWebMessageListener` não reduziria risco neste app
+
+Sem migração de dados necessária.
+
+### v2.9.2 (2026-09-09)
+
+Endurecimento de segurança de uma auditoria externa, mais correções do leitor:
+
+- **Segurança**: a importação de backup é protegida contra injeção CSS/JS via `fontFamily`, contra SSRF em `sourceUrl` restaurado (hosts loopback, privados e link-local são rejeitados) e contra valores arbitrários de `photoPath`
+- **Segurança**: os parsers casam hosts exatamente, e deep links de notificação carregam um token por instalação
+- **Segurança**: o WebView do leitor usa nonce de CSP por carga (sem `unsafe-inline`), o desafio do Cloudflare valida o host antes de carregar, respostas de DNS privadas são bloqueadas e corpos de resposta são limitados a 8 MiB (16 MiB descomprimidos)
+- **Leitor**: título do capítulo de volta no topo do conteúdo (cabeçalhos duplicados da fonte são removidos), barra superior sempre visível, barra de status inferior com a bateria, barra de opções com um único toque
+- **Leitor**: mudanças de configuração, favorito e tema aplicam na página aberta sem recarregar, e o capítulo carregado antes da morte do processo é restaurado (antes voltava para um capítulo obsoleto)
+- **Correção**: links de capítulo `http://` numa página `https` são promovidos em vez de rejeitados
+- **Novo**: o tema do leitor segue o tema do app por padrão
+
+Sem migração de dados necessária.
+
+### v2.9.0 (2026-08-23)
+
+Coleções e backup completo:
+
+- **Coleções**: criar e fixar coleções e adicionar novels a elas pelo menu da novel
+- **Backup v3**: exporta novels (autor, total de capítulos, atualização automática, último capítulo lido), favoritos e personagens, e agora também coleções e configurações; a restauração pendente é aplicada quando o download em background termina
+- **Importação**: importações só de configurações são suportadas, e novels apenas locais são reportadas como não restauráveis
+- **Banco**: Room v11 → v12 (`folders`, `novel_folder`)
+
+O Room migra automaticamente (v11 → v12).
+
+### v2.7.5 (2026-08-23)
+
+Polimento do leitor e da biblioteca:
+
+- **Leitor**: alternar os controles com um toque curto; a lista de capítulos rola até o capítulo atual; cabeçalho da fonte que duplica o título do capítulo é removido
+- **Biblioteca**: o badge da novel mostra a contagem de capítulos novos, com fallback para o ponto
+- **Importação**: novels na fila de importação em background aparecem como "Aguardando importação" até chegarem
+
+Sem migração de dados necessária.
+
+### v2.7.0 (2026-08-20)
+
+- **Leitor**: controles alternam com toque longo, ordem reversa da lista de capítulos, e a posição de scroll ao vivo é capturada via JS para retomar certo ao voltar de um capítulo
+- **Biblioteca**: sheet "What's New" ao abrir o app quando há capítulos novos
+- **Interno**: o dispatcher `LibraryIntent` foi substituído por chamadas diretas ao ViewModel; código morto removido
+- **Banco**: Room v10 → v11 (`chapters.isNew`)
+
+O Room migra automaticamente (v10 → v11).
+
+### v2.6.0-fix (2026-08-04)
+
+Correções do swipe no leitor:
+
+- Swipe vertical só troca de capítulo nos limites da página
+- O capítulo anterior volta ao fim depois de um swipe para cima
+
+Sem migração de dados necessária.
+
+### v2.6.0 (2026-08-02)
+
+Favoritos, cancelamento direcionado e correções de importação:
+
+- **Biblioteca**: novels favoritas (toggle e filtro no menu de 3 pontos) e backup JSON seletivo
+- **Importação**: fila por novel com cancelamento direcionado de jobs em background
+- **Leitor**: transição direcional de entrada ao trocar de capítulo por gesto, e posição de scroll correta restaurada entre navegações
+- **Correção**: um `StackOverflowError` derrubava o leitor a cada swipe (os campos de callback do bridge sombreavam os métodos anotados)
+- **Correção**: o FreeWebNovel importa a lista completa de capítulos (antes só os 40 primeiros), e capas são gravadas em bytes binários exatos
+- **Banco**: Room v9 → v10
+
+O Room migra automaticamente (v9 → v10).
+
+### v2.5.4 (2026-07-17)
+
+- **Leitor**: direção do swipe configurável (vertical, horizontal, ambos ou nenhum), estado de capítulo vazio com recuperação via MHT, reimportação de arquivo MHT/HTML para um capítulo existente, e erros do leitor com ação de Retry
+- **Biblioteca**: menu de 3 pontos visível nos cards, entrada "Capítulos", validação inline de HTTPS no diálogo de capa, e fim da exclusão acidental de personagem por swipe
+- **Notificações**: tocar numa notificação de importação abre a seção de capítulos falhos e rola até ela
+- **Hápticos**: padronizados (só toque longo)
+
+Sem migração de dados necessária.
+
+### v2.5.3 (2026-07-10)
+
+Confiabilidade da importação:
+
+- "Retry all" reenfileira todos os capítulos falhos
+- Retries com backoff e classificação explícita de rate-limit (429), pacing de 5 s e rejeição de conteúdo vazio ou obsoleto
+
+Sem migração de dados necessária.
+
+### v2.5.2 (2026-06-30)
+
+Importação multi-fonte e checagem de atualização por fonte:
+
+- **Importação**: uma novel pode ter várias fontes, e a checagem de atualização itera todas elas
+- **Biblioteca**: ponto azul e badge de contagem quando a novel tem capítulos novos
+- **Parsers**: novo layout do FreeWebNovel, arquivo de capítulos do ReadNovelFull e augmentação de lista por domínio
+- **Cloudflare**: cookies persistidos por domínio e checagem de host do desafio cobrindo qualquer domínio
+- **Correção**: páginas 404 não são mais capturadas como conteúdo de capítulo
+- **Banco**: Room v8 → v9 (`novel_sources`, `hasUpdates`)
+
+O Room migra automaticamente (v8 → v9).
+
 ### v2.4.3 (2026-06-26)
 
 Polimento de UI/UX e infraestrutura:

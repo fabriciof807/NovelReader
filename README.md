@@ -107,6 +107,115 @@ For novels from sites not listed, the generic parser tries to extract the main c
 
 ## Version history
 
+### v2.9.3 (2026-09-14)
+
+Dependency hardening, reader theming and accessibility:
+
+- **Reader**: the settings sheet has an **Auto** theme chip, so the reader follows the app theme again after you pick a colour (before, that choice was unreachable without clearing app data)
+- **A11y**: the theme chips are announced as radio buttons instead of generic checkable views
+- **Security**: `jsoup` 1.22.1 → 1.23.2, clearing CVE-2026-71497 (the advisory only triggers for safelists that allow raw-text elements, which `READER_SAFELIST` never did); the parser fixtures pass unchanged
+- **Security**: the landing-page build toolchain advisories are patched in the lockfile
+- **Docs**: the residual-risk registry records why migrating the reader's JS bridge to `addWebMessageListener` would not reduce risk in this app
+
+No data migration required.
+
+### v2.9.2 (2026-09-09)
+
+Security hardening from an external audit, plus reader fixes:
+
+- **Security**: backup import is hardened against CSS/JS injection through `fontFamily`, against SSRF on restored `sourceUrl` values (loopback, private and link-local hosts are rejected) and against arbitrary `photoPath` values
+- **Security**: site parsers match hosts exactly, and notification deep links carry a per-install token
+- **Security**: the reader WebView uses a per-load CSP nonce (no `unsafe-inline`), the Cloudflare challenge validates the host before loading it, private DNS answers are blocked and response bodies are capped at 8 MiB (16 MiB decompressed)
+- **Reader**: chapter title back at the top of the content (duplicate source headings are deduped), always-visible top bar, bottom status bar with the battery level, options bar on a single tap
+- **Reader**: config, bookmark and theme changes apply to the open page without reloading it, and the chapter that was loaded before process death is restored (it used to return to a stale chapter)
+- **Fix**: `http://` chapter links on an `https` page are upgraded instead of being rejected
+- **Feat**: the reader theme follows the app theme by default
+
+No data migration required.
+
+### v2.9.0 (2026-08-23)
+
+Collections and complete backup:
+
+- **Collections**: create and pin collections and add novels to them from the novel menu
+- **Backup v3**: exports novels (author, total chapters, auto-update, last read chapter), bookmarks and characters, and now also collections and settings; a pending restore is applied once the background download finishes
+- **Import**: settings-only imports are supported, and local-only novels are reported as not restorable
+- **Database**: Room v11 → v12 (`folders`, `novel_folder`)
+
+Room migrates automatically (v11 → v12).
+
+### v2.7.5 (2026-08-23)
+
+Reader and library polish:
+
+- **Reader**: toggle the controls with a short press; the chapter-list sheet scrolls to the current chapter; a source heading that duplicates the chapter title is stripped
+- **Library**: the novel badge shows the new-chapter count, falling back to a dot
+- **Import**: novels queued for background import show as "Waiting to import" until they land
+
+No data migration required.
+
+### v2.7.0 (2026-08-20)
+
+- **Reader**: controls toggle on a long press, reverse chapter order in the list, and the live scroll position is captured through JS so returning from a chapter resumes correctly
+- **Library**: "What's New" sheet on app open when chapters were added
+- **Internal**: the `LibraryIntent` dispatcher was replaced with direct ViewModel calls; dead code removed
+- **Database**: Room v10 → v11 (`chapters.isNew`)
+
+Room migrates automatically (v10 → v11).
+
+### v2.6.0-fix (2026-08-04)
+
+Reader swipe fixes:
+
+- A vertical swipe only changes chapters at page boundaries
+- The previous chapter resumes at the end again after a swipe up
+
+No data migration required.
+
+### v2.6.0 (2026-08-02)
+
+Favorites, targeted cancel and import fixes:
+
+- **Library**: favorite novels (3-dot menu toggle and filter) and selective JSON backup
+- **Import**: per-novel queue with targeted cancellation of background jobs
+- **Reader**: directional entrance transition when changing chapters by gesture, and the correct scroll position restored across navigation
+- **Fix**: a `StackOverflowError` crashed the reader on every swipe (bridge callback fields shadowed the annotated methods)
+- **Fix**: FreeWebNovel imports the full chapter list (it only got the first 40), and covers are written as exact binary bytes
+- **Database**: Room v9 → v10
+
+Room migrates automatically (v9 → v10).
+
+### v2.5.4 (2026-07-17)
+
+- **Reader**: configurable swipe direction (vertical, horizontal, both or none), empty-chapter state with MHT recovery, re-import of an MHT/HTML file into an existing chapter, and reader errors surfaced with a Retry action
+- **Library**: visible 3-dot menu on cards, a "Chapters" entry, inline HTTPS validation in the cover dialog, and no more accidental character deletion by swipe
+- **Notifications**: tapping an import notification opens the failed-chapters section and scrolls to it
+- **Haptics**: standardized (long press only)
+
+No data migration required.
+
+### v2.5.3 (2026-07-10)
+
+Import reliability:
+
+- "Retry all" re-enqueues every failed chapter
+- Retries with backoff and explicit rate-limit (429) classification, 5 s pacing, and rejection of empty or stale content
+
+No data migration required.
+
+### v2.5.2 (2026-06-30)
+
+Multi-source import and per-source update checks:
+
+- **Import**: a novel can have several sources, and the update check iterates all of them
+- **Library**: blue dot and chapter-count badge when a novel has new chapters
+- **Parsers**: FreeWebNovel's new layout, the ReadNovelFull chapter archive, and per-domain list augmentation
+- **Cloudflare**: cookies are persisted per domain and the challenge host check covers any domain
+- **Fix**: 404 pages are no longer captured as chapter content
+- **Database**: Room v8 → v9 (`novel_sources`, `hasUpdates`)
+
+Room migrates automatically (v8 → v9).
+
 ### v2.4.3 (2026-06-26)
 
 UI/UX polish and infrastructure:

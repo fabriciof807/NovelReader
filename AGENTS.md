@@ -2,7 +2,7 @@
 
 ## Overview
 
-NovelReader (v2.9.2) is an offline-first Android novel reader. It imports HTML/MHT files from local storage or fetches chapters from web novel sites. All data stays on the device.
+NovelReader (v2.9.3) is an offline-first Android novel reader. It imports HTML/MHT files from local storage or fetches chapters from web novel sites. All data stays on the device.
 
 The app is end-user focused: 100% offline, no analytics, no account, no cloud.
 
@@ -191,7 +191,16 @@ Design specs and implementation plans from past AI sessions are preserved in git
 
 ## Current Version
 
-v2.9.2 (versionCode 29). See [README.md](README.md) (English) and [README_PT.md](README_PT.md) (Portuguese) for the user-facing documentation. Full release history in `git log`.
+v2.9.3 (versionCode 30). See [README.md](README.md) (English) and [README_PT.md](README_PT.md) (Portuguese) for the user-facing documentation. Full release history in `git log`.
+
+### v2.9.3 highlights
+
+- Feat: the reader settings sheet has an `Auto` theme chip, so following the app theme is selectable again after picking a colour (previously the stored value was unreachable without clearing app data).
+- Fix: theme chips are exposed to accessibility services as radio buttons; Compose only maps `Selected` to `isSelected` for `Role.Tab` and otherwise sets `isChecked` (compose-ui 1.7.6, lines 833-840), so the chips needed an explicit `Role.RadioButton`.
+- Fix: dependency `jsoup` bumped 1.22.1 → 1.23.2, clearing CVE-2026-71497 (parser/browser desync in `Safelist` with raw-text elements); parser fixtures verified unchanged.
+- Security: the landing-page npm advisories are patched in the lockfile (build-time only).
+- Docs: `docs/security-residual-risks.md` records why migrating the reader JS bridge to `WebViewCompat.addWebMessageListener` would not reduce risk here (single synthetic origin, network loads and navigation blocked, no frames).
+- 506 unit tests passing (was 497).
 
 ### v2.9.2 highlights
 
