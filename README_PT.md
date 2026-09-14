@@ -29,11 +29,19 @@ NovelReader é para quem lê muito novel/web novel/light novel e quer:
 
 ### Ler
 
-- Tema claro ou escuro
+- Seis paletas (Índigo, Papel, Grafite, Floresta, Ameixa, AMOLED) mais a cor dinâmica do sistema no Android 12+
+- Cor de acento própria, escolhida em separado para o app e para o leitor
 - Tamanho de fonte, altura da linha, scroll automático ajustáveis
 - Cada capítulo lembra onde você parou (mesmo se matar o app)
 - **Busca em texto completo** — procure uma palavra ou frase em todos os capítulos de uma novel
 - Bookmarks com notas — marque passagens importantes
+
+### Deixe do seu jeito
+
+- **Papel de parede da biblioteca** e um **papel de parede separado para o leitor** — use uma imagem sua ou um dos fundos prontos
+- Desfoque em cada papel de parede, na intensidade que você quiser
+- **Véu de leitura** — controle quanto do fundo do leitor fica entre o texto e o papel de parede, para a foto nunca custar legibilidade
+- O tema do leitor pode seguir o app ou ficar fixo numa variante clara/escura
 
 ### Organizar personagens
 
@@ -104,6 +112,16 @@ Para novels de sites não listados, o parser genérico tenta extrair o conteúdo
 ---
 
 ## Histórico de versões
+
+### v2.10.0 (2026-09-14)
+
+- Feat: seis paletas (Índigo, Papel, Grafite, Floresta, Ameixa, AMOLED) com variante clara e escura, substituindo a escolha simples de claro/escuro/dinâmico; a cor dinâmica vira uma das opções de paleta.
+- Feat: cor de acento editável para o app e, em separado, para o leitor — o app deriva um tom legível para a matiz/saturação escolhida, em vez de deixar um acento claro lavar a interface (verificado contra o fundo de todas as paletas).
+- Feat: papéis de parede — um para a biblioteca e um para o leitor, cada um com desfoque próprio, usando imagem sua (copiada para o armazenamento privado do app, nunca no backup) ou um dos oito fundos prontos.
+- Feat: slider de véu de leitura (padrão 80%) e paleta + variante clara/escura próprias do leitor, para o papel de parede nunca ganhar do texto.
+- Fix: o sheet de configurações do leitor agora rola; com as seções novas a metade de baixo ficava inalcançável no celular.
+- Temas antigos do leitor (`light`, `dark`, `sepia`, `gray`) mapeiam exatamente para as paletas novas, então quem já lia mantém as cores.
+- 596 testes unitários passando (eram 506).
 
 ### v2.9.3 (2026-09-14)
 
@@ -329,13 +347,15 @@ app/src/main/java/com/novelreader/
 
 | Suíte | Tipo | ~Contagem |
 |---|---|---|
-| Parsers | Unit | 40 |
-| ViewModels | Unit | 17 |
-| Use Cases | Unit | 13 |
-| E2E / Regressão | Unit | 18 |
-| DAOs | Instrumentado | 30 |
-| UI Screens | Instrumentado | 6 |
-| **Total** | | **~124** |
+| Leitor (view model, HTML builder, sheet, tema) | Unit | 137 |
+| Parsers | Unit | 78 |
+| Use cases + import web | Unit | 143 |
+| Telas de biblioteca / lista de capítulos / configurações | Unit | 55 |
+| Preferências, storage, tema e customização | Unit | 87 |
+| Workers, navegação, favoritos, diversos | Unit | 96 |
+| **Total (JVM)** | | **596** |
+
+`./gradlew :app:testDebugUnitTest` roda toda a suíte JVM; a suíte de DAOs abaixo precisa de emulador.
 
 Mais detalhes em [`README-TESTES.md`](README-TESTES.md).
 

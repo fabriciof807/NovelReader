@@ -2,7 +2,7 @@
 
 ## Overview
 
-NovelReader (v2.9.3) is an offline-first Android novel reader. It imports HTML/MHT files from local storage or fetches chapters from web novel sites. All data stays on the device.
+NovelReader (v2.10.0) is an offline-first Android novel reader. It imports HTML/MHT files from local storage or fetches chapters from web novel sites. All data stays on the device.
 
 The app is end-user focused: 100% offline, no analytics, no account, no cloud.
 
@@ -35,6 +35,7 @@ app/src/main/java/com/novelreader/
                               CharacterPhotoDao, FailedChapterDao, FolderDao, NovelSourceDao
       FtsSearchService.kt  -- FTS4 search with FTS-syntax escaping
     local/preferences/     -- DataStore (AppPreferences, ReaderPreferences, ImportPreferences, LibraryPreferences)
+    storage/WallpaperStorage.kt -- SAF import into filesDir/wallpapers, path validation, 20 MiB cap
     parser/                -- HTML/MHT parsers via Hilt multibinding (FreeWebNovel, ReadNovelFull, Generic, MhtParser)
     storage/               -- CoverStorage (local file I/O)
     remote/                -- MvlempyrCharacterImporter (WordPress API)
@@ -49,6 +50,9 @@ app/src/main/java/com/novelreader/
     CharacterManagementUseCase, CoverManagementUseCase, ExportDataUseCase, ImportDataUseCase
     ReimportChapterContentUseCase -- Parses MHT/HTML and updates existing chapter content
   ui/
+    customization/         -- palettes, accent and wallpaper pickers shared by settings and reader
+                              (PalettePicker, AccentColorPicker, WallpaperPicker, WallpaperBackground,
+                              HomeWallpaperViewModel); pure colour work lives in ui/theme/AppPalette.kt
     navigation/NavGraph.kt -- 6 routes; library accepts optional selectedNovelId arg
     navigation/DeepLinkBus.kt -- SharedFlow connecting MainActivity intent handling to NavGraph
     library/               -- Library screen with tabs (novels, chapters, characters)
@@ -170,9 +174,25 @@ Manual `Migration(start, end)` in `NovelDatabase.Companion`. Each uses raw `exec
 
 4 DataStore instances: `app_prefs`, `reader_prefs`, `import_prefs`, `library_prefs`. Each with its own preferences class.
 
+### Wallpapers
+
+Two independent global slots (`WallpaperStorage.SLOT_HOME`, `SLOT_READER`), never per novel. A reference is one string: `none`, `builtin:<id>` (one of 8 gradients in `WallpaperBackground.BUILTIN_WALLPAPERS`) or `file:<name.ext>` — the name must match `^[a-z0-9_]{1,64}\.(jpg|jpeg|png|webp)$` and the resolved canonical path must stay inside `filesDir/wallpapers/`.
+
+- `WallpaperStorage.importFromUri` validates the MIME/extension, caps the copy at 20 MiB, writes `<slot>_<timestamp>.<ext>` and deletes the slot's previous file.
+- `WallpaperBackground` draws nothing when the ref is missing, so a dangling reference after a backup restore degrades to "no wallpaper" instead of crashing. Blur uses `Modifier.blur` on API 31+ and a Coil down-sample request below that (no RenderEffect before 31).
+- The reader draws the image behind the (transparent) WebView with a veil in the reader palette's background colour; `themeVars` returns `bgColor = transparent` whenever a wallpaper is active. The library sets `Scaffold`/`TopAppBar`/`TabRow` to transparent while a wallpaper is active.
+- The image bytes are **not** part of the backup (v3 settings carry the ref only); a `file:` ref whose file is absent on the importing device is applied as `none`.
+
 ### Theme
 
-Custom Material 3 colors in `ui/theme/Color.kt` and `ui/theme/Theme.kt`. Light theme uses warm cream (`F5F0E8`) + warm white (`FFF8F0`); dark theme uses dark navy (`1A1A2E`) + dark blue (`16213E`). Primary is deep indigo; secondary is orange. `secondaryContainer` is overridden in both modes to match the orange palette (M3 defaults to pink in dark mode).
+`ui/theme/AppPalette.kt` is the single source of palettes: six ids (`indigo`, `papel`, `grafite`, `floresta`, `ameixa`, `amoled`), each with a light and a dark `ColorScheme` plus a `ReaderSurface` (`bg`/`text`/`accent`/`link` CSS hex) for the reader. `AppPalette.AMOLED` is deliberately black in *both* variants (no elevation).
+
+`PreferenceAllowlists` owns the canonical ids and the legacy aliases (`light`→`indigo:light`, `dark`→`indigo:dark`, `sepia`→`papel:light`, `gray`→`grafite:dark`), so stored values from older versions keep their exact appearance.
+
+- `app_palette`: palette id or `dynamic` (system colours, Android 12+; below 31 it falls back to `indigo`). `dynamic_color_enabled` is still written as a mirror for backup compatibility.
+- `reader theme` (stored): `auto`, `<palette>`, or `<palette>:light|dark`. `auto` follows the app palette and variant; a bare palette follows the app variant; the explicit variant pins it. `ReaderTheme` owns the parse/compose helpers, `ReaderTheme.resolve` returns the resolved `(palette, themeDark)` pair that `ReaderConfig` carries into `ReaderHtmlBuilder.themeVars`.
+- Accent: `accent_color` (app) and `reader_accent_color` are independent. `AppPalette.accentHexFor` derives the actual hex by binary-searching HSL lightness until it reaches a 5:1 contrast against the palette background, so any hue/saturation the user picks stays readable.
+- `fontFamily`, accent hexes and every wallpaper ref pass through `PreferenceAllowlists` **and** the CSS sink re-validates (`safeCssColor` in `ReaderHtmlBuilder`): the `fontFamily` injection (piolium F1) is the reason the sink defends itself instead of trusting the prefs layer.
 
 ## Testing
 
@@ -180,7 +200,7 @@ Custom Material 3 colors in `ui/theme/Color.kt` and `ui/theme/Theme.kt`. Light t
 - **Instrumented tests**: Room in-memory DB, Compose Test Rule, Espresso
 - Parser tests use real HTML fixtures
 - ViewModel tests inject mocked DAOs/use cases
-- **Current count: 506 unit tests**
+- **Current count: 596 unit tests**
 - **Always run `./gradlew :app:compileDebugKotlin :app:testDebugUnitTest` before pushing**
 
 ## Recent Sessions
@@ -191,7 +211,16 @@ Design specs and implementation plans from past AI sessions are preserved in git
 
 ## Current Version
 
-v2.9.3 (versionCode 30). See [README.md](README.md) (English) and [README_PT.md](README_PT.md) (Portuguese) for the user-facing documentation. Full release history in `git log`.
+v2.10.0 (versionCode 31). See [README.md](README.md) (English) and [README_PT.md](README_PT.md) (Portuguese) for the user-facing documentation. Full release history in `git log`.
+
+### v2.10.0 highlights
+
+- Feat: six palettes with light/dark variants + editable accent color (app and reader separately), replacing light/dark/dynamic; `dynamic` becomes one of the palette options.
+- Feat: library and reader wallpapers (own image or built-in gradient) with independent blur, plus a reader veil slider (default 80%).
+- Fix: the reader settings sheet scrolls — with the new sections the lower half was unreachable.
+- Legacy reader themes map exactly onto the new palettes; no data migration.
+- 596 unit tests passing (was 506).
+- Spec: `docs/visual-customization-spec.md`.
 
 ### v2.9.3 highlights
 

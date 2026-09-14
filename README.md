@@ -31,11 +31,19 @@ NovelReader is for people who read a lot of web novels / light novels and want t
 
 ### Read
 
-- Light or dark theme
+- Six palettes (Indigo, Paper, Graphite, Forest, Plum, AMOLED) plus the system dynamic color on Android 12+
+- Your own accent color, for the app and for the reader separately
 - Adjustable font size, line height, and auto-scroll
 - Each chapter remembers where you stopped (even if you kill the app)
 - **Full-text search** — find a word or phrase across all chapters of a novel
 - Bookmarks with notes — mark important passages
+
+### Make it yours
+
+- **Wallpaper for the library** and a **separate wallpaper for the reader** — pick your own image or one of the built-in gradients
+- Blur each wallpaper to taste
+- **Reading veil** — control how much of the reader background sits between the text and the wallpaper, so a photo never costs you legibility
+- Themes chosen in the reader can follow the app or be pinned to a light/dark variant
 
 ### Organize characters
 
@@ -106,6 +114,16 @@ For novels from sites not listed, the generic parser tries to extract the main c
 ---
 
 ## Version history
+
+### v2.10.0 (2026-09-14)
+
+- Feat: six palettes (Indigo, Paper, Graphite, Forest, Plum, AMOLED) with a light/dark variant each, replacing the plain light/dark/dynamic choice; dynamic color becomes one of the palette options.
+- Feat: editable accent color for the app and, separately, for the reader — the app derives a readable tone for the chosen hue/saturation instead of letting a bright accent wash out the UI (verified against every palette background).
+- Feat: wallpapers — one for the library and one for the reader, each with its own blur, either your own image (copied into app-private storage, never in the backup) or one of eight built-in gradients.
+- Feat: reading veil slider (default 80%) plus a per-reader palette and light/dark variant, so the wallpaper never wins over the text.
+- Fix: the reader settings sheet now scrolls; with the new sections the bottom half was unreachable on a phone.
+- Legacy reader themes (`light`, `dark`, `sepia`, `gray`) map exactly onto the new palettes, so existing readers keep their colours.
+- 596 unit tests passing (was 506).
 
 ### v2.9.3 (2026-09-14)
 
@@ -332,13 +350,15 @@ app/src/main/java/com/novelreader/
 
 | Suite | Type | ~Count |
 |---|---|---|
-| Parsers | Unit | 40 |
-| ViewModels | Unit | 17 |
-| Use Cases | Unit | 13 |
-| E2E / Regression | Unit | 18 |
-| DAOs | Instrumented | 30 |
-| UI Screens | Instrumented | 6 |
-| **Total** | | **~124** |
+| Reader (view model, HTML builder, sheet, theme) | Unit | 137 |
+| Parsers | Unit | 78 |
+| Use cases + web import | Unit | 143 |
+| Library / chapter list / settings screens | Unit | 55 |
+| Preferences, storage, theme and customization | Unit | 87 |
+| Workers, navigation, favorites, misc | Unit | 96 |
+| **Total (JVM)** | | **596** |
+
+`./gradlew :app:testDebugUnitTest` runs the whole JVM suite; the DAO suite below needs an emulator.
 
 More details in [`README-TESTES.md`](README-TESTES.md).
 
