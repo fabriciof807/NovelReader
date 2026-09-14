@@ -1,5 +1,9 @@
 package com.novelreader.ui.reader
 
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -74,6 +78,15 @@ class ReaderSettingsSheetTest {
 
         composeTestRule.onNodeWithContentDescription("Sépia").assertIsSelected()
         composeTestRule.onNodeWithContentDescription("Auto").assertIsNotSelected()
+    }
+
+    @Test
+    fun `exposes the theme chips as a radio group`() {
+        setSheet(themeSelection = "auto")
+
+        composeTestRule.onNodeWithContentDescription("Auto").assert(
+            SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.RadioButton)
+        )
     }
 
     @Test
