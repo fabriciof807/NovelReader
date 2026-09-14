@@ -1,6 +1,8 @@
 package com.novelreader.ui.reader
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -22,7 +24,6 @@ import androidx.compose.material.icons.filled.BrightnessAuto
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.LightMode
-import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material.icons.filled.TouchApp
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -47,6 +48,16 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.novelreader.R
 import com.novelreader.data.local.preferences.ReaderConfig
+import com.novelreader.data.local.preferences.PreferenceAllowlists
+import com.novelreader.data.storage.WallpaperStorage
+import com.novelreader.ui.customization.AccentColorPicker
+import com.novelreader.ui.customization.BlurSlider
+import com.novelreader.ui.customization.VeilSlider
+import com.novelreader.ui.customization.WallpaperChoiceRow
+import com.novelreader.ui.customization.PalettePicker
+import com.novelreader.ui.customization.READER_AUTO
+import com.novelreader.ui.customization.readerPaletteChoices
+import com.novelreader.ui.theme.parseAccentHex
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -54,6 +65,11 @@ fun SettingsSheet(
     config: ReaderConfig,
     themeSelection: String = ReaderTheme.DEFAULT,
     onThemeChange: (String) -> Unit,
+    onAccentChange: (String?) -> Unit = {},
+    onPickWallpaper: () -> Unit = {},
+    onWallpaperChange: (String) -> Unit = {},
+    onWallpaperBlurChange: (Int) -> Unit = {},
+    onVeilChange: (Int) -> Unit = {},
     onFontSizeChange: (Int) -> Unit,
     onLineHeightChange: (Float) -> Unit,
     onAutoScrollSpeedChange: (Float) -> Unit,
@@ -62,6 +78,10 @@ fun SettingsSheet(
     onDismiss: () -> Unit
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val readerBackdrop = parseAccentHex(readerSurfaceOf(config).bg)
+        ?: MaterialTheme.colorScheme.background
+    val readerAccent = parseAccentHex(readerAccentOf(config))
+        ?: MaterialTheme.colorScheme.primary
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -70,6 +90,7 @@ fun SettingsSheet(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
                 .padding(horizontal = 20.dp)
                 .padding(bottom = 32.dp)
         ) {
@@ -85,46 +106,65 @@ fun SettingsSheet(
 
             Text(stringResource(R.string.theme), style = MaterialTheme.typography.titleSmall)
             Spacer(modifier = Modifier.height(8.dp))
+            PalettePicker(
+                selectedId = ReaderTheme.paletteId(themeSelection) ?: READER_AUTO,
+                choices = readerPaletteChoices(
+                    dark = config.themeDark,
+                    autoBackground = readerBackdrop,
+                    autoPrimary = readerAccent
+                ),
+                onSelect = { onThemeChange(ReaderTheme.withPalette(themeSelection, it)) }
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Text(
+                stringResource(R.string.reader_variant),
+                style = MaterialTheme.typography.titleSmall
+            )
+            Spacer(modifier = Modifier.height(4.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 ThemeOption(
                     icon = Icons.Default.BrightnessAuto,
-                    label = stringResource(R.string.reader_theme_auto),
-                    selected = themeSelection == ReaderTheme.AUTO,
-                    onClick = { onThemeChange(ReaderTheme.AUTO) },
+                    label = stringResource(R.string.reader_variant_auto),
+                    selected = ReaderTheme.variant(themeSelection) == null,
+                    onClick = { onThemeChange(ReaderTheme.withVariant(themeSelection, null)) },
                     modifier = Modifier.weight(1f)
                 )
                 ThemeOption(
                     icon = Icons.Default.LightMode,
-                    label = stringResource(R.string.light),
-                    selected = themeSelection == "light",
-                    onClick = { onThemeChange("light") },
+                    label = stringResource(R.string.reader_variant_light),
+                    selected = ReaderTheme.variant(themeSelection) == ReaderTheme.LIGHT,
+                    onClick = { onThemeChange(ReaderTheme.withVariant(themeSelection, ReaderTheme.LIGHT)) },
                     modifier = Modifier.weight(1f)
                 )
                 ThemeOption(
                     icon = Icons.Default.DarkMode,
-                    label = stringResource(R.string.dark),
-                    selected = themeSelection == "dark",
-                    onClick = { onThemeChange("dark") },
-                    modifier = Modifier.weight(1f)
-                )
-                ThemeOption(
-                    icon = Icons.Default.Palette,
-                    label = stringResource(R.string.sepia),
-                    selected = themeSelection == "sepia",
-                    onClick = { onThemeChange("sepia") },
-                    modifier = Modifier.weight(1f)
-                )
-                ThemeOption(
-                    icon = Icons.Default.DarkMode,
-                    label = stringResource(R.string.reader_theme_gray),
-                    selected = themeSelection == "gray",
-                    onClick = { onThemeChange("gray") },
+                    label = stringResource(R.string.reader_variant_dark),
+                    selected = ReaderTheme.variant(themeSelection) == ReaderTheme.DARK,
+                    onClick = { onThemeChange(ReaderTheme.withVariant(themeSelection, ReaderTheme.DARK)) },
                     modifier = Modifier.weight(1f)
                 )
             }
+
+            Spacer(modifier = Modifier.height(16.dp))
+            HorizontalDivider()
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Text(
+                stringResource(R.string.accent_color),
+                style = MaterialTheme.typography.titleSmall
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            AccentColorPicker(
+                selected = config.accentColor,
+                background = readerBackdrop,
+                fallback = readerAccent,
+                onSelect = onAccentChange
+            )
 
             Spacer(modifier = Modifier.height(20.dp))
             HorizontalDivider()
@@ -221,6 +261,26 @@ fun SettingsSheet(
                     modifier = Modifier.weight(1f)
                 )
             }
+
+            Spacer(modifier = Modifier.height(16.dp))
+            HorizontalDivider()
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Text(
+                stringResource(R.string.wallpaper_reader),
+                style = MaterialTheme.typography.titleSmall
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            WallpaperChoiceRow(
+                selectedRef = config.wallpaper,
+                hasImage = WallpaperStorage.fileNameOf(config.wallpaper) != null,
+                onPickImage = onPickWallpaper,
+                onSelectBuiltin = onWallpaperChange,
+                onRemove = { onWallpaperChange(PreferenceAllowlists.WALLPAPER_NONE) }
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            BlurSlider(blur = config.wallpaperBlur, onBlurChange = onWallpaperBlurChange)
+            VeilSlider(veil = config.veil, onVeilChange = onVeilChange)
 
             Spacer(modifier = Modifier.height(16.dp))
             HorizontalDivider()

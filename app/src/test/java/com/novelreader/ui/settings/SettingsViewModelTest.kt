@@ -15,6 +15,7 @@ import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
@@ -39,13 +40,36 @@ class SettingsViewModelTest {
         Dispatchers.setMain(testDispatcher)
         every { appPreferences.appTheme } returns flowOf("system")
         every { appPreferences.locale } returns flowOf("pt")
-        every { appPreferences.dynamicColorEnabled } returns flowOf(true)
+        every { appPreferences.appPalette } returns flowOf("floresta")
+        every { appPreferences.accentColor } returns flowOf("#ff6f00")
         viewModel = SettingsViewModel(appPreferences, exportDataUseCase, importDataUseCase)
     }
 
     @After
     fun tearDown() {
         Dispatchers.resetMain()
+    }
+
+    @Test
+    fun `exposes the stored palette and accent`() = runTest {
+        assertThat(viewModel.appPalette.first()).isEqualTo("floresta")
+        assertThat(viewModel.accentColor.first()).isEqualTo("#ff6f00")
+    }
+
+    @Test
+    fun `updateAppPalette persists the palette`() = runTest {
+        viewModel.updateAppPalette("papel")
+
+        coVerify { appPreferences.updateAppPalette("papel") }
+    }
+
+    @Test
+    fun `updateAccentColor persists and clears the accent`() = runTest {
+        viewModel.updateAccentColor("#2e7d32")
+        coVerify { appPreferences.updateAccentColor("#2e7d32") }
+
+        viewModel.updateAccentColor(null)
+        coVerify { appPreferences.updateAccentColor(null) }
     }
 
     @Test

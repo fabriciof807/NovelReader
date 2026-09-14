@@ -20,7 +20,12 @@ data class ReaderConfig(
     val fontSize: Int = 20,
     val fontFamily: String = "serif",
     val lineHeight: Float = 1.8f,
-    val theme: String = "light",
+    val theme: String = "indigo",
+    val themeDark: Boolean = false,
+    val accentColor: String? = null,
+    val wallpaper: String = PreferenceAllowlists.WALLPAPER_NONE,
+    val wallpaperBlur: Int = 0,
+    val veil: Int = PreferenceAllowlists.DEFAULT_VEIL,
     val autoScrollSpeed: Float = 0f,
     val keepScreenOn: Boolean = true,
     val swipeDirection: String = "vertical"
@@ -35,6 +40,10 @@ class ReaderPreferences @Inject constructor(
         val FONT_FAMILY = stringPreferencesKey("font_family")
         val LINE_HEIGHT = stringPreferencesKey("line_height")
         val THEME = stringPreferencesKey("theme")
+        val ACCENT_COLOR = stringPreferencesKey("reader_accent_color")
+        val WALLPAPER = stringPreferencesKey("reader_wallpaper")
+        val WALLPAPER_BLUR = intPreferencesKey("reader_wallpaper_blur")
+        val VEIL = intPreferencesKey("reader_veil")
         val AUTO_SCROLL_SPEED = stringPreferencesKey("auto_scroll_speed")
         val KEEP_SCREEN_ON = booleanPreferencesKey("keep_screen_on")
         val SWIPE_DIRECTION = stringPreferencesKey("swipe_direction")
@@ -46,9 +55,13 @@ class ReaderPreferences @Inject constructor(
             fontFamily = PreferenceAllowlists.sanitizeFontFamily(prefs[Keys.FONT_FAMILY]),
             lineHeight = prefs[Keys.LINE_HEIGHT]?.toFloatOrNull() ?: 1.8f,
             theme = PreferenceAllowlists.sanitizeReaderTheme(prefs[Keys.THEME] ?: "auto"),
+            accentColor = PreferenceAllowlists.sanitizeAccentColor(prefs[Keys.ACCENT_COLOR]),
+            wallpaper = PreferenceAllowlists.sanitizeWallpaperRef(prefs[Keys.WALLPAPER]),
+            wallpaperBlur = PreferenceAllowlists.sanitizeBlur(prefs[Keys.WALLPAPER_BLUR]),
+            veil = PreferenceAllowlists.sanitizeVeil(prefs[Keys.VEIL]),
             autoScrollSpeed = prefs[Keys.AUTO_SCROLL_SPEED]?.toFloatOrNull() ?: 0f,
             keepScreenOn = prefs[Keys.KEEP_SCREEN_ON] ?: true,
-            swipeDirection = prefs[Keys.SWIPE_DIRECTION]?.takeIf { it in setOf("vertical", "horizontal", "both", "none") } ?: "vertical"
+            swipeDirection = PreferenceAllowlists.sanitizeSwipeDirection(prefs[Keys.SWIPE_DIRECTION])
         )
     }
 
@@ -72,11 +85,38 @@ class ReaderPreferences @Inject constructor(
         context.dataStore.edit { it[Keys.THEME] = PreferenceAllowlists.sanitizeReaderTheme(theme) }
     }
 
+    suspend fun updateAccentColor(color: String?) {
+        context.dataStore.edit {
+            val sanitized = PreferenceAllowlists.sanitizeAccentColor(color)
+            if (sanitized == null) it.remove(Keys.ACCENT_COLOR) else it[Keys.ACCENT_COLOR] = sanitized
+        }
+    }
+
+    suspend fun updateWallpaper(ref: String) {
+        context.dataStore.edit {
+            it[Keys.WALLPAPER] = PreferenceAllowlists.sanitizeWallpaperRef(ref)
+        }
+    }
+
+    suspend fun updateWallpaperBlur(blur: Int) {
+        context.dataStore.edit {
+            it[Keys.WALLPAPER_BLUR] = PreferenceAllowlists.sanitizeBlur(blur)
+        }
+    }
+
+    suspend fun updateVeil(veil: Int) {
+        context.dataStore.edit {
+            it[Keys.VEIL] = PreferenceAllowlists.sanitizeVeil(veil)
+        }
+    }
+
     suspend fun updateKeepScreenOn(value: Boolean) {
         context.dataStore.edit { it[Keys.KEEP_SCREEN_ON] = value }
     }
 
     suspend fun updateSwipeDirection(direction: String) {
-        context.dataStore.edit { it[Keys.SWIPE_DIRECTION] = direction }
+        context.dataStore.edit {
+            it[Keys.SWIPE_DIRECTION] = PreferenceAllowlists.sanitizeSwipeDirection(direction)
+        }
     }
 }

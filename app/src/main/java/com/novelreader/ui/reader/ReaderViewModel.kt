@@ -15,7 +15,9 @@ import com.novelreader.data.local.db.entity.BookmarkEntity
 import com.novelreader.data.local.db.entity.ChapterEntity
 import com.novelreader.data.local.db.entity.NovelEntity
 import com.novelreader.data.local.preferences.ReaderConfig
+import com.novelreader.data.local.preferences.PreferenceAllowlists
 import com.novelreader.data.local.preferences.ReaderPreferences
+import com.novelreader.data.storage.WallpaperStorage
 import com.novelreader.data.local.preferences.AppPreferences
 import com.novelreader.domain.usecase.ReimportChapterContentUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -59,6 +61,7 @@ class ReaderViewModel @Inject constructor(
     private val chapterDao: ChapterDao,
     private val bookmarkDao: BookmarkDao,
     private val readerPreferences: ReaderPreferences,
+    private val wallpaperStorage: WallpaperStorage,
     private val appPreferences: AppPreferences,
     private val ftsSearchService: FtsSearchService,
     private val reimportChapterContentUseCase: ReimportChapterContentUseCase
@@ -99,20 +102,30 @@ class ReaderViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            combine(readerPreferences.config, appPreferences.appTheme) { config, appTheme ->
-                config.copy(theme = resolveTheme(config.theme, appTheme)) to config.theme
-            }.collect { (config, storedTheme) ->
-                _state.value = _state.value.copy(config = config, themeSelection = storedTheme)
-            }
+            combine(
+                readerPreferences.config,
+                appPreferences.appTheme,
+                appPreferences.appPalette
+            ) { config, appTheme, appPalette -> Triple(config, appTheme, appPalette) }
+                .collect { (config, appTheme, appPalette) ->
+                    val (palette, dark) = ReaderTheme.resolve(
+                        storedTheme = config.theme,
+                        appPalette = appPalette,
+                        appDark = isAppDark(appTheme)
+                    )
+                    _state.value = _state.value.copy(
+                        config = config.copy(theme = palette, themeDark = dark),
+                        themeSelection = config.theme
+                    )
+                }
         }
         loadChapter(savedStateHandle.get<Long>(keyLoadedChapterId) ?: chapterId)
     }
 
-    private fun resolveTheme(storedTheme: String, appTheme: String): String = when {
-        storedTheme != ReaderTheme.AUTO -> storedTheme
-        appTheme == "dark" -> "dark"
-        appTheme == "light" -> "light"
-        else -> if (isSystemDark()) "dark" else "light"
+    private fun isAppDark(appTheme: String): Boolean = when (appTheme) {
+        "dark" -> true
+        "light" -> false
+        else -> isSystemDark()
     }
 
     private fun isSystemDark(): Boolean =
@@ -299,6 +312,36 @@ class ReaderViewModel @Inject constructor(
 
     fun updateTheme(theme: String) {
         viewModelScope.launch { readerPreferences.updateTheme(theme) }
+    }
+
+    fun updateAccentColor(color: String?) {
+        viewModelScope.launch { readerPreferences.updateAccentColor(color) }
+    }
+
+    fun updateWallpaper(ref: String) {
+        viewModelScope.launch { readerPreferences.updateWallpaper(ref) }
+    }
+
+    fun updateWallpaperBlur(value: Int) {
+        viewModelScope.launch { readerPreferences.updateWallpaperBlur(value) }
+    }
+
+    fun updateVeil(value: Int) {
+        viewModelScope.launch { readerPreferences.updateVeil(value) }
+    }
+
+    fun importWallpaper(uri: Uri) {
+        viewModelScope.launch {
+            wallpaperStorage.importFromUri(WallpaperStorage.SLOT_READER, uri)
+                ?.let { readerPreferences.updateWallpaper(it) }
+        }
+    }
+
+    fun removeWallpaper() {
+        viewModelScope.launch {
+            wallpaperStorage.clearSlot(WallpaperStorage.SLOT_READER)
+            readerPreferences.updateWallpaper(PreferenceAllowlists.WALLPAPER_NONE)
+        }
     }
 
     fun updateFontSize(size: Int) {

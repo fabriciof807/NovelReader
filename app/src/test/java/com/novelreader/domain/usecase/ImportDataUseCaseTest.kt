@@ -7,6 +7,7 @@ import androidx.test.core.app.ApplicationProvider
 import com.google.common.truth.Truth.assertThat
 import com.novelreader.data.local.preferences.AppPreferences
 import com.novelreader.data.local.preferences.LibraryPreferences
+import com.novelreader.data.local.preferences.PreferenceAllowlists
 import com.novelreader.data.local.preferences.ReaderPreferences
 import com.novelreader.data.storage.PendingRestoreStore
 import io.mockk.coEvery
@@ -16,7 +17,9 @@ import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
+import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -37,6 +40,8 @@ class ImportDataUseCaseTest {
     private val folderDao: com.novelreader.data.local.db.dao.FolderDao = mockk()
 
     private val appContext: Context = ApplicationProvider.getApplicationContext()
+    private val wallpaperStorage: com.novelreader.data.storage.WallpaperStorage =
+        mockk(relaxed = true)
     private lateinit var pendingRestoreStore: PendingRestoreStore
 
     private lateinit var useCase: ImportDataUseCase
@@ -68,8 +73,44 @@ class ImportDataUseCaseTest {
             appPreferences = AppPreferences(appContext),
             readerPreferences = ReaderPreferences(appContext),
             libraryPreferences = LibraryPreferences(appContext),
+            wallpaperStorage = wallpaperStorage,
             ioDispatcher = Dispatchers.Unconfined
         )
+    }
+
+    // The preferences DataStore delegate caches the files dir of the first context it sees, so values
+    // written here stay visible to other test classes that assert the defaults.
+    @After
+    fun resetSharedPreferences() {
+        runBlocking {
+            ReaderPreferences(appContext).apply {
+                updateTheme("auto")
+                updateFontFamily("serif")
+                updateFontSize(20)
+                updateLineHeight(1.8f)
+                updateAccentColor(null)
+                updateWallpaper(PreferenceAllowlists.WALLPAPER_NONE)
+                updateWallpaperBlur(0)
+                updateVeil(PreferenceAllowlists.DEFAULT_VEIL)
+                updateAutoScrollSpeed(0f)
+                updateKeepScreenOn(true)
+                updateSwipeDirection("vertical")
+            }
+            AppPreferences(appContext).apply {
+                updateAppTheme("system")
+                updateAppPalette(PreferenceAllowlists.PALETTE_DYNAMIC)
+                updateAccentColor(null)
+                updateHomeWallpaper(PreferenceAllowlists.WALLPAPER_NONE)
+                updateHomeWallpaperBlur(0)
+                updateLocale("pt")
+                updateDynamicColorEnabled(true)
+            }
+            LibraryPreferences(appContext).apply {
+                updateSortOrder("LAST_READ")
+                updateChapterSortOrder("ASCENDING")
+                updateViewMode("GRID")
+            }
+        }
     }
 
     @Test
@@ -174,10 +215,119 @@ class ImportDataUseCaseTest {
         assertThat(prefs.dynamicColorEnabled.first()).isFalse()
         readerPrefs.config.first().let {
             assertThat(it.fontSize).isEqualTo(24)
-            assertThat(it.theme).isEqualTo("sepia")
+            assertThat(it.theme).isEqualTo("papel:light")
             assertThat(it.swipeDirection).isEqualTo("horizontal")
         }
         LibraryPreferences(appContext).sortOrder.first().let { assertThat(it).isEqualTo("TITLE") }
+    }
+
+    @Test
+    fun `settings section applies the visual customization keys`() = runTest {
+        val prefs = AppPreferences(appContext)
+        val readerPrefs = ReaderPreferences(appContext)
+        coEvery { wallpaperStorage.exists("file:home_5.jpg") } returns true
+
+        val result = execute(
+            """
+            {
+              "novels": [], "bookmarks": [], "characters": [], "collections": [],
+              "settings": {
+                "appPalette": "floresta",
+                "accentColor": "#2e7d32",
+                "wallpaperHome": "file:home_5.jpg",
+                "wallpaperHomeBlur": 22,
+                "reader": {
+                  "theme": "papel:dark",
+                  "accentColor": "#8d6e63",
+                  "wallpaper": "builtin:aurora",
+                  "wallpaperBlur": 12,
+                  "veil": 65
+                }
+              }
+            }
+            """.trimIndent()
+        )
+
+        assertThat(result.settingsApplied).isTrue()
+        assertThat(prefs.appPalette.first()).isEqualTo("floresta")
+        assertThat(prefs.accentColor.first()).isEqualTo("#2e7d32")
+        assertThat(prefs.homeWallpaper.first()).isEqualTo("file:home_5.jpg")
+        assertThat(prefs.homeWallpaperBlur.first()).isEqualTo(22)
+        readerPrefs.config.first().let { config ->
+            assertThat(config.theme).isEqualTo("papel:dark")
+            assertThat(config.accentColor).isEqualTo("#8d6e63")
+            assertThat(config.wallpaper).isEqualTo("builtin:aurora")
+            assertThat(config.wallpaperBlur).isEqualTo(12)
+            assertThat(config.veil).isEqualTo(65)
+        }
+    }
+
+    @Test
+    fun `a wallpaper file missing on this device falls back to none`() = runTest {
+        val prefs = AppPreferences(appContext)
+        val readerPrefs = ReaderPreferences(appContext)
+        coEvery { wallpaperStorage.exists("file:home_gone.jpg") } returns false
+        coEvery { wallpaperStorage.exists("file:reader_gone.jpg") } returns false
+
+        execute(
+            """
+            {
+              "novels": [], "bookmarks": [], "characters": [], "collections": [],
+              "settings": {
+                "wallpaperHome": "file:home_gone.jpg",
+                "reader": {"wallpaper": "file:reader_gone.jpg"}
+              }
+            }
+            """.trimIndent()
+        )
+
+        assertThat(prefs.homeWallpaper.first()).isEqualTo("none")
+        assertThat(readerPrefs.config.first().wallpaper).isEqualTo("none")
+    }
+
+    @Test
+    fun `a hostile wallpaper reference is dropped without touching the device`() = runTest {
+        val prefs = AppPreferences(appContext)
+        val readerPrefs = ReaderPreferences(appContext)
+
+        execute(
+            """
+            {
+              "novels": [], "bookmarks": [], "characters": [], "collections": [],
+              "settings": {
+                "wallpaperHome": "file:../../shared_prefs/app_prefs.xml",
+                "reader": {"wallpaper": "/data/data/com.other/files/x.jpg"}
+              }
+            }
+            """.trimIndent()
+        )
+
+        assertThat(prefs.homeWallpaper.first()).isEqualTo("none")
+        assertThat(readerPrefs.config.first().wallpaper).isEqualTo("none")
+        coVerify(exactly = 0) { wallpaperStorage.exists(any()) }
+    }
+
+    @Test
+    fun `a hostile accent color is dropped and the palette default is kept`() = runTest {
+        val prefs = AppPreferences(appContext)
+        val readerPrefs = ReaderPreferences(appContext)
+
+        execute(
+            """
+            {
+              "novels": [], "bookmarks": [], "characters": [], "collections": [],
+              "settings": {
+                "appPalette": "floresta",
+                "accentColor": "#fff;} body { display: none }",
+                "reader": {"accentColor": "url(javascript:alert(1))"}
+              }
+            }
+            """.trimIndent()
+        )
+
+        assertThat(prefs.appPalette.first()).isEqualTo("floresta")
+        assertThat(prefs.accentColor.first()).isNull()
+        assertThat(readerPrefs.config.first().accentColor).isNull()
     }
 
     @Test

@@ -1,15 +1,18 @@
 package com.novelreader.ui.reader
 
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.junit4.createComposeRule
-import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performSemanticsAction
+import androidx.compose.ui.test.performScrollTo
 import com.novelreader.data.local.preferences.ReaderConfig
 import com.novelreader.ui.theme.NovelReaderTheme
 import org.junit.Rule
@@ -26,9 +29,12 @@ class ReaderSettingsSheetTest {
     val composeTestRule = createComposeRule()
 
     private fun setSheet(
-        config: ReaderConfig = ReaderConfig(theme = "light"),
-        themeSelection: String = "light",
-        onThemeChange: (String) -> Unit = {}
+        config: ReaderConfig = ReaderConfig(theme = "indigo"),
+        themeSelection: String = "indigo",
+        onThemeChange: (String) -> Unit = {},
+        onAccentChange: (String?) -> Unit = {},
+        onWallpaperChange: (String) -> Unit = {},
+        onVeilChange: (Int) -> Unit = {}
     ) {
         composeTestRule.setContent {
             NovelReaderTheme {
@@ -36,6 +42,9 @@ class ReaderSettingsSheetTest {
                     config = config,
                     themeSelection = themeSelection,
                     onThemeChange = onThemeChange,
+                    onAccentChange = onAccentChange,
+                    onWallpaperChange = onWallpaperChange,
+                    onVeilChange = onVeilChange,
                     onFontSizeChange = {},
                     onLineHeightChange = {},
                     onAutoScrollSpeedChange = {},
@@ -48,54 +57,161 @@ class ReaderSettingsSheetTest {
     }
 
     @Test
-    fun `shows the auto option with the other reader themes`() {
+    fun `shows the auto palette option with the named palettes`() {
         setSheet(themeSelection = "auto")
 
         composeTestRule.onNodeWithContentDescription("Auto").assertIsSelected()
-        composeTestRule.onNodeWithContentDescription("Claro").assertIsNotSelected()
-        composeTestRule.onNodeWithText("Cinza").assertExists()
+        composeTestRule.onNodeWithContentDescription("Papel").assertIsNotSelected()
+        composeTestRule.onNodeWithText("Floresta").assertExists()
     }
 
     @Test
-    fun `selects the auto chip while the page theme is resolved to light`() {
-        setSheet(config = ReaderConfig(theme = "light"), themeSelection = "auto")
+    fun `selects the named palette chip when the stored theme names a palette`() {
+        setSheet(config = ReaderConfig(theme = "papel"), themeSelection = "papel:light")
 
-        composeTestRule.onNodeWithContentDescription("Auto").assertIsSelected()
-        composeTestRule.onNodeWithContentDescription("Claro").assertIsNotSelected()
-    }
-
-    @Test
-    fun `selects the auto chip while the page theme is resolved to dark`() {
-        setSheet(config = ReaderConfig(theme = "dark"), themeSelection = "auto")
-
-        composeTestRule.onNodeWithContentDescription("Auto").assertIsSelected()
-        composeTestRule.onNodeWithContentDescription("Escuro").assertIsNotSelected()
-    }
-
-    @Test
-    fun `selects the explicit chip when the stored theme is not auto`() {
-        setSheet(config = ReaderConfig(theme = "sepia"), themeSelection = "sepia")
-
-        composeTestRule.onNodeWithContentDescription("Sépia").assertIsSelected()
+        composeTestRule.onNodeWithContentDescription("Papel").assertIsSelected()
         composeTestRule.onNodeWithContentDescription("Auto").assertIsNotSelected()
     }
 
     @Test
-    fun `exposes the theme chips as a radio group`() {
+    fun `reports the auto palette while keeping the chosen variant`() {
+        var selected: String? = null
+        setSheet(
+            config = ReaderConfig(theme = "papel"),
+            themeSelection = "papel:light",
+            onThemeChange = { selected = it }
+        )
+
+        composeTestRule.onNodeWithContentDescription("Auto").performClick()
+
+        assert(selected == "auto:light") { "expected auto:light but got $selected" }
+    }
+
+    @Test
+    fun `reports the tapped palette with the current variant`() {
+        var selected: String? = null
+        setSheet(
+            config = ReaderConfig(theme = "indigo", themeDark = true),
+            themeSelection = "indigo:dark",
+            onThemeChange = { selected = it }
+        )
+
+        composeTestRule.onNodeWithContentDescription("Papel").performClick()
+
+        assert(selected == "papel:dark") { "expected papel:dark but got $selected" }
+    }
+
+    @Test
+    fun `selects the dark variant chip when the stored theme forces dark`() {
+        setSheet(config = ReaderConfig(theme = "papel", themeDark = true), themeSelection = "papel:dark")
+
+        composeTestRule.onNodeWithContentDescription("Escura").assertIsSelected()
+        composeTestRule.onNodeWithContentDescription("Clara").assertIsNotSelected()
+        composeTestRule.onNodeWithContentDescription("Seguir o app").assertIsNotSelected()
+    }
+
+    @Test
+    fun `reports the follow the app variant when that chip is tapped`() {
+        var selected: String? = null
+        setSheet(
+            config = ReaderConfig(theme = "papel", themeDark = true),
+            themeSelection = "papel:dark",
+            onThemeChange = { selected = it }
+        )
+
+        composeTestRule.onNodeWithContentDescription("Seguir o app").performClick()
+
+        assert(selected == "papel") { "expected papel but got $selected" }
+    }
+
+    @Test
+    fun `reports the forced light variant when that chip is tapped`() {
+        var selected: String? = null
+        setSheet(themeSelection = "auto", onThemeChange = { selected = it })
+
+        composeTestRule.onNodeWithContentDescription("Clara").performClick()
+
+        assert(selected == "auto:light") { "expected auto:light but got $selected" }
+    }
+
+    @Test
+    fun `shows the reader wallpaper section with its sliders`() {
+        setSheet(config = ReaderConfig(theme = "indigo", wallpaper = "builtin:noite", veil = 80))
+
+        composeTestRule.onNodeWithText("Papel de parede do leitor").assertExists()
+        composeTestRule.onNodeWithText("Desfoque: 0").assertExists()
+        composeTestRule.onNodeWithText("Véu de leitura: 80%").assertExists()
+        composeTestRule.onNodeWithContentDescription("Noite").assertIsSelected()
+    }
+
+    @Test
+    fun `reports the tapped builtin wallpaper`() {
+        var selected: String? = null
+        setSheet(
+            config = ReaderConfig(theme = "indigo"),
+            onWallpaperChange = { selected = it }
+        )
+
+        composeTestRule.onNodeWithContentDescription("Aurora")
+            .performScrollTo()
+            .performSemanticsAction(SemanticsActions.OnClick)
+
+        assert(selected == "builtin:aurora") { "expected builtin:aurora but got $selected" }
+    }
+
+    @Test
+    fun `reports none when the wallpaper is removed`() {
+        var selected: String? = "builtin:noite"
+        setSheet(
+            config = ReaderConfig(theme = "indigo", wallpaper = "builtin:noite"),
+            onWallpaperChange = { selected = it }
+        )
+
+        composeTestRule.onNodeWithContentDescription("Remover").performScrollTo().performClick()
+
+        assert(selected == "none") { "expected none but got $selected" }
+    }
+
+    @Test
+    fun `exposes the palette chips as a radio group`() {
         setSheet(themeSelection = "auto")
 
         composeTestRule.onNodeWithContentDescription("Auto").assert(
             SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.RadioButton)
         )
+        composeTestRule.onNodeWithContentDescription("Papel").assert(
+            SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.RadioButton)
+        )
     }
 
     @Test
-    fun `reports the auto selection when the auto chip is tapped`() {
+    fun `reports the tapped accent preset`() {
         var selected: String? = null
-        setSheet(config = ReaderConfig(theme = "sepia"), themeSelection = "sepia") { selected = it }
+        setSheet(onAccentChange = { selected = it })
 
-        composeTestRule.onNodeWithContentDescription("Auto").performClick()
+        composeTestRule.onNodeWithContentDescription("#ff6f00").performClick()
 
-        assert(selected == "auto") { "expected auto but got $selected" }
+        assert(selected == "#ff6f00") { "expected #ff6f00 but got $selected" }
+    }
+
+    @Test
+    fun `reports the palette default when the accent is reset`() {
+        var selected: String? = "not-null"
+        setSheet(
+            config = ReaderConfig(theme = "papel", accentColor = "#ff6f00"),
+            onAccentChange = { selected = it }
+        )
+
+        composeTestRule.onNodeWithContentDescription("Padrão da paleta").performClick()
+
+        assert(selected == null) { "expected null but got $selected" }
+    }
+
+    @Test
+    fun `reflects the stored accent on the preset swatches`() {
+        setSheet(config = ReaderConfig(theme = "papel", accentColor = "#2e7d32"))
+
+        composeTestRule.onNodeWithContentDescription("#2e7d32").assertIsSelected()
+        composeTestRule.onNodeWithContentDescription("Padrão da paleta").assertIsNotSelected()
     }
 }

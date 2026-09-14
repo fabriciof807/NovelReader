@@ -7,7 +7,9 @@ import com.novelreader.data.local.db.dao.NovelDao
 import com.novelreader.data.local.db.entity.FolderEntity
 import com.novelreader.data.local.preferences.AppPreferences
 import com.novelreader.data.local.preferences.LibraryPreferences
+import com.novelreader.data.local.preferences.PreferenceAllowlists
 import com.novelreader.data.local.preferences.ReaderPreferences
+import com.novelreader.data.storage.WallpaperStorage
 import com.novelreader.data.storage.PendingBookmark
 import com.novelreader.data.storage.PendingCharacter
 import com.novelreader.data.storage.PendingCollectionLink
@@ -65,6 +67,7 @@ class ImportDataUseCase @Inject constructor(
     private val appPreferences: AppPreferences,
     private val readerPreferences: ReaderPreferences,
     private val libraryPreferences: LibraryPreferences,
+    private val wallpaperStorage: WallpaperStorage,
     @IoDispatcher private val ioDispatcher: CoroutineDispatcher
 ) {
     suspend fun previewImport(uri: Uri): ImportPreview = withContext(ioDispatcher) {
@@ -274,12 +277,32 @@ class ImportDataUseCase @Inject constructor(
         }
     }
 
+    private suspend fun restorableWallpaperRef(ref: String): String {
+        val sanitized = PreferenceAllowlists.sanitizeWallpaperRef(ref)
+        if (PreferenceAllowlists.WALLPAPER_NONE == sanitized) return sanitized
+        if (WallpaperStorage.builtinId(sanitized) != null) return sanitized
+        return if (wallpaperStorage.exists(sanitized)) sanitized
+        else PreferenceAllowlists.WALLPAPER_NONE
+    }
+
     private suspend fun applySettings(settings: JSONObject?): Boolean = withContext(ioDispatcher) {
         if (settings == null || settings.length() == 0) return@withContext false
         settings.optString("appTheme").takeIf { it.isNotBlank() }?.let { appPreferences.updateAppTheme(it) }
         settings.optString("locale").takeIf { it.isNotBlank() }?.let { appPreferences.updateLocale(it) }
         if (settings.has("dynamicColor")) {
             appPreferences.updateDynamicColorEnabled(settings.getBoolean("dynamicColor"))
+        }
+        settings.optString("appPalette").takeIf { it.isNotBlank() }?.let {
+            appPreferences.updateAppPalette(it)
+        }
+        if (settings.has("accentColor")) {
+            appPreferences.updateAccentColor(settings.optString("accentColor"))
+        }
+        settings.optString("wallpaperHome").takeIf { it.isNotBlank() }?.let { ref ->
+            appPreferences.updateHomeWallpaper(restorableWallpaperRef(ref))
+        }
+        if (settings.has("wallpaperHomeBlur")) {
+            appPreferences.updateHomeWallpaperBlur(settings.getInt("wallpaperHomeBlur"))
         }
         settings.optJSONObject("reader")?.let { r ->
             if (r.has("fontSize")) readerPreferences.updateFontSize(r.getInt("fontSize"))
@@ -291,6 +314,12 @@ class ImportDataUseCase @Inject constructor(
             }
             if (r.has("keepScreenOn")) readerPreferences.updateKeepScreenOn(r.getBoolean("keepScreenOn"))
             r.optString("swipeDirection").takeIf { it.isNotBlank() }?.let { readerPreferences.updateSwipeDirection(it) }
+            if (r.has("accentColor")) readerPreferences.updateAccentColor(r.optString("accentColor"))
+            r.optString("wallpaper").takeIf { it.isNotBlank() }?.let { ref ->
+                readerPreferences.updateWallpaper(restorableWallpaperRef(ref))
+            }
+            if (r.has("wallpaperBlur")) readerPreferences.updateWallpaperBlur(r.getInt("wallpaperBlur"))
+            if (r.has("veil")) readerPreferences.updateVeil(r.getInt("veil"))
         }
         settings.optJSONObject("library")?.let { l ->
             l.optString("sortOrder").takeIf { it.isNotBlank() }?.let { libraryPreferences.updateSortOrder(it) }

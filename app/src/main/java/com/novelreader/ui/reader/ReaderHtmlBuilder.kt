@@ -1,7 +1,10 @@
 package com.novelreader.ui.reader
 
 import com.novelreader.data.local.db.entity.BookmarkEntity
+import com.novelreader.data.local.preferences.PreferenceAllowlists
 import com.novelreader.data.local.preferences.ReaderConfig
+import com.novelreader.ui.theme.AppPalette
+import com.novelreader.ui.theme.ReaderSurface
 import org.json.JSONArray
 import org.json.JSONObject
 import org.jsoup.Jsoup
@@ -31,30 +34,28 @@ private val NAV_PATTERNS = listOf(
     Regex("nav(e|i)gat(e|ing).{0,20}(chapter|cap.tulo)", RegexOption.IGNORE_CASE),
 )
 
-fun themeVars(config: ReaderConfig): Map<String, String> = when (config.theme) {
-    "dark" -> mapOf(
-        "bgColor" to "#0a0a0f",
-        "textColor" to "#e0e0e0",
-        "accentColor" to "#90caf9",
-        "linkColor" to "#64b5f6"
-    )
-    "sepia" -> mapOf(
-        "bgColor" to "#f4e4c1",
-        "textColor" to "#5b4636",
-        "accentColor" to "#8d6e63",
-        "linkColor" to "#6d4c41"
-    )
-    "gray" -> mapOf(
-        "bgColor" to "#2d2d2d",
-        "textColor" to "#d0d0d0",
-        "accentColor" to "#90a4ae",
-        "linkColor" to "#81d4fa"
-    )
-    else -> mapOf(
-        "bgColor" to "#f5f0e8",
-        "textColor" to "#333333",
-        "accentColor" to "#1a237e",
-        "linkColor" to "#1565c0"
+fun readerSurfaceOf(config: ReaderConfig): ReaderSurface =
+    AppPalette.fromId(config.theme).readerSurface(config.themeDark)
+
+private val CSS_COLOR = Regex("^#[0-9a-fA-F]{6}$")
+
+private fun safeCssColor(value: String?): String? {
+    val trimmed = value?.trim() ?: return null
+    return trimmed.takeIf { CSS_COLOR.matches(it) }?.lowercase()
+}
+
+fun readerAccentOf(config: ReaderConfig): String =
+    safeCssColor(config.accentColor) ?: readerSurfaceOf(config).accent
+
+fun themeVars(config: ReaderConfig): Map<String, String> {
+    val surface = readerSurfaceOf(config)
+    val customAccent = safeCssColor(config.accentColor)
+    val wallpaperActive = config.wallpaper != PreferenceAllowlists.WALLPAPER_NONE
+    return mapOf(
+        "bgColor" to if (wallpaperActive) "transparent" else surface.bg,
+        "textColor" to surface.text,
+        "accentColor" to (customAccent ?: surface.accent),
+        "linkColor" to (customAccent ?: surface.link)
     )
 }
 

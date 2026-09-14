@@ -7,6 +7,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -46,14 +47,12 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -80,6 +79,13 @@ import com.novelreader.domain.usecase.ExportOptions
 import com.novelreader.domain.usecase.ImportPreview
 import com.novelreader.domain.usecase.ImportPreviewEntry
 import com.novelreader.domain.usecase.ImportResult
+import com.novelreader.data.storage.WallpaperStorage
+import com.novelreader.ui.customization.AccentColorPicker
+import com.novelreader.ui.customization.BlurSlider
+import com.novelreader.ui.customization.HomeWallpaperViewModel
+import com.novelreader.ui.customization.WallpaperChoiceRow
+import com.novelreader.ui.customization.PalettePicker
+import com.novelreader.ui.customization.appPaletteChoices
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -90,13 +96,29 @@ fun SettingsScreen(
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
     val appTheme by viewModel.appTheme.collectAsState()
+    val appPalette by viewModel.appPalette.collectAsState()
+    val accentColor by viewModel.accentColor.collectAsState()
+    val isDarkTheme = when (appTheme) {
+        "dark" -> true
+        "light" -> false
+        else -> isSystemInDarkTheme()
+    }
     val locale by viewModel.locale.collectAsState()
-    val dynamicColorEnabled by viewModel.dynamicColorEnabled.collectAsState()
     val isAndroid12OrLater = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val jsonRef = remember { mutableStateOf<String?>(null) }
 
+    val wallpaperViewModel: HomeWallpaperViewModel = hiltViewModel()
+    val homeWallpaper by wallpaperViewModel.wallpaper.collectAsState()
+    val homeWallpaperBlur by wallpaperViewModel.blur.collectAsState()
+    val wallpaperPicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.GetContent()
+    ) { uri ->
+        uri?.let { wallpaperViewModel.importFromUri(it) }
+    }
+
+    val paletteExpanded = remember { mutableStateOf(true) }
     val themeExpanded = remember { mutableStateOf(true) }
     val langExpanded = remember { mutableStateOf(false) }
     var showExportConfirm by remember { mutableStateOf(false) }
@@ -486,17 +508,47 @@ fun SettingsScreen(
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
-            ListItem(
-                headlineContent = { Text(stringResource(R.string.settings_dynamic_color_title)) },
-                supportingContent = { Text(stringResource(R.string.settings_dynamic_color_subtitle)) },
-                trailingContent = {
-                    Switch(
-                        checked = dynamicColorEnabled,
-                        onCheckedChange = { viewModel.updateDynamicColorEnabled(it) },
-                        enabled = isAndroid12OrLater
-                    )
-                }
-            )
+            SettingsSection(
+                title = stringResource(R.string.palette),
+                expanded = paletteExpanded.value,
+                onToggle = { paletteExpanded.value = !paletteExpanded.value }
+            ) {
+                PalettePicker(
+                    selectedId = appPalette,
+                    choices = appPaletteChoices(isDarkTheme, isAndroid12OrLater),
+                    onSelect = { viewModel.updateAppPalette(it) }
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(
+                    text = stringResource(R.string.accent_color),
+                    style = MaterialTheme.typography.titleSmall
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                AccentColorPicker(
+                    selected = accentColor,
+                    background = MaterialTheme.colorScheme.background,
+                    fallback = MaterialTheme.colorScheme.secondary,
+                    onSelect = { viewModel.updateAccentColor(it) }
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = stringResource(R.string.wallpaper_home),
+                    style = MaterialTheme.typography.titleSmall
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                WallpaperChoiceRow(
+                    selectedRef = homeWallpaper,
+                    hasImage = WallpaperStorage.fileNameOf(homeWallpaper) != null,
+                    onPickImage = { wallpaperPicker.launch("image/*") },
+                    onSelectBuiltin = { wallpaperViewModel.select(it) },
+                    onRemove = { wallpaperViewModel.remove() }
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                BlurSlider(
+                    blur = homeWallpaperBlur,
+                    onBlurChange = { wallpaperViewModel.updateBlur(it) }
+                )
+            }
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 

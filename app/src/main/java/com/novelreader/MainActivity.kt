@@ -19,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
 import androidx.navigation.compose.rememberNavController
 import com.novelreader.data.local.preferences.AppPreferences
+import com.novelreader.data.local.preferences.PreferenceAllowlists
 import com.novelreader.ui.navigation.DeepLinkBus
 import com.novelreader.ui.navigation.DeepLinkIntentParser
 import com.novelreader.ui.navigation.DeepLinkToken
@@ -55,11 +56,15 @@ class MainActivity : ComponentActivity() {
         handleIntent(intent)
         setContent {
             val appTheme by appPreferences.appTheme.collectAsState(initial = "system")
-            val dynamicColor by appPreferences.dynamicColorEnabled.collectAsState(initial = true)
+            val appPalette by appPreferences.appPalette.collectAsState(
+                initial = PreferenceAllowlists.PALETTE_DYNAMIC
+            )
+            val accentColor by appPreferences.accentColor.collectAsState(initial = null)
 
             NovelReaderTheme(
                 appTheme = appTheme,
-                useDynamicColor = dynamicColor
+                palette = appPalette,
+                accentColor = accentColor
             ) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),

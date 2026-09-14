@@ -2,6 +2,8 @@ package com.novelreader.ui.reader
 
 import android.webkit.ValueCallback
 import android.webkit.WebView
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -69,6 +71,8 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.novelreader.R
+import com.novelreader.ui.customization.WallpaperBackground
+import com.novelreader.ui.theme.parseAccentHex
 import com.novelreader.data.local.db.entity.BookmarkEntity
 import com.novelreader.data.local.db.entity.ChapterEntity
 import com.novelreader.data.local.preferences.ReaderConfig
@@ -119,6 +123,12 @@ fun ReaderScreen(
     if (initialSearchQuery != lastInitialSearchQuery) {
         lastInitialSearchQuery = initialSearchQuery
         pendingSearchQuery = initialSearchQuery
+    }
+
+    val wallpaperPicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.GetContent()
+    ) { uri ->
+        uri?.let { viewModel.importWallpaper(it) }
     }
 
     fun saveScroll(callback: () -> Unit = {}) {
@@ -228,6 +238,11 @@ fun ReaderScreen(
             config = state.config,
             themeSelection = state.themeSelection,
             onThemeChange = { viewModel.updateTheme(it) },
+            onAccentChange = { viewModel.updateAccentColor(it) },
+            onPickWallpaper = { wallpaperPicker.launch("image/*") },
+            onWallpaperChange = { viewModel.updateWallpaper(it) },
+            onWallpaperBlurChange = { viewModel.updateWallpaperBlur(it) },
+            onVeilChange = { viewModel.updateVeil(it) },
             onFontSizeChange = { viewModel.updateFontSize(it) },
             onLineHeightChange = { viewModel.updateLineHeight(it) },
             onAutoScrollSpeedChange = { viewModel.updateAutoScrollSpeed(it) },
@@ -471,6 +486,14 @@ fun ReaderScreen(
                 .fillMaxSize()
                 .padding(padding)
         ) {
+            WallpaperBackground(
+                ref = state.config.wallpaper,
+                blur = state.config.wallpaperBlur,
+                veil = state.config.veil,
+                veilColor = parseAccentHex(readerSurfaceOf(state.config).bg) ?: Color.Black,
+                modifier = Modifier.fillMaxSize()
+            )
+
             when {
                 state.isLoading -> {
                     CircularProgressIndicator(

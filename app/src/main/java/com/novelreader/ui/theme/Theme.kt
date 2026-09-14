@@ -1,58 +1,40 @@
 package com.novelreader.ui.theme
 
 import android.app.Activity
-import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
-import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowInsetsControllerCompat
+import com.novelreader.data.local.preferences.PreferenceAllowlists
 
-private val DarkColorScheme = darkColorScheme(
-    primary = DarkPrimary,
-    onPrimary = DarkOnPrimary,
-    primaryContainer = DarkPrimary.copy(alpha = 0.18f),
-    secondary = DarkSecondary,
-    onSecondary = DarkOnSecondary,
-    secondaryContainer = DarkSecondaryContainer,
-    onSecondaryContainer = DarkOnSecondaryContainer,
-    background = DarkBackground,
-    surface = DarkSurface,
-    surfaceVariant = DarkSurface,
-    onBackground = DarkText,
-    onSurface = DarkText,
-    onSurfaceVariant = DarkText.copy(alpha = 0.7f),
-    error = Color(0xFFFFB4AB),
-    errorContainer = Color(0xFF93000A)
-)
+fun isDynamicPaletteAvailable(sdkInt: Int = android.os.Build.VERSION.SDK_INT): Boolean =
+    sdkInt >= android.os.Build.VERSION_CODES.S
 
-private val LightColorScheme = lightColorScheme(
-    primary = Primary,
-    secondary = Secondary,
-    secondaryContainer = LightSecondaryContainer,
-    onSecondaryContainer = LightOnSecondaryContainer,
-    background = LightBackground,
-    surface = LightSurface,
-    surfaceVariant = Color(0xFFE8E0D0),
-    onBackground = LightText,
-    onSurface = LightText,
-    onSurfaceVariant = LightText.copy(alpha = 0.7f),
-    error = Color(0xFFBA1A1A),
-    errorContainer = Color(0xFFFFDAD6)
-)
+fun shouldUseDynamicColor(
+    palette: String,
+    accentColor: String?,
+    sdkInt: Int = android.os.Build.VERSION.SDK_INT
+): Boolean = palette == PreferenceAllowlists.PALETTE_DYNAMIC &&
+    PreferenceAllowlists.sanitizeAccentColor(accentColor) == null &&
+    isDynamicPaletteAvailable(sdkInt)
+
+fun resolvePaletteScheme(palette: String, dark: Boolean, accentColor: String? = null): ColorScheme {
+    val resolved = AppPalette.fromId(palette)
+    val scheme = if (dark) resolved.dark else resolved.light
+    return scheme.withAccent(accentColor)
+}
 
 @Composable
 fun NovelReaderTheme(
     appTheme: String = "system",
-    useDynamicColor: Boolean = true,
+    palette: String = AppPalette.DEFAULT.id,
+    accentColor: String? = null,
     content: @Composable () -> Unit
 ) {
     val darkTheme = when (appTheme) {
@@ -62,12 +44,11 @@ fun NovelReaderTheme(
     }
 
     val context = LocalContext.current
+    val useDynamic = shouldUseDynamicColor(palette, accentColor)
     val colorScheme = when {
-        useDynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-        }
-        darkTheme -> DarkColorScheme
-        else -> LightColorScheme
+        useDynamic && darkTheme -> dynamicDarkColorScheme(context)
+        useDynamic -> dynamicLightColorScheme(context)
+        else -> resolvePaletteScheme(palette, darkTheme, accentColor)
     }
 
     val view = LocalView.current

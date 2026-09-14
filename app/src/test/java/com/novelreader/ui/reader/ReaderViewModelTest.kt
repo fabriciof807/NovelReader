@@ -12,6 +12,7 @@ import com.novelreader.data.local.db.entity.BookmarkEntity
 import com.novelreader.data.local.db.entity.ChapterEntity
 import com.novelreader.data.local.db.FtsSearchService
 import com.novelreader.data.local.preferences.ReaderPreferences
+import com.novelreader.data.storage.WallpaperStorage
 import com.novelreader.domain.usecase.ReimportChapterContentUseCase
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -42,6 +43,8 @@ class ReaderViewModelTest {
     private val chapterDao: ChapterDao = mockk(relaxed = true)
     private val bookmarkDao: BookmarkDao = mockk(relaxed = true)
     private val readerPrefs: ReaderPreferences = mockk(relaxed = true)
+    private val wallpaperStorage: com.novelreader.data.storage.WallpaperStorage =
+        mockk(relaxed = true)
     private val appPreferences: com.novelreader.data.local.preferences.AppPreferences = mockk(relaxed = true)
     private val ftsSearchService: FtsSearchService = mockk(relaxed = true)
     private val reimportChapterContentUseCase: ReimportChapterContentUseCase = mockk(relaxed = true)
@@ -53,6 +56,7 @@ class ReaderViewModelTest {
         Dispatchers.setMain(testDispatcher)
         every { readerPrefs.config } returns flowOf(com.novelreader.data.local.preferences.ReaderConfig())
         every { appPreferences.appTheme } returns flowOf("system")
+        every { appPreferences.appPalette } returns flowOf("indigo")
         every { bookmarkDao.getByChapter(any()) } returns flowOf(emptyList())
     }
 
@@ -68,17 +72,19 @@ class ReaderViewModelTest {
         chapterDao = chapterDao,
         bookmarkDao = bookmarkDao,
         readerPreferences = readerPrefs,
+        wallpaperStorage = wallpaperStorage,
         appPreferences = appPreferences,
         ftsSearchService = ftsSearchService,
         reimportChapterContentUseCase = reimportChapterContentUseCase
     )
 
     @Test
-    fun `reader theme follows the dark app theme when the stored theme is auto`() = runTest {
+    fun `reader theme follows the app palette and variant when the stored theme is auto`() = runTest {
         every { readerPrefs.config } returns flowOf(
             com.novelreader.data.local.preferences.ReaderConfig(theme = "auto")
         )
         every { appPreferences.appTheme } returns flowOf("dark")
+        every { appPreferences.appPalette } returns flowOf("floresta")
         coEvery { chapterDao.getChapterById(10) } returns ChapterEntity(
             id = 10, novelId = 1, title = "Ch1",
             fileName = "ch1.html", orderIndex = 0, content = "<p>x</p>"
@@ -87,15 +93,17 @@ class ReaderViewModelTest {
 
         viewModel = createViewModel()
 
-        assertThat(viewModel.state.value.config.theme).isEqualTo("dark")
+        assertThat(viewModel.state.value.config.theme).isEqualTo("floresta")
+        assertThat(viewModel.state.value.config.themeDark).isTrue()
     }
 
     @Test
-    fun `an explicit reader theme overrides the app theme`() = runTest {
+    fun `an explicit reader palette keeps its legacy light surface over the dark app theme`() = runTest {
         every { readerPrefs.config } returns flowOf(
             com.novelreader.data.local.preferences.ReaderConfig(theme = "sepia")
         )
         every { appPreferences.appTheme } returns flowOf("dark")
+        every { appPreferences.appPalette } returns flowOf("grafite")
         coEvery { chapterDao.getChapterById(10) } returns ChapterEntity(
             id = 10, novelId = 1, title = "Ch1",
             fileName = "ch1.html", orderIndex = 0, content = "<p>x</p>"
@@ -104,7 +112,28 @@ class ReaderViewModelTest {
 
         viewModel = createViewModel()
 
-        assertThat(viewModel.state.value.config.theme).isEqualTo("sepia")
+        assertThat(viewModel.state.value.config.theme).isEqualTo("papel")
+        assertThat(viewModel.state.value.config.themeDark).isFalse()
+        assertThat(viewModel.state.value.themeSelection).isEqualTo("sepia")
+    }
+
+    @Test
+    fun `an explicit reader variant overrides the app variant`() = runTest {
+        every { readerPrefs.config } returns flowOf(
+            com.novelreader.data.local.preferences.ReaderConfig(theme = "papel:dark")
+        )
+        every { appPreferences.appTheme } returns flowOf("light")
+        every { appPreferences.appPalette } returns flowOf("indigo")
+        coEvery { chapterDao.getChapterById(10) } returns ChapterEntity(
+            id = 10, novelId = 1, title = "Ch1",
+            fileName = "ch1.html", orderIndex = 0, content = "<p>x</p>"
+        )
+        coEvery { chapterDao.getChaptersByNovelSync(1) } returns emptyList()
+
+        viewModel = createViewModel()
+
+        assertThat(viewModel.state.value.config.theme).isEqualTo("papel")
+        assertThat(viewModel.state.value.config.themeDark).isTrue()
     }
 
     @Test
@@ -113,6 +142,7 @@ class ReaderViewModelTest {
             com.novelreader.data.local.preferences.ReaderConfig(theme = "auto")
         )
         every { appPreferences.appTheme } returns flowOf("dark")
+        every { appPreferences.appPalette } returns flowOf("indigo")
         coEvery { chapterDao.getChapterById(10) } returns ChapterEntity(
             id = 10, novelId = 1, title = "Ch1",
             fileName = "ch1.html", orderIndex = 0, content = "<p>x</p>"
@@ -121,7 +151,8 @@ class ReaderViewModelTest {
 
         viewModel = createViewModel()
 
-        assertThat(viewModel.state.value.config.theme).isEqualTo("dark")
+        assertThat(viewModel.state.value.config.theme).isEqualTo("indigo")
+        assertThat(viewModel.state.value.config.themeDark).isTrue()
         assertThat(viewModel.state.value.themeSelection).isEqualTo("auto")
     }
 
@@ -140,6 +171,48 @@ class ReaderViewModelTest {
         viewModel = createViewModel()
 
         assertThat(viewModel.state.value.themeSelection).isEqualTo("sepia")
+    }
+
+    @Test
+    fun `updateAccentColor persists the reader accent`() = runTest {
+        viewModel = createViewModel()
+
+        viewModel.updateAccentColor("#2e7d32")
+
+        coVerify { readerPrefs.updateAccentColor("#2e7d32") }
+    }
+
+    @Test
+    fun `updateWallpaperBlur and updateVeil persist their values`() = runTest {
+        viewModel = createViewModel()
+
+        viewModel.updateWallpaperBlur(24)
+        viewModel.updateVeil(55)
+
+        coVerify { readerPrefs.updateWallpaperBlur(24) }
+        coVerify { readerPrefs.updateVeil(55) }
+    }
+
+    @Test
+    fun `importWallpaper stores the reference returned by the storage`() = runTest {
+        val uri: Uri = mockk()
+        coEvery { wallpaperStorage.importFromUri(WallpaperStorage.SLOT_READER, uri) } returns
+            "file:reader_7.jpg"
+        viewModel = createViewModel()
+
+        viewModel.importWallpaper(uri)
+
+        coVerify { readerPrefs.updateWallpaper("file:reader_7.jpg") }
+    }
+
+    @Test
+    fun `removeWallpaper clears the slot and resets the reference`() = runTest {
+        viewModel = createViewModel()
+
+        viewModel.removeWallpaper()
+
+        coVerify { wallpaperStorage.clearSlot(WallpaperStorage.SLOT_READER) }
+        coVerify { readerPrefs.updateWallpaper("none") }
     }
 
     @Test

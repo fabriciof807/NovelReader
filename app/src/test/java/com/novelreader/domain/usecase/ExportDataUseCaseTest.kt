@@ -95,9 +95,15 @@ class ExportDataUseCaseTest {
         every { appPreferences.appTheme } returns flowOf("dark")
         every { appPreferences.locale } returns flowOf("pt")
         every { appPreferences.dynamicColorEnabled } returns flowOf(false)
+        every { appPreferences.appPalette } returns flowOf("papel")
+        every { appPreferences.accentColor } returns flowOf("#ff6f00")
+        every { appPreferences.homeWallpaper } returns flowOf("builtin:noite")
+        every { appPreferences.homeWallpaperBlur } returns flowOf(18)
         every { readerPreferences.config } returns flowOf(
             com.novelreader.data.local.preferences.ReaderConfig(
-                fontSize = 24, fontFamily = "sans", lineHeight = 2f, theme = "sepia",
+                fontSize = 24, fontFamily = "sans", lineHeight = 2f, theme = "papel:light",
+                accentColor = "#8d6e63", wallpaper = "file:reader_1.jpg",
+                wallpaperBlur = 24, veil = 70,
                 autoScrollSpeed = 1.5f, keepScreenOn = false, swipeDirection = "horizontal"
             )
         )
@@ -159,6 +165,17 @@ class ExportDataUseCaseTest {
         assertThat(settings.getBoolean("dynamicColor")).isFalse()
         assertThat(settings.getJSONObject("reader").getInt("fontSize")).isEqualTo(24)
         assertThat(settings.getJSONObject("reader").getString("swipeDirection")).isEqualTo("horizontal")
+        assertThat(settings.getString("appPalette")).isEqualTo("papel")
+        assertThat(settings.getString("accentColor")).isEqualTo("#ff6f00")
+        assertThat(settings.getString("wallpaperHome")).isEqualTo("builtin:noite")
+        assertThat(settings.getInt("wallpaperHomeBlur")).isEqualTo(18)
+        settings.getJSONObject("reader").let { reader ->
+            assertThat(reader.getString("theme")).isEqualTo("papel:light")
+            assertThat(reader.getString("accentColor")).isEqualTo("#8d6e63")
+            assertThat(reader.getString("wallpaper")).isEqualTo("file:reader_1.jpg")
+            assertThat(reader.getInt("wallpaperBlur")).isEqualTo(24)
+            assertThat(reader.getInt("veil")).isEqualTo(70)
+        }
         assertThat(settings.getJSONObject("library").getString("sortOrder")).isEqualTo("TITLE")
     }
 

@@ -155,11 +155,19 @@ class ExportDataUseCase @Inject constructor(
             put("appTheme", appPreferences.appTheme.first())
             put("locale", appPreferences.locale.first())
             put("dynamicColor", appPreferences.dynamicColorEnabled.first())
+            put("appPalette", appPreferences.appPalette.first())
+            appPreferences.accentColor.first()?.let { put("accentColor", it) }
+            put("wallpaperHome", appPreferences.homeWallpaper.first())
+            put("wallpaperHomeBlur", appPreferences.homeWallpaperBlur.first())
             put("reader", JSONObject().apply {
                 put("fontSize", config.fontSize)
                 put("fontFamily", config.fontFamily)
                 put("lineHeight", config.lineHeight.toDouble())
                 put("theme", config.theme)
+                config.accentColor?.let { put("accentColor", it) }
+                put("wallpaper", config.wallpaper)
+                put("wallpaperBlur", config.wallpaperBlur)
+                put("veil", config.veil)
                 put("autoScrollSpeed", config.autoScrollSpeed.toDouble())
                 put("keepScreenOn", config.keepScreenOn)
                 put("swipeDirection", config.swipeDirection)

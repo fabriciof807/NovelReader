@@ -3,6 +3,7 @@ package com.novelreader.ui.reader
 import com.google.common.truth.Truth.assertThat
 import com.novelreader.data.local.db.entity.BookmarkEntity
 import com.novelreader.data.local.preferences.ReaderConfig
+import com.novelreader.ui.theme.AppPalette
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -35,13 +36,68 @@ class ReaderHtmlBuilderTest {
     }
 
     @Test
-    fun `themeVars returns the four color keys for each theme`() {
-        for (theme in listOf("light", "dark", "sepia", "gray")) {
-            val map = themeVars(ReaderConfig(theme = theme))
-            assertThat(map).containsKey("bgColor")
-            assertThat(map).containsKey("textColor")
-            assertThat(map).containsKey("accentColor")
-            assertThat(map).containsKey("linkColor")
+    fun `themeVars returns the four color keys for every palette and variant`() {
+        for (palette in AppPalette.entries) {
+            for (dark in listOf(false, true)) {
+                val map = themeVars(ReaderConfig(theme = palette.id, themeDark = dark))
+                assertThat(map.keys)
+                    .containsExactly("bgColor", "textColor", "accentColor", "linkColor")
+            }
+        }
+    }
+
+    @Test
+    fun `themeVars resolves the legacy reader themes to their original colours`() {
+        val light = themeVars(ReaderConfig(theme = "indigo", themeDark = false))
+        assertThat(light["bgColor"]).isEqualTo("#f5f0e8")
+        assertThat(light["textColor"]).isEqualTo("#333333")
+        assertThat(light["accentColor"]).isEqualTo("#1a237e")
+
+        val sepia = themeVars(ReaderConfig(theme = "papel", themeDark = false))
+        assertThat(sepia["bgColor"]).isEqualTo("#f4e4c1")
+        assertThat(sepia["textColor"]).isEqualTo("#5b4636")
+
+        val gray = themeVars(ReaderConfig(theme = "grafite", themeDark = true))
+        assertThat(gray["bgColor"]).isEqualTo("#2d2d2d")
+        assertThat(gray["accentColor"]).isEqualTo("#90a4ae")
+    }
+
+    @Test
+    fun `themeVars uses the reader accent for accents and links`() {
+        val map = themeVars(
+            ReaderConfig(theme = "indigo", themeDark = false, accentColor = "#8d6e63")
+        )
+        assertThat(map["accentColor"]).isEqualTo("#8d6e63")
+        assertThat(map["linkColor"]).isEqualTo("#8d6e63")
+        assertThat(map["bgColor"]).isEqualTo("#f5f0e8")
+    }
+
+    @Test
+    fun `themeVars ignores an accent that could escape the css value`() {
+        val map = themeVars(
+            ReaderConfig(
+                theme = "indigo",
+                themeDark = false,
+                accentColor = "#fff;} body { display: none }"
+            )
+        )
+        assertThat(map["accentColor"]).isEqualTo("#1a237e")
+        assertThat(map["linkColor"]).isEqualTo("#1565c0")
+    }
+
+    @Test
+    fun `themeVars goes transparent while a wallpaper is set`() {
+        val plain = themeVars(
+            ReaderConfig(theme = "papel", themeDark = false, wallpaper = "none")
+        )
+        assertThat(plain["bgColor"]).isEqualTo("#f4e4c1")
+
+        listOf("builtin:oceano", "file:reader_1.jpg").forEach { ref ->
+            val map = themeVars(
+                ReaderConfig(theme = "papel", themeDark = false, wallpaper = ref)
+            )
+            assertThat(map["bgColor"]).isEqualTo("transparent")
+            assertThat(map["textColor"]).isEqualTo("#5b4636")
         }
     }
 
@@ -49,7 +105,7 @@ class ReaderHtmlBuilderTest {
     fun `buildReaderHtml emits kebab-case CSS custom properties matching the theme`() {
         val html = buildReaderHtml(
             content = "<p>x</p>",
-            config = ReaderConfig(theme = "dark")
+            config = ReaderConfig(theme = "indigo", themeDark = true)
         )
         val root = html.substringAfter("<style>").substringBefore("</style>")
             .substringAfter(":root {").substringBefore("}")
@@ -135,7 +191,7 @@ class ReaderHtmlBuilderTest {
 
     @Test
     fun `applyConfigJs passes the config object to applyConfig without JSON parse`() {
-        val js = applyConfigJs(ReaderConfig(theme = "dark"))
+        val js = applyConfigJs(ReaderConfig(theme = "indigo", themeDark = true))
         assertThat(js).contains("applyConfig(args.args);")
         assertThat(js).doesNotContain("JSON.parse(args)")
         assertThat(js).contains("\"fontFamily\":\"serif\"")

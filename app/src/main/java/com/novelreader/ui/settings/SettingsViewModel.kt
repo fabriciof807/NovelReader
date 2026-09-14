@@ -5,6 +5,7 @@ import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.novelreader.data.local.preferences.AppPreferences
+import com.novelreader.data.local.preferences.PreferenceAllowlists
 import com.novelreader.domain.usecase.ExportDataUseCase
 import com.novelreader.domain.usecase.ExportOptions
 import com.novelreader.domain.usecase.ImportDataUseCase
@@ -33,8 +34,15 @@ class SettingsViewModel @Inject constructor(
     val locale: StateFlow<String> = appPreferences.locale
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "pt")
 
-    val dynamicColorEnabled: StateFlow<Boolean> = appPreferences.dynamicColorEnabled
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+    val appPalette: StateFlow<String> = appPreferences.appPalette
+        .stateIn(
+            viewModelScope,
+            SharingStarted.WhileSubscribed(5000),
+            PreferenceAllowlists.PALETTE_DYNAMIC
+        )
+
+    val accentColor: StateFlow<String?> = appPreferences.accentColor
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
     private val _exportedJson = MutableSharedFlow<String>(extraBufferCapacity = 1)
     val exportedJson: SharedFlow<String> = _exportedJson
@@ -72,9 +80,15 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    fun updateDynamicColorEnabled(enabled: Boolean) {
+    fun updateAppPalette(palette: String) {
         viewModelScope.launch {
-            appPreferences.updateDynamicColorEnabled(enabled)
+            appPreferences.updateAppPalette(palette)
+        }
+    }
+
+    fun updateAccentColor(color: String?) {
+        viewModelScope.launch {
+            appPreferences.updateAccentColor(color)
         }
     }
 

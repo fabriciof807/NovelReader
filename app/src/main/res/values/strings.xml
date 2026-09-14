@@ -61,6 +61,32 @@
     <string name="english">Inglês</string>
     <string name="settings_dynamic_color_title">Tema dinâmico (Android 12+)</string>
     <string name="settings_dynamic_color_subtitle">Usa as cores do seu sistema</string>
+    <string name="palette">Paleta</string>
+    <string name="accent_color">Cor de acento</string>
+    <string name="accent_color_default">Padrão da paleta</string>
+    <string name="accent_color_hue">Matiz</string>
+    <string name="accent_color_saturation">Saturação</string>
+    <string name="palette_indigo">Índigo</string>
+    <string name="palette_papel">Papel</string>
+    <string name="palette_grafite">Grafite</string>
+    <string name="palette_floresta">Floresta</string>
+    <string name="palette_ameixa">Ameixa</string>
+    <string name="palette_amoled">AMOLED</string>
+    <string name="palette_dynamic">Dinâmica</string>
+    <string name="builtin_wallpaper_amanhecer">Amanhecer</string>
+    <string name="builtin_wallpaper_aurora">Aurora</string>
+    <string name="builtin_wallpaper_crepusculo">Crepúsculo</string>
+    <string name="builtin_wallpaper_bosque">Bosque</string>
+    <string name="builtin_wallpaper_carvao">Carvão</string>
+    <string name="builtin_wallpaper_noite">Noite</string>
+    <string name="builtin_wallpaper_oceano">Oceano</string>
+    <string name="builtin_wallpaper_pergaminho">Pergaminho</string>
+    <string name="wallpaper_home">Papel de parede da biblioteca</string>
+    <string name="wallpaper_reader">Papel de parede do leitor</string>
+    <string name="wallpaper_pick">Escolher imagem</string>
+    <string name="wallpaper_remove">Remover</string>
+    <string name="wallpaper_blur">Desfoque: %d</string>
+    <string name="wallpaper_veil">Véu de leitura: %d%%</string>
 
     <!-- Import -->
     <string name="import_action">Importar</string>
@@ -98,6 +124,10 @@
     <string name="sepia">Sépia</string>
     <string name="reader_theme_gray">Cinza</string>
     <string name="reader_theme_auto">Auto</string>
+    <string name="reader_variant">Variante</string>
+    <string name="reader_variant_auto">Seguir o app</string>
+    <string name="reader_variant_light">Clara</string>
+    <string name="reader_variant_dark">Escura</string>
     <string name="font_size">Tamanho da fonte: %dpx</string>
     <string name="line_spacing">Espaçamento: %.1f</string>
     <string name="reader_auto_scroll">Rolagem automática</string>

@@ -44,11 +44,15 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.novelreader.R
+import com.novelreader.data.local.preferences.PreferenceAllowlists
+import com.novelreader.ui.customization.HomeWallpaperViewModel
+import com.novelreader.ui.customization.WallpaperBackground
 import com.novelreader.ui.library.components.AddToCollectionDialog
 import com.novelreader.ui.library.components.CollectionNameDialog
 import com.novelreader.ui.library.components.CoverUrlDialog
@@ -89,6 +93,10 @@ fun LibraryScreen(
     val failedChapters by viewModel.failedChapters.collectAsState()
     val scrollToFailedRequest by viewModel.scrollToFailedRequest.collectAsState()
     val viewMode by viewModel.viewMode.collectAsState()
+    val wallpaperViewModel: HomeWallpaperViewModel = hiltViewModel()
+    val homeWallpaper by wallpaperViewModel.wallpaper.collectAsState()
+    val homeWallpaperBlur by wallpaperViewModel.blur.collectAsState()
+    val wallpaperActive = homeWallpaper != PreferenceAllowlists.WALLPAPER_NONE
     val showWhatsNew by viewModel.showWhatsNew.collectAsState()
     val whatsNewGroups by viewModel.whatsNewGroups.collectAsState()
     val newChapterCounts by viewModel.newChapterCounts.collectAsState()
@@ -178,8 +186,16 @@ fun LibraryScreen(
         )
     }
 
-    Scaffold(
-        topBar = {
+    Box(modifier = Modifier.fillMaxSize()) {
+        WallpaperBackground(
+            ref = homeWallpaper,
+            blur = homeWallpaperBlur,
+            modifier = Modifier.fillMaxSize()
+        )
+        Scaffold(
+            containerColor = if (wallpaperActive) Color.Transparent
+            else MaterialTheme.colorScheme.background,
+            topBar = {
             Column {
                 TopAppBar(
                     title = {
@@ -213,7 +229,8 @@ fun LibraryScreen(
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.surface,
+                        containerColor = if (wallpaperActive) Color.Transparent
+                        else MaterialTheme.colorScheme.surface,
                         titleContentColor = MaterialTheme.colorScheme.onSurface
                     ),
                     actions = {
@@ -273,7 +290,11 @@ fun LibraryScreen(
                         }
                     }
                 )
-                TabRow(selectedTabIndex = selectedTab) {
+                TabRow(
+                    selectedTabIndex = selectedTab,
+                    containerColor = if (wallpaperActive) Color.Transparent
+                    else MaterialTheme.colorScheme.surface
+                ) {
                     Tab(
                         selected = selectedTab == 0,
                         onClick = { viewModel.deselectNovel() },
@@ -427,6 +448,7 @@ fun LibraryScreen(
                     onImportCharacters = { url -> viewModel.importCharactersFromUrl(url) }
                 )
             }
+        }
         }
     }
 
