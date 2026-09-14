@@ -12,7 +12,7 @@ The app is end-user focused: 100% offline, no analytics, no account, no cloud.
 - Jetpack Compose (BOM 2024.12.01) + Material3
 - Room 2.8.4 (SQLite, FTS4 for full-text search) — **v12** (10 entities, 8 DAOs)
 - Hilt 2.59.2 (DI with multibinding for parsers)
-- Jsoup 1.22.1 (HTML parsing)
+- Jsoup 1.23.2 (HTML parsing)
 - Coil 2.7.0 (image loading)
 - DataStore 1.1.3 (preferences)
 - WorkManager 2.10.0 (background chapter imports)
@@ -201,6 +201,7 @@ v2.9.2 (versionCode 29). See [README.md](README.md) (English) and [README_PT.md]
 - Fix: `http://` chapter links on an https page are upgraded instead of being rejected by `requireHttps`.
 - Fix: reader theme changes and bookmark/config updates now apply to the open page (the load effect no longer double-loads the chapter, so `onPageFinished` token checks pass and scroll restore works again).
 - Feat: the reader theme defaults to `auto` and follows the app theme (light/dark); an explicit choice overrides it, and the settings sheet has an `Auto` chip so the choice can be reverted without clearing app data.
+- Fix: dependency `jsoup` bumped 1.22.1 → 1.23.2, clearing CVE-2026-71497 (parser/browser desync in `Safelist` with raw-text elements); parser fixtures verified unchanged.
 - Security: reader WebView CSP now uses a per-load nonce (no `unsafe-inline`); the Cloudflare challenge WebView validates the host before loading; `PublicOnlyDns` blocks private DNS answers; response/decompression bodies are capped at 8/16 MiB.
 - Docs: `docs/security-residual-risks.md` records the piolium findings, the hardening and the dependency CVE audit.
 - Feat: chapter title back at the top of the reader content (`<h1 class="chapter-title">`); source headings that duplicate the title are deduped, short titles included.

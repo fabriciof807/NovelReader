@@ -42,14 +42,16 @@ verified against the source and fixed:
 
 | Dependency | Version | Status |
 |---|---|---|
-| `org.jsoup:jsoup` | 1.22.1 | **CVE-2026-71497** (medium, CVSS 4.7): XSS via parser/browser desynchronization, but only when a custom `Safelist` permits raw-text/RCDATA elements (`style`, `title`, `iframe`, …). `READER_SAFELIST` allows only `p`, `h1`–`h6`, `br`, `strong`, `em`, `b`, `i`, `u`, `sub`, `sup`, so the precondition is not met. Upgrade to a 1.23.x release to clear the advisory. |
+| `org.jsoup:jsoup` | 1.23.2 | **CVE-2026-71497 cleared** (fixed in 1.23.1). The advisory was XSS via parser/browser desynchronization, only reachable when a custom `Safelist` permits raw-text/RCDATA elements (`style`, `title`, `iframe`, …); `READER_SAFELIST` allows only `p`, `h1`–`h6`, `br`, `strong`, `em`, `b`, `i`, `u`, `sub`, `sup`, so the precondition never applied here. The bump is verified by the parser fixtures under `app/src/test/resources/`. |
 | `com.squareup.okhttp3:okhttp` | 4.12.0 | No CVE found for the core client. The known brotli issue (CVE-2023-3782) affects `okhttp-brotli`, which this project does not use. The project's own brotli path is now bounded (section 2). |
 | `io.coil-kt:coil-compose` | 2.7.0 | No known CVE. |
 | `org.brotli:dec` | 0.1.2 | No known CVE; decompression is bounded (section 2). |
 | Android WebView | system | Not pinned by the app; updated through the Play Store on the device. |
 
-Recommended follow-up: bump jsoup to 1.23.x (verify the reader/parser fixtures
-after the bump).
+Recommended follow-up: none open for jsoup. The 1.22.1 → 1.23.2 bump (2026-09-14)
+landed together with the parser fixtures passing unchanged; the only
+`Jsoup.connect` call site (`MvlempyrCharacterImporter`) keeps `followRedirects(true)`
+under the specification-correct redirect handling introduced in 1.23.1.
 
 ### 3.1 npm dependency audit (`landing-page/`, 2026-09-10)
 

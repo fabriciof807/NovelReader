@@ -149,7 +149,7 @@ See `git log` for the history of architectural improvements and the `handoff-*.m
 | Hilt | 2.59.2 |
 | Room | 2.8.4 |
 | KSP | 2.3.9 |
-| Jsoup | 1.22.1 |
+| Jsoup | 1.23.2 |
 | Coil | 2.7.0 |
 | DataStore | 1.1.3 |
 | WorkManager | 2.10.0 |
