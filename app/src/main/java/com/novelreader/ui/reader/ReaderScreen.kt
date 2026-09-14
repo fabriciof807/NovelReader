@@ -226,6 +226,7 @@ fun ReaderScreen(
     if (state.showSettings) {
         SettingsSheet(
             config = state.config,
+            themeSelection = state.themeSelection,
             onThemeChange = { viewModel.updateTheme(it) },
             onFontSizeChange = { viewModel.updateFontSize(it) },
             onLineHeightChange = { viewModel.updateLineHeight(it) },

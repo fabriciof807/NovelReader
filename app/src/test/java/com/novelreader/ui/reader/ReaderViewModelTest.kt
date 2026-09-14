@@ -108,6 +108,50 @@ class ReaderViewModelTest {
     }
 
     @Test
+    fun `the auto theme keeps the resolved page theme and reports the auto selection`() = runTest {
+        every { readerPrefs.config } returns flowOf(
+            com.novelreader.data.local.preferences.ReaderConfig(theme = "auto")
+        )
+        every { appPreferences.appTheme } returns flowOf("dark")
+        coEvery { chapterDao.getChapterById(10) } returns ChapterEntity(
+            id = 10, novelId = 1, title = "Ch1",
+            fileName = "ch1.html", orderIndex = 0, content = "<p>x</p>"
+        )
+        coEvery { chapterDao.getChaptersByNovelSync(1) } returns emptyList()
+
+        viewModel = createViewModel()
+
+        assertThat(viewModel.state.value.config.theme).isEqualTo("dark")
+        assertThat(viewModel.state.value.themeSelection).isEqualTo("auto")
+    }
+
+    @Test
+    fun `an explicit theme is reported as the stored selection`() = runTest {
+        every { readerPrefs.config } returns flowOf(
+            com.novelreader.data.local.preferences.ReaderConfig(theme = "sepia")
+        )
+        every { appPreferences.appTheme } returns flowOf("dark")
+        coEvery { chapterDao.getChapterById(10) } returns ChapterEntity(
+            id = 10, novelId = 1, title = "Ch1",
+            fileName = "ch1.html", orderIndex = 0, content = "<p>x</p>"
+        )
+        coEvery { chapterDao.getChaptersByNovelSync(1) } returns emptyList()
+
+        viewModel = createViewModel()
+
+        assertThat(viewModel.state.value.themeSelection).isEqualTo("sepia")
+    }
+
+    @Test
+    fun `updateTheme persists the auto selection`() = runTest {
+        viewModel = createViewModel()
+
+        viewModel.updateTheme("auto")
+
+        coVerify { readerPrefs.updateTheme("auto") }
+    }
+
+    @Test
     fun `loadChapter with missing chapter sets error in state`() = runTest {
         coEvery { chapterDao.getChapterById(10) } returns null
         viewModel = createViewModel()

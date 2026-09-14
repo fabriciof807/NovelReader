@@ -97,6 +97,7 @@
     <string name="theme">Tema</string>
     <string name="sepia">Sépia</string>
     <string name="reader_theme_gray">Cinza</string>
+    <string name="reader_theme_auto">Auto</string>
     <string name="font_size">Tamanho da fonte: %dpx</string>
     <string name="line_spacing">Espaçamento: %.1f</string>
     <string name="reader_auto_scroll">Rolagem automática</string>

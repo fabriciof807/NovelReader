@@ -45,6 +45,7 @@ data class ReaderState(
     val showBookmarkDialog: Boolean = false,
     val showSettings: Boolean = false,
     val config: ReaderConfig = ReaderConfig(),
+    val themeSelection: String = ReaderTheme.DEFAULT,
     val isSearchActive: Boolean = false,
     val searchQuery: String = "",
     val searchResults: List<ChapterEntity> = emptyList()
@@ -94,22 +95,21 @@ class ReaderViewModel @Inject constructor(
     companion object {
         private const val emptyChapterThreshold = 200
         private const val keyLoadedChapterId = "loadedChapterId"
-        private const val themeAuto = "auto"
     }
 
     init {
         viewModelScope.launch {
             combine(readerPreferences.config, appPreferences.appTheme) { config, appTheme ->
-                config.copy(theme = resolveTheme(config.theme, appTheme))
-            }.collect { config ->
-                _state.value = _state.value.copy(config = config)
+                config.copy(theme = resolveTheme(config.theme, appTheme)) to config.theme
+            }.collect { (config, storedTheme) ->
+                _state.value = _state.value.copy(config = config, themeSelection = storedTheme)
             }
         }
         loadChapter(savedStateHandle.get<Long>(keyLoadedChapterId) ?: chapterId)
     }
 
     private fun resolveTheme(storedTheme: String, appTheme: String): String = when {
-        storedTheme != themeAuto -> storedTheme
+        storedTheme != ReaderTheme.AUTO -> storedTheme
         appTheme == "dark" -> "dark"
         appTheme == "light" -> "light"
         else -> if (isSystemDark()) "dark" else "light"

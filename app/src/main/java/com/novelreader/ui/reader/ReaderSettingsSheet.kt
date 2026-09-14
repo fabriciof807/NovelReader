@@ -13,10 +13,12 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowUpward
+import androidx.compose.material.icons.filled.BrightnessAuto
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.LightMode
@@ -49,6 +51,7 @@ import com.novelreader.data.local.preferences.ReaderConfig
 @Composable
 fun SettingsSheet(
     config: ReaderConfig,
+    themeSelection: String = ReaderTheme.DEFAULT,
     onThemeChange: (String) -> Unit,
     onFontSizeChange: (Int) -> Unit,
     onLineHeightChange: (Float) -> Unit,
@@ -83,33 +86,40 @@ fun SettingsSheet(
             Spacer(modifier = Modifier.height(8.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
+                ThemeOption(
+                    icon = Icons.Default.BrightnessAuto,
+                    label = stringResource(R.string.reader_theme_auto),
+                    selected = themeSelection == ReaderTheme.AUTO,
+                    onClick = { onThemeChange(ReaderTheme.AUTO) },
+                    modifier = Modifier.weight(1f)
+                )
                 ThemeOption(
                     icon = Icons.Default.LightMode,
                     label = stringResource(R.string.light),
-                    selected = config.theme == "light",
+                    selected = themeSelection == "light",
                     onClick = { onThemeChange("light") },
                     modifier = Modifier.weight(1f)
                 )
                 ThemeOption(
                     icon = Icons.Default.DarkMode,
                     label = stringResource(R.string.dark),
-                    selected = config.theme == "dark",
+                    selected = themeSelection == "dark",
                     onClick = { onThemeChange("dark") },
                     modifier = Modifier.weight(1f)
                 )
                 ThemeOption(
                     icon = Icons.Default.Palette,
                     label = stringResource(R.string.sepia),
-                    selected = config.theme == "sepia",
+                    selected = themeSelection == "sepia",
                     onClick = { onThemeChange("sepia") },
                     modifier = Modifier.weight(1f)
                 )
                 ThemeOption(
                     icon = Icons.Default.DarkMode,
                     label = stringResource(R.string.reader_theme_gray),
-                    selected = config.theme == "gray",
+                    selected = themeSelection == "gray",
                     onClick = { onThemeChange("gray") },
                     modifier = Modifier.weight(1f)
                 )
@@ -276,7 +286,7 @@ private fun ThemeOption(
             .clip(RoundedCornerShape(12.dp))
             .background(bgColor)
             .border(2.dp, borderColor, RoundedCornerShape(12.dp))
-            .clickable(onClick = onClick)
+            .selectable(selected = selected, onClick = onClick)
             .padding(vertical = 16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -293,7 +303,8 @@ private fun ThemeOption(
             style = MaterialTheme.typography.labelMedium,
             fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
             color = if (selected) MaterialTheme.colorScheme.primary
-            else MaterialTheme.colorScheme.onSurfaceVariant
+            else MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1
         )
     }
 }
