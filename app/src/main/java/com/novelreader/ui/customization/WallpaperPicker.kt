@@ -21,6 +21,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -166,18 +170,24 @@ private fun builtinWallpaperLabelRes(id: String): Int = when (id) {
 
 @Composable
 fun BlurSlider(
-    blur: Int,
-    onBlurChange: (Int) -> Unit,
-    modifier: Modifier = Modifier
+    initial: Int,
+    onCommit: (Int) -> Unit,
+    modifier: Modifier = Modifier,
+    onPreview: (Int) -> Unit = {}
 ) {
+    var value by remember(initial) { mutableFloatStateOf(initial.toFloat()) }
     Column(modifier = modifier.fillMaxWidth()) {
         Text(
-            text = stringResource(R.string.wallpaper_blur, blur),
+            text = stringResource(R.string.wallpaper_blur, value.toInt()),
             style = MaterialTheme.typography.titleSmall
         )
         Slider(
-            value = blur.toFloat(),
-            onValueChange = { onBlurChange(it.toInt()) },
+            value = value,
+            onValueChange = {
+                value = it
+                onPreview(it.toInt())
+            },
+            onValueChangeFinished = { onCommit(value.toInt()) },
             valueRange = 0f..PreferenceAllowlists.MAX_BLUR.toFloat(),
             modifier = Modifier.fillMaxWidth()
         )
@@ -186,18 +196,24 @@ fun BlurSlider(
 
 @Composable
 fun VeilSlider(
-    veil: Int,
-    onVeilChange: (Int) -> Unit,
-    modifier: Modifier = Modifier
+    initial: Int,
+    onCommit: (Int) -> Unit,
+    modifier: Modifier = Modifier,
+    onPreview: (Int) -> Unit = {}
 ) {
+    var value by remember(initial) { mutableFloatStateOf(initial.toFloat()) }
     Column(modifier = modifier.fillMaxWidth()) {
         Text(
-            text = stringResource(R.string.wallpaper_veil, veil),
+            text = stringResource(R.string.wallpaper_veil, value.toInt()),
             style = MaterialTheme.typography.titleSmall
         )
         Slider(
-            value = veil.toFloat(),
-            onValueChange = { onVeilChange(it.toInt()) },
+            value = value,
+            onValueChange = {
+                value = it
+                onPreview(it.toInt())
+            },
+            onValueChangeFinished = { onCommit(value.toInt()) },
             valueRange = 0f..PreferenceAllowlists.MAX_VEIL.toFloat(),
             modifier = Modifier.fillMaxWidth()
         )

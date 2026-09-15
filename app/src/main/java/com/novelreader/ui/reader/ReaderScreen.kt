@@ -55,6 +55,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -124,6 +125,13 @@ fun ReaderScreen(
         lastInitialSearchQuery = initialSearchQuery
         pendingSearchQuery = initialSearchQuery
     }
+
+    val savedThemes by viewModel.savedThemes.collectAsState()
+    var liveVeil by remember { mutableIntStateOf(state.config.veil) }
+    var liveBlur by remember { mutableIntStateOf(state.config.wallpaperBlur) }
+
+    LaunchedEffect(state.config.veil) { liveVeil = state.config.veil }
+    LaunchedEffect(state.config.wallpaperBlur) { liveBlur = state.config.wallpaperBlur }
 
     val wallpaperPicker = rememberLauncherForActivityResult(
         ActivityResultContracts.GetContent()
@@ -242,7 +250,14 @@ fun ReaderScreen(
             onPickWallpaper = { wallpaperPicker.launch("image/*") },
             onWallpaperChange = { viewModel.updateWallpaper(it) },
             onWallpaperBlurChange = { viewModel.updateWallpaperBlur(it) },
+            onWallpaperBlurPreview = { liveBlur = it },
             onVeilChange = { viewModel.updateVeil(it) },
+            onVeilPreview = { liveVeil = it },
+            savedThemes = savedThemes,
+            onSaveTheme = { viewModel.saveTheme(it) },
+            onApplyTheme = { viewModel.applyTheme(it) },
+            onDeleteTheme = { viewModel.deleteTheme(it) },
+            onResetAppearance = { viewModel.resetAppearance() },
             onFontSizeChange = { viewModel.updateFontSize(it) },
             onLineHeightChange = { viewModel.updateLineHeight(it) },
             onAutoScrollSpeedChange = { viewModel.updateAutoScrollSpeed(it) },
@@ -488,8 +503,8 @@ fun ReaderScreen(
         ) {
             WallpaperBackground(
                 ref = state.config.wallpaper,
-                blur = state.config.wallpaperBlur,
-                veil = state.config.veil,
+                blur = liveBlur,
+                veil = liveVeil,
                 veilColor = parseAccentHex(readerSurfaceOf(state.config).bg) ?: Color.Black,
                 modifier = Modifier.fillMaxSize()
             )

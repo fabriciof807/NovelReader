@@ -17,7 +17,9 @@ import com.novelreader.data.local.db.entity.NovelEntity
 import com.novelreader.data.local.preferences.ReaderConfig
 import com.novelreader.data.local.preferences.PreferenceAllowlists
 import com.novelreader.data.local.preferences.ReaderPreferences
+import com.novelreader.data.local.preferences.SavedTheme
 import com.novelreader.data.storage.WallpaperStorage
+import com.novelreader.domain.usecase.VisualThemeUseCase
 import com.novelreader.data.local.preferences.AppPreferences
 import com.novelreader.domain.usecase.ReimportChapterContentUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -27,6 +29,8 @@ import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
@@ -62,6 +66,7 @@ class ReaderViewModel @Inject constructor(
     private val bookmarkDao: BookmarkDao,
     private val readerPreferences: ReaderPreferences,
     private val wallpaperStorage: WallpaperStorage,
+    private val visualThemeUseCase: VisualThemeUseCase,
     private val appPreferences: AppPreferences,
     private val ftsSearchService: FtsSearchService,
     private val reimportChapterContentUseCase: ReimportChapterContentUseCase
@@ -335,6 +340,25 @@ class ReaderViewModel @Inject constructor(
             wallpaperStorage.importFromUri(WallpaperStorage.SLOT_READER, uri)
                 ?.let { readerPreferences.updateWallpaper(it) }
         }
+    }
+
+    val savedThemes: StateFlow<List<SavedTheme>> = appPreferences.savedThemes
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    fun saveTheme(name: String) {
+        viewModelScope.launch { visualThemeUseCase.saveCurrent(name) }
+    }
+
+    fun applyTheme(theme: SavedTheme) {
+        viewModelScope.launch { visualThemeUseCase.apply(theme) }
+    }
+
+    fun deleteTheme(theme: SavedTheme) {
+        viewModelScope.launch { visualThemeUseCase.delete(theme.name) }
+    }
+
+    fun resetAppearance() {
+        viewModelScope.launch { visualThemeUseCase.resetToDefaults() }
     }
 
     fun removeWallpaper() {

@@ -6,11 +6,13 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.novelreader.data.local.preferences.AppPreferences
 import com.novelreader.data.local.preferences.PreferenceAllowlists
+import com.novelreader.data.local.preferences.SavedTheme
 import com.novelreader.domain.usecase.ExportDataUseCase
 import com.novelreader.domain.usecase.ExportOptions
 import com.novelreader.domain.usecase.ImportDataUseCase
 import com.novelreader.domain.usecase.ImportPreview
 import com.novelreader.domain.usecase.ImportResult
+import com.novelreader.domain.usecase.VisualThemeUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -25,7 +27,8 @@ import javax.inject.Inject
 class SettingsViewModel @Inject constructor(
     private val appPreferences: AppPreferences,
     private val exportDataUseCase: ExportDataUseCase,
-    private val importDataUseCase: ImportDataUseCase
+    private val importDataUseCase: ImportDataUseCase,
+    private val visualThemeUseCase: VisualThemeUseCase
 ) : ViewModel() {
 
     val appTheme: StateFlow<String> = appPreferences.appTheme
@@ -43,6 +46,9 @@ class SettingsViewModel @Inject constructor(
 
     val accentColor: StateFlow<String?> = appPreferences.accentColor
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
+    val savedThemes: StateFlow<List<SavedTheme>> = appPreferences.savedThemes
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     private val _exportedJson = MutableSharedFlow<String>(extraBufferCapacity = 1)
     val exportedJson: SharedFlow<String> = _exportedJson
@@ -90,6 +96,22 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             appPreferences.updateAccentColor(color)
         }
+    }
+
+    fun saveTheme(name: String) {
+        viewModelScope.launch { visualThemeUseCase.saveCurrent(name) }
+    }
+
+    fun applyTheme(theme: SavedTheme) {
+        viewModelScope.launch { visualThemeUseCase.apply(theme) }
+    }
+
+    fun deleteTheme(theme: SavedTheme) {
+        viewModelScope.launch { visualThemeUseCase.delete(theme.name) }
+    }
+
+    fun resetAppearance() {
+        viewModelScope.launch { visualThemeUseCase.resetToDefaults() }
     }
 
     fun exportData(options: ExportOptions = ExportOptions()) {

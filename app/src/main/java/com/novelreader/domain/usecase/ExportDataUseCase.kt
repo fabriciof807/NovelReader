@@ -9,6 +9,7 @@ import com.novelreader.data.local.db.dao.NovelDao
 import com.novelreader.data.local.preferences.AppPreferences
 import com.novelreader.data.local.preferences.LibraryPreferences
 import com.novelreader.data.local.preferences.ReaderPreferences
+import com.novelreader.data.local.preferences.SavedThemeCodec
 import com.novelreader.data.local.db.entity.NovelEntity
 import com.novelreader.di.qualifiers.IoDispatcher
 import kotlinx.coroutines.CoroutineDispatcher
@@ -159,6 +160,10 @@ class ExportDataUseCase @Inject constructor(
             appPreferences.accentColor.first()?.let { put("accentColor", it) }
             put("wallpaperHome", appPreferences.homeWallpaper.first())
             put("wallpaperHomeBlur", appPreferences.homeWallpaperBlur.first())
+            val themes = appPreferences.savedThemes.first()
+            if (themes.isNotEmpty()) {
+                put("savedThemes", JSONArray(SavedThemeCodec.encode(themes)))
+            }
             put("reader", JSONObject().apply {
                 put("fontSize", config.fontSize)
                 put("fontFamily", config.fontFamily)

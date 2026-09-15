@@ -37,6 +37,10 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -49,6 +53,7 @@ import androidx.compose.ui.unit.dp
 import com.novelreader.R
 import com.novelreader.data.local.preferences.ReaderConfig
 import com.novelreader.data.local.preferences.PreferenceAllowlists
+import com.novelreader.data.local.preferences.SavedTheme
 import com.novelreader.data.storage.WallpaperStorage
 import com.novelreader.ui.customization.AccentColorPicker
 import com.novelreader.ui.customization.BlurSlider
@@ -56,6 +61,7 @@ import com.novelreader.ui.customization.VeilSlider
 import com.novelreader.ui.customization.WallpaperChoiceRow
 import com.novelreader.ui.customization.PalettePicker
 import com.novelreader.ui.customization.READER_AUTO
+import com.novelreader.ui.customization.SavedThemesSection
 import com.novelreader.ui.customization.readerPaletteChoices
 import com.novelreader.ui.theme.parseAccentHex
 
@@ -69,7 +75,14 @@ fun SettingsSheet(
     onPickWallpaper: () -> Unit = {},
     onWallpaperChange: (String) -> Unit = {},
     onWallpaperBlurChange: (Int) -> Unit = {},
+    onWallpaperBlurPreview: (Int) -> Unit = {},
     onVeilChange: (Int) -> Unit = {},
+    onVeilPreview: (Int) -> Unit = {},
+    savedThemes: List<SavedTheme> = emptyList(),
+    onSaveTheme: (String) -> Unit = {},
+    onApplyTheme: (SavedTheme) -> Unit = {},
+    onDeleteTheme: (SavedTheme) -> Unit = {},
+    onResetAppearance: () -> Unit = {},
     onFontSizeChange: (Int) -> Unit,
     onLineHeightChange: (Float) -> Unit,
     onAutoScrollSpeedChange: (Float) -> Unit,
@@ -170,14 +183,18 @@ fun SettingsSheet(
             HorizontalDivider()
             Spacer(modifier = Modifier.height(16.dp))
 
+            var fontSize by remember(config.fontSize) {
+                mutableFloatStateOf(config.fontSize.toFloat())
+            }
             Text(
-                stringResource(R.string.font_size, config.fontSize),
+                stringResource(R.string.font_size, fontSize.toInt()),
                 style = MaterialTheme.typography.titleSmall
             )
             Spacer(modifier = Modifier.height(4.dp))
             Slider(
-                value = config.fontSize.toFloat(),
-                onValueChange = { onFontSizeChange(it.toInt()) },
+                value = fontSize,
+                onValueChange = { fontSize = it },
+                onValueChangeFinished = { onFontSizeChange(fontSize.toInt()) },
                 valueRange = 14f..40f,
                 steps = 12,
                 modifier = Modifier.fillMaxWidth()
@@ -187,14 +204,16 @@ fun SettingsSheet(
             HorizontalDivider()
             Spacer(modifier = Modifier.height(16.dp))
 
+            var lineHeight by remember(config.lineHeight) { mutableFloatStateOf(config.lineHeight) }
             Text(
-                stringResource(R.string.line_spacing, config.lineHeight),
+                stringResource(R.string.line_spacing, lineHeight),
                 style = MaterialTheme.typography.titleSmall
             )
             Spacer(modifier = Modifier.height(4.dp))
             Slider(
-                value = config.lineHeight,
-                onValueChange = { onLineHeightChange(it) },
+                value = lineHeight,
+                onValueChange = { lineHeight = it },
+                onValueChangeFinished = { onLineHeightChange(lineHeight) },
                 valueRange = 1.2f..2.5f,
                 steps = 12,
                 modifier = Modifier.fillMaxWidth()
@@ -278,9 +297,30 @@ fun SettingsSheet(
                 onSelectBuiltin = onWallpaperChange,
                 onRemove = { onWallpaperChange(PreferenceAllowlists.WALLPAPER_NONE) }
             )
+            Spacer(modifier = Modifier.height(16.dp))
+            HorizontalDivider()
+            Spacer(modifier = Modifier.height(16.dp))
+
+            SavedThemesSection(
+                themes = savedThemes,
+                dark = config.themeDark,
+                onSave = onSaveTheme,
+                onApply = onApplyTheme,
+                onDelete = onDeleteTheme,
+                onReset = onResetAppearance
+            )
+
             Spacer(modifier = Modifier.height(12.dp))
-            BlurSlider(blur = config.wallpaperBlur, onBlurChange = onWallpaperBlurChange)
-            VeilSlider(veil = config.veil, onVeilChange = onVeilChange)
+            BlurSlider(
+                initial = config.wallpaperBlur,
+                onCommit = onWallpaperBlurChange,
+                onPreview = onWallpaperBlurPreview
+            )
+            VeilSlider(
+                initial = config.veil,
+                onCommit = onVeilChange,
+                onPreview = onVeilPreview
+            )
 
             Spacer(modifier = Modifier.height(16.dp))
             HorizontalDivider()
@@ -306,9 +346,13 @@ fun SettingsSheet(
                 }
             }
             Spacer(modifier = Modifier.height(4.dp))
+            var autoScrollSpeed by remember(config.autoScrollSpeed) {
+                mutableFloatStateOf(config.autoScrollSpeed)
+            }
             Slider(
-                value = config.autoScrollSpeed,
-                onValueChange = { onAutoScrollSpeedChange(it) },
+                value = autoScrollSpeed,
+                onValueChange = { autoScrollSpeed = it },
+                onValueChangeFinished = { onAutoScrollSpeedChange(autoScrollSpeed) },
                 valueRange = 0f..3f,
                 steps = 11,
                 modifier = Modifier.fillMaxWidth()

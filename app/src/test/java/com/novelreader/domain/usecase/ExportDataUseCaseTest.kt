@@ -99,6 +99,13 @@ class ExportDataUseCaseTest {
         every { appPreferences.accentColor } returns flowOf("#ff6f00")
         every { appPreferences.homeWallpaper } returns flowOf("builtin:noite")
         every { appPreferences.homeWallpaperBlur } returns flowOf(18)
+        every { appPreferences.savedThemes } returns flowOf(
+            listOf(
+                com.novelreader.data.local.preferences.SavedTheme(
+                    "Noite", "amoled", "#7c4dff", "papel:dark", "#8d6e63"
+                )
+            )
+        )
         every { readerPreferences.config } returns flowOf(
             com.novelreader.data.local.preferences.ReaderConfig(
                 fontSize = 24, fontFamily = "sans", lineHeight = 2f, theme = "papel:light",
@@ -168,6 +175,13 @@ class ExportDataUseCaseTest {
         assertThat(settings.getString("appPalette")).isEqualTo("papel")
         assertThat(settings.getString("accentColor")).isEqualTo("#ff6f00")
         assertThat(settings.getString("wallpaperHome")).isEqualTo("builtin:noite")
+        settings.getJSONArray("savedThemes").getJSONObject(0).let { theme ->
+            assertThat(theme.getString("name")).isEqualTo("Noite")
+            assertThat(theme.getString("palette")).isEqualTo("amoled")
+            assertThat(theme.getString("accentColor")).isEqualTo("#7c4dff")
+            assertThat(theme.getString("readerTheme")).isEqualTo("papel:dark")
+            assertThat(theme.getString("readerAccentColor")).isEqualTo("#8d6e63")
+        }
         assertThat(settings.getInt("wallpaperHomeBlur")).isEqualTo(18)
         settings.getJSONObject("reader").let { reader ->
             assertThat(reader.getString("theme")).isEqualTo("papel:light")

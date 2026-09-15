@@ -62,6 +62,9 @@ object PreferenceAllowlists {
         }
     }
 
+    fun defaultAppPalette(sdkInt: Int): String =
+        if (sdkInt >= android.os.Build.VERSION_CODES.S) PALETTE_DYNAMIC else "indigo"
+
     fun sanitizeAccentColor(value: String?): String? =
         value?.trim()?.lowercase()?.takeIf { ACCENT_COLOR.matches(it) }
 

@@ -32,6 +32,8 @@ class SettingsViewModelTest {
     private val appPreferences: AppPreferences = mockk(relaxed = true)
     private val exportDataUseCase: ExportDataUseCase = mockk(relaxed = true)
     private val importDataUseCase: ImportDataUseCase = mockk(relaxed = true)
+    private val visualThemeUseCase: com.novelreader.domain.usecase.VisualThemeUseCase =
+        mockk(relaxed = true)
 
     private lateinit var viewModel: SettingsViewModel
 
@@ -42,7 +44,12 @@ class SettingsViewModelTest {
         every { appPreferences.locale } returns flowOf("pt")
         every { appPreferences.appPalette } returns flowOf("floresta")
         every { appPreferences.accentColor } returns flowOf("#ff6f00")
-        viewModel = SettingsViewModel(appPreferences, exportDataUseCase, importDataUseCase)
+        viewModel = SettingsViewModel(
+            appPreferences,
+            exportDataUseCase,
+            importDataUseCase,
+            visualThemeUseCase
+        )
     }
 
     @After
@@ -70,6 +77,23 @@ class SettingsViewModelTest {
 
         viewModel.updateAccentColor(null)
         coVerify { appPreferences.updateAccentColor(null) }
+    }
+
+    @Test
+    fun `theme actions go through the visual theme use case`() = runTest {
+        val theme = com.novelreader.data.local.preferences.SavedTheme(
+            "Noite", "amoled", "#7c4dff", "papel:dark", null
+        )
+
+        viewModel.saveTheme("Noite")
+        viewModel.applyTheme(theme)
+        viewModel.deleteTheme(theme)
+        viewModel.resetAppearance()
+
+        coVerify { visualThemeUseCase.saveCurrent("Noite") }
+        coVerify { visualThemeUseCase.apply(theme) }
+        coVerify { visualThemeUseCase.delete("Noite") }
+        coVerify { visualThemeUseCase.resetToDefaults() }
     }
 
     @Test

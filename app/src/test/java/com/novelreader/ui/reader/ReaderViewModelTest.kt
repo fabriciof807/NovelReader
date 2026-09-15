@@ -45,6 +45,8 @@ class ReaderViewModelTest {
     private val readerPrefs: ReaderPreferences = mockk(relaxed = true)
     private val wallpaperStorage: com.novelreader.data.storage.WallpaperStorage =
         mockk(relaxed = true)
+    private val visualThemeUseCase: com.novelreader.domain.usecase.VisualThemeUseCase =
+        mockk(relaxed = true)
     private val appPreferences: com.novelreader.data.local.preferences.AppPreferences = mockk(relaxed = true)
     private val ftsSearchService: FtsSearchService = mockk(relaxed = true)
     private val reimportChapterContentUseCase: ReimportChapterContentUseCase = mockk(relaxed = true)
@@ -73,6 +75,7 @@ class ReaderViewModelTest {
         bookmarkDao = bookmarkDao,
         readerPreferences = readerPrefs,
         wallpaperStorage = wallpaperStorage,
+        visualThemeUseCase = visualThemeUseCase,
         appPreferences = appPreferences,
         ftsSearchService = ftsSearchService,
         reimportChapterContentUseCase = reimportChapterContentUseCase
@@ -213,6 +216,24 @@ class ReaderViewModelTest {
 
         coVerify { wallpaperStorage.clearSlot(WallpaperStorage.SLOT_READER) }
         coVerify { readerPrefs.updateWallpaper("none") }
+    }
+
+    @Test
+    fun `theme actions go through the visual theme use case`() = runTest {
+        val theme = com.novelreader.data.local.preferences.SavedTheme(
+            "Noite", "amoled", "#7c4dff", "papel:dark", null
+        )
+        viewModel = createViewModel()
+
+        viewModel.saveTheme("Noite")
+        viewModel.applyTheme(theme)
+        viewModel.deleteTheme(theme)
+        viewModel.resetAppearance()
+
+        coVerify { visualThemeUseCase.saveCurrent("Noite") }
+        coVerify { visualThemeUseCase.apply(theme) }
+        coVerify { visualThemeUseCase.delete("Noite") }
+        coVerify { visualThemeUseCase.resetToDefaults() }
     }
 
     @Test

@@ -119,10 +119,8 @@ fun AccentColorPicker(
             )
             Slider(
                 value = hue,
-                onValueChange = {
-                    hue = it
-                    emit(accentHexFor(it, saturation, background))
-                },
+                onValueChange = { hue = it },
+                onValueChangeFinished = { emit(accentHexFor(hue, saturation, background)) },
                 valueRange = 0f..360f,
                 modifier = Modifier
                     .weight(1f)
@@ -136,10 +134,8 @@ fun AccentColorPicker(
         )
         Slider(
             value = saturation.toFloat(),
-            onValueChange = {
-                saturation = it.toInt()
-                emit(accentHexFor(hue, it.toInt(), background))
-            },
+            onValueChange = { saturation = it.toInt() },
+            onValueChangeFinished = { emit(accentHexFor(hue, saturation, background)) },
             valueRange = 0f..100f,
             modifier = Modifier.fillMaxWidth()
         )

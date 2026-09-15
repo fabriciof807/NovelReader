@@ -26,6 +26,7 @@ class AppPreferences @Inject constructor(
         val ACCENT_COLOR = stringPreferencesKey("accent_color")
         val WALLPAPER_HOME = stringPreferencesKey("wallpaper_home")
         val WALLPAPER_HOME_BLUR = intPreferencesKey("wallpaper_home_blur")
+        val SAVED_THEMES = stringPreferencesKey("saved_themes")
         val LOCALE = stringPreferencesKey("locale")
         val DYNAMIC_COLOR_ENABLED = booleanPreferencesKey("dynamic_color_enabled")
     }
@@ -83,6 +84,16 @@ class AppPreferences @Inject constructor(
     suspend fun updateHomeWallpaperBlur(blur: Int) {
         context.appDataStore.edit {
             it[Keys.WALLPAPER_HOME_BLUR] = PreferenceAllowlists.sanitizeBlur(blur)
+        }
+    }
+
+    val savedThemes: Flow<List<SavedTheme>> = context.appDataStore.data.map { prefs ->
+        SavedThemeCodec.decode(prefs[Keys.SAVED_THEMES])
+    }
+
+    suspend fun updateSavedThemes(themes: List<SavedTheme>) {
+        context.appDataStore.edit {
+            it[Keys.SAVED_THEMES] = SavedThemeCodec.encode(themes)
         }
     }
 

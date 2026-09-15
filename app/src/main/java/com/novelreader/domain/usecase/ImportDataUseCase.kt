@@ -9,6 +9,7 @@ import com.novelreader.data.local.preferences.AppPreferences
 import com.novelreader.data.local.preferences.LibraryPreferences
 import com.novelreader.data.local.preferences.PreferenceAllowlists
 import com.novelreader.data.local.preferences.ReaderPreferences
+import com.novelreader.data.local.preferences.SavedThemeCodec
 import com.novelreader.data.storage.WallpaperStorage
 import com.novelreader.data.storage.PendingBookmark
 import com.novelreader.data.storage.PendingCharacter
@@ -297,6 +298,9 @@ class ImportDataUseCase @Inject constructor(
         }
         if (settings.has("accentColor")) {
             appPreferences.updateAccentColor(settings.optString("accentColor"))
+        }
+        settings.optJSONArray("savedThemes")?.let { themes ->
+            appPreferences.updateSavedThemes(SavedThemeCodec.decode(themes.toString()))
         }
         settings.optString("wallpaperHome").takeIf { it.isNotBlank() }?.let { ref ->
             appPreferences.updateHomeWallpaper(restorableWallpaperRef(ref))

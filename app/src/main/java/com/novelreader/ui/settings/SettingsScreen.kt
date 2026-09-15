@@ -83,6 +83,7 @@ import com.novelreader.data.storage.WallpaperStorage
 import com.novelreader.ui.customization.AccentColorPicker
 import com.novelreader.ui.customization.BlurSlider
 import com.novelreader.ui.customization.HomeWallpaperViewModel
+import com.novelreader.ui.customization.SavedThemesSection
 import com.novelreader.ui.customization.WallpaperChoiceRow
 import com.novelreader.ui.customization.PalettePicker
 import com.novelreader.ui.customization.appPaletteChoices
@@ -98,6 +99,7 @@ fun SettingsScreen(
     val appTheme by viewModel.appTheme.collectAsState()
     val appPalette by viewModel.appPalette.collectAsState()
     val accentColor by viewModel.accentColor.collectAsState()
+    val savedThemes by viewModel.savedThemes.collectAsState()
     val isDarkTheme = when (appTheme) {
         "dark" -> true
         "light" -> false
@@ -543,10 +545,20 @@ fun SettingsScreen(
                     onSelectBuiltin = { wallpaperViewModel.select(it) },
                     onRemove = { wallpaperViewModel.remove() }
                 )
+                Spacer(modifier = Modifier.height(16.dp))
+                SavedThemesSection(
+                    themes = savedThemes,
+                    dark = isDarkTheme,
+                    onSave = { viewModel.saveTheme(it) },
+                    onApply = { viewModel.applyTheme(it) },
+                    onDelete = { viewModel.deleteTheme(it) },
+                    onReset = { viewModel.resetAppearance() }
+                )
+
                 Spacer(modifier = Modifier.height(8.dp))
                 BlurSlider(
-                    blur = homeWallpaperBlur,
-                    onBlurChange = { wallpaperViewModel.updateBlur(it) }
+                    initial = homeWallpaperBlur,
+                    onCommit = { wallpaperViewModel.updateBlur(it) }
                 )
             }
 

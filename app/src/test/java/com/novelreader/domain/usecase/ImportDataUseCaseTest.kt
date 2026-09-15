@@ -263,6 +263,36 @@ class ImportDataUseCaseTest {
     }
 
     @Test
+    fun `saved themes travel in the backup and come back sanitized`() = runTest {
+        val prefs = AppPreferences(appContext)
+
+        execute(
+            """
+            {
+              "novels": [], "bookmarks": [], "characters": [], "collections": [],
+              "settings": {
+                "savedThemes": [
+                  {"name": "Noite", "palette": "amoled", "accentColor": "#7c4dff",
+                   "readerTheme": "papel:dark", "readerAccentColor": "#8d6e63"},
+                  {"name": "  ", "palette": "papel"},
+                  {"name": "Hostil", "palette": "papel;}body{}", "accentColor": "red",
+                   "readerTheme": "x:y", "readerAccentColor": "url(javascript:1)"}
+                ]
+              }
+            }
+            """.trimIndent()
+        )
+
+        val themes = prefs.savedThemes.first()
+        assertThat(themes.map { it.name }).containsExactly("Noite", "Hostil").inOrder()
+        assertThat(themes.first().palette).isEqualTo("amoled")
+        assertThat(themes.first().readerTheme).isEqualTo("papel:dark")
+        assertThat(themes.last().palette).isEqualTo("indigo")
+        assertThat(themes.last().accentColor).isNull()
+        assertThat(themes.last().readerTheme).isEqualTo("auto")
+    }
+
+    @Test
     fun `a wallpaper file missing on this device falls back to none`() = runTest {
         val prefs = AppPreferences(appContext)
         val readerPrefs = ReaderPreferences(appContext)
