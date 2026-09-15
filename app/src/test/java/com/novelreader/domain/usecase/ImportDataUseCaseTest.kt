@@ -102,6 +102,7 @@ class ImportDataUseCaseTest {
                 updateAccentColor(null)
                 updateHomeWallpaper(PreferenceAllowlists.WALLPAPER_NONE)
                 updateHomeWallpaperBlur(0)
+                updateWallpaperBehindBars(true)
                 updateLocale("pt")
                 updateDynamicColorEnabled(true)
             }
@@ -236,6 +237,7 @@ class ImportDataUseCaseTest {
                 "accentColor": "#2e7d32",
                 "wallpaperHome": "file:home_5.jpg",
                 "wallpaperHomeBlur": 22,
+                "wallpaperBehindBars": false,
                 "reader": {
                   "theme": "papel:dark",
                   "accentColor": "#8d6e63",
@@ -253,6 +255,7 @@ class ImportDataUseCaseTest {
         assertThat(prefs.accentColor.first()).isEqualTo("#2e7d32")
         assertThat(prefs.homeWallpaper.first()).isEqualTo("file:home_5.jpg")
         assertThat(prefs.homeWallpaperBlur.first()).isEqualTo(22)
+        assertThat(prefs.wallpaperBehindBars.first()).isFalse()
         readerPrefs.config.first().let { config ->
             assertThat(config.theme).isEqualTo("papel:dark")
             assertThat(config.accentColor).isEqualTo("#8d6e63")

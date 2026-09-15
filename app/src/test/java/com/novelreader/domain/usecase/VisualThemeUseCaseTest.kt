@@ -147,6 +147,7 @@ class VisualThemeUseCaseTest {
         coVerify { appPreferences.updateAccentColor(null) }
         coVerify { appPreferences.updateHomeWallpaper(PreferenceAllowlists.WALLPAPER_NONE) }
         coVerify { appPreferences.updateHomeWallpaperBlur(0) }
+        coVerify { appPreferences.updateWallpaperBehindBars(true) }
         coVerify { wallpaperStorage.clearSlot(WallpaperStorage.SLOT_HOME) }
         coVerify { readerPreferences.updateTheme("auto") }
         coVerify { readerPreferences.updateAccentColor(null) }

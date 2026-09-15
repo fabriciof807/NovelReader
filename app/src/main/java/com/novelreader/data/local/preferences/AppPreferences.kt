@@ -27,6 +27,7 @@ class AppPreferences @Inject constructor(
         val WALLPAPER_HOME = stringPreferencesKey("wallpaper_home")
         val WALLPAPER_HOME_BLUR = intPreferencesKey("wallpaper_home_blur")
         val SAVED_THEMES = stringPreferencesKey("saved_themes")
+        val WALLPAPER_BEHIND_BARS = booleanPreferencesKey("wallpaper_behind_bars")
         val LOCALE = stringPreferencesKey("locale")
         val DYNAMIC_COLOR_ENABLED = booleanPreferencesKey("dynamic_color_enabled")
     }
@@ -85,6 +86,14 @@ class AppPreferences @Inject constructor(
         context.appDataStore.edit {
             it[Keys.WALLPAPER_HOME_BLUR] = PreferenceAllowlists.sanitizeBlur(blur)
         }
+    }
+
+    val wallpaperBehindBars: Flow<Boolean> = context.appDataStore.data.map { prefs ->
+        prefs[Keys.WALLPAPER_BEHIND_BARS] ?: true
+    }
+
+    suspend fun updateWallpaperBehindBars(enabled: Boolean) {
+        context.appDataStore.edit { it[Keys.WALLPAPER_BEHIND_BARS] = enabled }
     }
 
     val savedThemes: Flow<List<SavedTheme>> = context.appDataStore.data.map { prefs ->

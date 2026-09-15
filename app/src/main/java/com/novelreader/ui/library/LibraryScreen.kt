@@ -52,6 +52,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.novelreader.R
 import com.novelreader.data.local.preferences.PreferenceAllowlists
 import com.novelreader.ui.customization.HomeWallpaperViewModel
+import com.novelreader.ui.customization.barColorFor
 import com.novelreader.ui.customization.WallpaperBackground
 import com.novelreader.ui.library.components.AddToCollectionDialog
 import com.novelreader.ui.library.components.CollectionNameDialog
@@ -96,7 +97,13 @@ fun LibraryScreen(
     val wallpaperViewModel: HomeWallpaperViewModel = hiltViewModel()
     val homeWallpaper by wallpaperViewModel.wallpaper.collectAsState()
     val homeWallpaperBlur by wallpaperViewModel.blur.collectAsState()
+    val homeWallpaperBehindBars by wallpaperViewModel.behindBars.collectAsState()
     val wallpaperActive = homeWallpaper != PreferenceAllowlists.WALLPAPER_NONE
+    val barColor = barColorFor(
+        surface = MaterialTheme.colorScheme.surface,
+        wallpaperActive = wallpaperActive,
+        behindBars = homeWallpaperBehindBars
+    )
     val showWhatsNew by viewModel.showWhatsNew.collectAsState()
     val whatsNewGroups by viewModel.whatsNewGroups.collectAsState()
     val newChapterCounts by viewModel.newChapterCounts.collectAsState()
@@ -229,8 +236,7 @@ fun LibraryScreen(
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = if (wallpaperActive) Color.Transparent
-                        else MaterialTheme.colorScheme.surface,
+                        containerColor = barColor,
                         titleContentColor = MaterialTheme.colorScheme.onSurface
                     ),
                     actions = {
@@ -292,8 +298,7 @@ fun LibraryScreen(
                 )
                 TabRow(
                     selectedTabIndex = selectedTab,
-                    containerColor = if (wallpaperActive) Color.Transparent
-                    else MaterialTheme.colorScheme.surface
+                    containerColor = barColor
                 ) {
                     Tab(
                         selected = selectedTab == 0,

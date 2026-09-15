@@ -95,6 +95,8 @@
     <string name="reset_appearance_title">Reset appearance</string>
     <string name="reset_appearance_message">Palette, accent colour, wallpapers, blur and veil go back to the defaults. Your saved themes are kept.</string>
     <string name="reset_appearance_confirm">Reset</string>
+    <string name="wallpaper_behind_bars">Wallpaper behind the bars</string>
+    <string name="wallpaper_behind_bars_desc">Makes the top bar and the tabs translucent in the theme colour, letting the wallpaper show through</string>
     <string name="wallpaper_home">Library wallpaper</string>
     <string name="wallpaper_reader">Reader wallpaper</string>
     <string name="wallpaper_pick">Pick image</string>

@@ -99,6 +99,7 @@ class ExportDataUseCaseTest {
         every { appPreferences.accentColor } returns flowOf("#ff6f00")
         every { appPreferences.homeWallpaper } returns flowOf("builtin:noite")
         every { appPreferences.homeWallpaperBlur } returns flowOf(18)
+        every { appPreferences.wallpaperBehindBars } returns flowOf(false)
         every { appPreferences.savedThemes } returns flowOf(
             listOf(
                 com.novelreader.data.local.preferences.SavedTheme(
@@ -183,6 +184,7 @@ class ExportDataUseCaseTest {
             assertThat(theme.getString("readerAccentColor")).isEqualTo("#8d6e63")
         }
         assertThat(settings.getInt("wallpaperHomeBlur")).isEqualTo(18)
+        assertThat(settings.getBoolean("wallpaperBehindBars")).isFalse()
         settings.getJSONObject("reader").let { reader ->
             assertThat(reader.getString("theme")).isEqualTo("papel:light")
             assertThat(reader.getString("accentColor")).isEqualTo("#8d6e63")

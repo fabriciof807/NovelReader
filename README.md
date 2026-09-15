@@ -45,6 +45,7 @@ NovelReader is for people who read a lot of web novels / light novels and want t
 - **Reading veil** — control how much of the reader background sits between the text and the wallpaper, so a photo never costs you legibility
 - Themes chosen in the reader can follow the app or be pinned to a light/dark variant
 - **Saved themes** — keep up to five looks (palette, accent colours and reader theme) and switch between them; switching never touches your wallpaper
+- **Wallpaper behind the bars** — choose whether the top bar and the tabs go translucent over the wallpaper, or stay solid as they were
 - **Reset appearance** — one button puts palette, accents, wallpapers, blur and veil back to the defaults, keeping your saved themes
 
 ### Organize characters
@@ -127,7 +128,8 @@ For novels from sites not listed, the generic parser tries to extract the main c
 - Legacy reader themes (`light`, `dark`, `sepia`, `gray`) map exactly onto the new palettes, so existing readers keep their colours.
 - Feat: up to five saved themes (palette, accent colours and reader theme) plus a one-tap appearance reset that keeps them.
 - Fix: sliders persisted on every drag frame — and the reader re-applied its CSS over the JS bridge for each of them — so the thumb stuck and jumped; values now commit once, on release.
-- 637 unit tests passing (was 506).
+- Feat: option to keep the wallpaper visible behind the top bar and tabs (translucent, with a theme-coloured veil) or leave those bars solid as before; on by default, shared by the library and the reader.
+- 650 unit tests passing (was 506).
 
 ### v2.9.3 (2026-09-14)
 
@@ -360,7 +362,7 @@ app/src/main/java/com/novelreader/
 | Library / chapter list / settings screens | Unit | 55 |
 | Preferences, storage, theme and customization | Unit | 87 |
 | Workers, navigation, favorites, misc | Unit | 96 |
-| **Total (JVM)** | | **637** |
+| **Total (JVM)** | | **650** |
 
 `./gradlew :app:testDebugUnitTest` runs the whole JVM suite; the DAO suite below needs an emulator.
 

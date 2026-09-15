@@ -88,14 +88,30 @@ com `FilterQuality.Low` — sem `RenderEffect` no API < 31.
 
 ## 6. Render
 
-**Home**: `Scaffold`, `TopAppBar` e `TabRow` ficam transparentes enquanto há
-wallpaper; o wallpaper é desenhado atrás. Sem wallpaper, o comportamento é
-idêntico ao anterior.
+### Barras
+
+Chave única (`app_prefs.wallpaper_behind_bars`, padrão **ligada**) decide se o
+wallpaper aparece atrás das barras. Vale para as duas superfícies — opção
+escolhida na sessão: biblioteca e leitor juntos, editável nos dois lugares.
+
+- Desligada: barra na cor sólida da superfície do tema (comportamento anterior à
+  feature).
+- Ligada (padrão): `barColorFor` devolve a superfície com `BAR_VEIL_ALPHA` (0.8)
+  de opacidade. Wallpaper cru atrás de título/ícones/abas foi descartado: com
+  fundo claro (amanhecer, papel) o texto praticamente sumia.
+- O `Scaffold` da biblioteca continua transparente quando há wallpaper; só as
+  barras recebem o véu.
+
+**Home**: `Scaffold` transparente enquanto há wallpaper, `TopAppBar` e `TabRow`
+com `barColorFor`. Sem wallpaper, idêntico ao anterior.
 
 **Leitor**: `themeVars` devolve `bgColor = transparent` quando há wallpaper; o
-`ReaderWebView` já pinta o próprio fundo como transparente. `ReaderScreen`
-desenha wallpaper + véu (cor de fundo da paleta do leitor, alpha = `veil/100`)
-atrás do WebView. Véu 80% é o default; 0% deixa o wallpaper cru, por escolha do
+`ReaderWebView` já pinta o próprio fundo como transparente. O wallpaper + véu
+(cor de fundo da paleta do leitor, alpha = `veil/100`) passam a cobrir a **tela
+inteira**, atrás do `Scaffold`, para que a barra do topo, a barra de opções e a
+faixa de bateria fiquem sobre o mesmo véu. `ReaderTopBar` e `ReaderStatusBar`
+recebem `containerColor` (default = superfície do tema, mantendo os testes
+existentes). Véu 80% é o default; 0% deixa o wallpaper cru, por escolha do
 usuário.
 
 ## 7. Temas salvos (5 slots)
@@ -124,7 +140,8 @@ SavedTheme(name, palette, accentColor?, readerTheme, readerAccentColor?)
 
 `VisualThemeUseCase.resetToDefaults` volta paleta (dinâmica no Android 12+,
 indigo abaixo disso), acentos, papéis de parede (apagando os arquivos dos dois
-slots), desfoques e véu ao padrão. **Os temas salvos são preservados** — o texto
+slots), desfoques, véu e a opção de barras (`wallpaper_behind_bars` → ligada) ao
+padrão. **Os temas salvos são preservados** — o texto
 do diálogo de confirmação diz isso explicitamente.
 
 ## 9. Sliders
@@ -143,8 +160,8 @@ soltar.
 ## 10. Backup v3
 
 `settings` ganha `appPalette`, `accentColor`, `wallpaperHome`,
-`wallpaperHomeBlur`, `savedThemes` e, dentro de `reader`, `accentColor`,
-`wallpaper`, `wallpaperBlur`, `veil`. **Os bytes da imagem não entram no
+`wallpaperHomeBlur`, `wallpaperBehindBars`, `savedThemes` e, dentro de `reader`,
+`accentColor`, `wallpaper`, `wallpaperBlur`, `veil`. **Os bytes da imagem não entram no
 backup.**
 
 Na importação, ref `file:` cujo arquivo não existe no aparelho vira `none`

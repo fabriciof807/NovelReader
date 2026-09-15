@@ -58,6 +58,7 @@ import com.novelreader.data.storage.WallpaperStorage
 import com.novelreader.ui.customization.AccentColorPicker
 import com.novelreader.ui.customization.BlurSlider
 import com.novelreader.ui.customization.VeilSlider
+import com.novelreader.ui.customization.WallpaperBehindBarsRow
 import com.novelreader.ui.customization.WallpaperChoiceRow
 import com.novelreader.ui.customization.PalettePicker
 import com.novelreader.ui.customization.READER_AUTO
@@ -78,6 +79,8 @@ fun SettingsSheet(
     onWallpaperBlurPreview: (Int) -> Unit = {},
     onVeilChange: (Int) -> Unit = {},
     onVeilPreview: (Int) -> Unit = {},
+    wallpaperBehindBars: Boolean = true,
+    onWallpaperBehindBarsChange: (Boolean) -> Unit = {},
     savedThemes: List<SavedTheme> = emptyList(),
     onSaveTheme: (String) -> Unit = {},
     onApplyTheme: (SavedTheme) -> Unit = {},
@@ -320,6 +323,11 @@ fun SettingsSheet(
                 initial = config.veil,
                 onCommit = onVeilChange,
                 onPreview = onVeilPreview
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            WallpaperBehindBarsRow(
+                checked = wallpaperBehindBars,
+                onCheckedChange = onWallpaperBehindBarsChange
             )
 
             Spacer(modifier = Modifier.height(16.dp))

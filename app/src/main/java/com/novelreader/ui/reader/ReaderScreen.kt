@@ -72,7 +72,9 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.novelreader.R
+import com.novelreader.data.local.preferences.PreferenceAllowlists
 import com.novelreader.ui.customization.WallpaperBackground
+import com.novelreader.ui.customization.barColorFor
 import com.novelreader.ui.theme.parseAccentHex
 import com.novelreader.data.local.db.entity.BookmarkEntity
 import com.novelreader.data.local.db.entity.ChapterEntity
@@ -127,6 +129,7 @@ fun ReaderScreen(
     }
 
     val savedThemes by viewModel.savedThemes.collectAsState()
+    val wallpaperBehindBars by viewModel.wallpaperBehindBars.collectAsState()
     var liveVeil by remember { mutableIntStateOf(state.config.veil) }
     var liveBlur by remember { mutableIntStateOf(state.config.wallpaperBlur) }
 
@@ -253,6 +256,8 @@ fun ReaderScreen(
             onWallpaperBlurPreview = { liveBlur = it },
             onVeilChange = { viewModel.updateVeil(it) },
             onVeilPreview = { liveVeil = it },
+            wallpaperBehindBars = wallpaperBehindBars,
+            onWallpaperBehindBarsChange = { viewModel.updateWallpaperBehindBars(it) },
             savedThemes = savedThemes,
             onSaveTheme = { viewModel.saveTheme(it) },
             onApplyTheme = { viewModel.applyTheme(it) },
@@ -376,233 +381,248 @@ fun ReaderScreen(
         }
     }
 
-    Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHostState) },
-        topBar = {
-            ReaderTopBar(
-                title = com.novelreader.data.parser.TitleExtractor.cleanChapterTitleForDisplay(
-                    state.chapter?.title ?: "",
-                    state.novel?.title
-                ),
-                isSearchActive = state.isSearchActive,
-                searchQuery = state.searchQuery,
-                onSearchQueryChange = { viewModel.onSearchQueryChange(it) },
-                onBack = { saveScroll { onBack() } },
-                onCloseSearch = { viewModel.deactivateSearch() },
-                onActivateSearch = { viewModel.activateSearch() }
-            )
-        },
-        bottomBar = {
-            Column(modifier = Modifier.navigationBarsPadding()) {
-                AnimatedVisibility(
-                    visible = isOptionsVisible,
-                    enter = fadeIn() + slideInVertically { it },
-                    exit = fadeOut() + slideOutVertically { it }
-                ) {
-                    BottomAppBar(
-                        containerColor = MaterialTheme.colorScheme.surface,
-                        windowInsets = WindowInsets(0, 0, 0, 0)
+    val readerWallpaperActive = state.config.wallpaper != PreferenceAllowlists.WALLPAPER_NONE
+    val readerBarColor = barColorFor(
+        surface = MaterialTheme.colorScheme.surface,
+        wallpaperActive = readerWallpaperActive,
+        behindBars = wallpaperBehindBars
+    )
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        WallpaperBackground(
+            ref = state.config.wallpaper,
+            blur = liveBlur,
+            veil = liveVeil,
+            veilColor = parseAccentHex(readerSurfaceOf(state.config).bg) ?: Color.Black,
+            modifier = Modifier.fillMaxSize()
+        )
+
+        Scaffold(
+            containerColor = if (readerWallpaperActive) Color.Transparent
+            else MaterialTheme.colorScheme.surface,
+            snackbarHost = { SnackbarHost(snackbarHostState) },
+            topBar = {
+                ReaderTopBar(
+                    title = com.novelreader.data.parser.TitleExtractor.cleanChapterTitleForDisplay(
+                        state.chapter?.title ?: "",
+                        state.novel?.title
+                    ),
+                    isSearchActive = state.isSearchActive,
+                    searchQuery = state.searchQuery,
+                    onSearchQueryChange = { viewModel.onSearchQueryChange(it) },
+                    onBack = { saveScroll { onBack() } },
+                    onCloseSearch = { viewModel.deactivateSearch() },
+                    onActivateSearch = { viewModel.activateSearch() },
+                    containerColor = readerBarColor
+                )
+            },
+            bottomBar = {
+                Column(modifier = Modifier.navigationBarsPadding()) {
+                    AnimatedVisibility(
+                        visible = isOptionsVisible,
+                        enter = fadeIn() + slideInVertically { it },
+                        exit = fadeOut() + slideOutVertically { it }
                     ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 8.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                        BottomAppBar(
+                            containerColor = readerBarColor,
+                            windowInsets = WindowInsets(0, 0, 0, 0)
                         ) {
-                            IconButton(
-                                onClick = {
-                                    saveScroll { viewModel.goToPrevChapter() }
-                                },
-                                enabled = state.prevChapterId != null
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Icon(
-                                    Icons.AutoMirrored.Filled.ArrowBackIos,
-                                    contentDescription = stringResource(R.string.previous)
-                                )
-                            }
-
-                            Spacer(modifier = Modifier.weight(1f))
-
-                            IconButton(onClick = {
-                                webView?.evaluateJavascript(
-                                    bookmarkCaptureRatioJs(),
-                                    ValueCallback { value ->
-                                        val ratio = value?.trim('"')?.toFloatOrNull() ?: 0f
-                                        viewModel.saveScrollPosition(ratio)
-                                        viewModel.showBookmarkDialog()
-                                    }
-                                ) ?: viewModel.showBookmarkDialog()
-                            }) {
-                                Box {
+                                IconButton(
+                                    onClick = {
+                                        saveScroll { viewModel.goToPrevChapter() }
+                                    },
+                                    enabled = state.prevChapterId != null
+                                ) {
                                     Icon(
-                                        Icons.Default.Bookmark,
-                                        contentDescription = stringResource(R.string.bookmarks),
-                                        tint = if (state.bookmarks.isNotEmpty())
-                                            MaterialTheme.colorScheme.secondary
-                                        else MaterialTheme.colorScheme.onSurface
+                                        Icons.AutoMirrored.Filled.ArrowBackIos,
+                                        contentDescription = stringResource(R.string.previous)
                                     )
-                                    if (state.bookmarks.isNotEmpty()) {
-                                        Box(
-                                            modifier = Modifier
-                                                .size(16.dp)
-                                                .align(Alignment.TopEnd)
-                                                .background(
-                                                    MaterialTheme.colorScheme.secondary,
-                                                    shape = RoundedCornerShape(8.dp)
-                                                ),
-                                            contentAlignment = Alignment.Center
-                                        ) {
-                                            Text(
-                                                text = "${state.bookmarks.size}",
-                                                style = MaterialTheme.typography.labelSmall,
-                                                color = MaterialTheme.colorScheme.onSecondary
-                                            )
+                                }
+
+                                Spacer(modifier = Modifier.weight(1f))
+
+                                IconButton(onClick = {
+                                    webView?.evaluateJavascript(
+                                        bookmarkCaptureRatioJs(),
+                                        ValueCallback { value ->
+                                            val ratio = value?.trim('"')?.toFloatOrNull() ?: 0f
+                                            viewModel.saveScrollPosition(ratio)
+                                            viewModel.showBookmarkDialog()
+                                        }
+                                    ) ?: viewModel.showBookmarkDialog()
+                                }) {
+                                    Box {
+                                        Icon(
+                                            Icons.Default.Bookmark,
+                                            contentDescription = stringResource(R.string.bookmarks),
+                                            tint = if (state.bookmarks.isNotEmpty())
+                                                MaterialTheme.colorScheme.secondary
+                                            else MaterialTheme.colorScheme.onSurface
+                                        )
+                                        if (state.bookmarks.isNotEmpty()) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(16.dp)
+                                                    .align(Alignment.TopEnd)
+                                                    .background(
+                                                        MaterialTheme.colorScheme.secondary,
+                                                        shape = RoundedCornerShape(8.dp)
+                                                    ),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Text(
+                                                    text = "${state.bookmarks.size}",
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = MaterialTheme.colorScheme.onSecondary
+                                                )
+                                            }
                                         }
                                     }
                                 }
-                            }
 
-                            IconButton(onClick = { viewModel.showSettings() }) {
-                                Icon(
-                                    Icons.Default.Settings,
-                                    contentDescription = stringResource(R.string.settings)
-                                )
-                            }
+                                IconButton(onClick = { viewModel.showSettings() }) {
+                                    Icon(
+                                        Icons.Default.Settings,
+                                        contentDescription = stringResource(R.string.settings)
+                                    )
+                                }
 
-                            IconButton(onClick = { showChapterList = true }) {
-                                Icon(
-                                    Icons.Default.List,
-                                    contentDescription = stringResource(R.string.chapter_list)
-                                )
-                            }
+                                IconButton(onClick = { showChapterList = true }) {
+                                    Icon(
+                                        Icons.Default.List,
+                                        contentDescription = stringResource(R.string.chapter_list)
+                                    )
+                                }
 
-                            Spacer(modifier = Modifier.weight(1f))
+                                Spacer(modifier = Modifier.weight(1f))
 
-                            IconButton(
-                                onClick = {
-                                    saveScroll { viewModel.goToNextChapter() }
-                                },
-                                enabled = state.nextChapterId != null
-                            ) {
-                                Icon(
-                                    Icons.AutoMirrored.Filled.ArrowForwardIos,
-                                    contentDescription = stringResource(R.string.next)
-                                )
+                                IconButton(
+                                    onClick = {
+                                        saveScroll { viewModel.goToNextChapter() }
+                                    },
+                                    enabled = state.nextChapterId != null
+                                ) {
+                                    Icon(
+                                        Icons.AutoMirrored.Filled.ArrowForwardIos,
+                                        contentDescription = stringResource(R.string.next)
+                                    )
+                                }
                             }
                         }
                     }
+                    ReaderStatusBar(
+                        battery = rememberBatteryState(),
+                        containerColor = readerBarColor
+                    )
                 }
-                ReaderStatusBar(battery = rememberBatteryState())
             }
-        }
-    ) { padding ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-        ) {
-            WallpaperBackground(
-                ref = state.config.wallpaper,
-                blur = liveBlur,
-                veil = liveVeil,
-                veilColor = parseAccentHex(readerSurfaceOf(state.config).bg) ?: Color.Black,
-                modifier = Modifier.fillMaxSize()
-            )
-
-            when {
-                state.isLoading -> {
-                    CircularProgressIndicator(
-                        modifier = Modifier.align(Alignment.Center)
-                    )
-                }
-                state.error != null -> {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(
-                                text = state.error ?: "",
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.error
-                            )
-                            Spacer(modifier = Modifier.height(16.dp))
-                            Button(onClick = { saveScroll { onBack() } }) {
-                                Text(stringResource(R.string.back))
+        ) { padding ->
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+            ) {
+                when {
+                    state.isLoading -> {
+                        CircularProgressIndicator(
+                            modifier = Modifier.align(Alignment.Center)
+                        )
+                    }
+                    state.error != null -> {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text(
+                                    text = state.error ?: "",
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.error
+                                )
+                                Spacer(modifier = Modifier.height(16.dp))
+                                Button(onClick = { saveScroll { onBack() } }) {
+                                    Text(stringResource(R.string.back))
+                                }
                             }
                         }
                     }
-                }
-                state.isEmpty -> {
-                    EmptyChapterState(
-                        onImportMht = { viewModel.importMhtForChapter(it) },
-                        onBack = { saveScroll { onBack() } }
-                    )
-                }
-                else -> {
-                    ReaderWebView(
-                    onScrollChanged = { ratio ->
-                        if (isPageLoaded) {
-                            scrollRatio = ratio
-                            viewModel.updateLiveScroll(ratio)
-                        }
-                    },
-                    onPageFinished = { wv, url ->
-                        if (!loadToken.shouldAccept(url)) return@ReaderWebView
-                        val restoreToken = pendingRestoreToken ?: return@ReaderWebView
-                        val ratio = viewModel.getScrollRatio()
-                        scrollRatio = ratio
-                        wv.evaluateJavascript(applyConfigJs(state.config), null)
-                        wv.evaluateJavascript(applyBookmarksJs(state.bookmarks), null)
-                        val search = pendingSearchQuery
-                        if (search != null) {
-                            pendingSearchQuery = null
-                            wv.evaluateJavascript(buildJs(
-                                code = "window.scrollTo(0, 0);",
-                                params = emptyMap()
-                            ), null)
-                            wv.evaluateJavascript(
-                                searchHighlightJs(search, ratio, completionToken = restoreToken),
-                                null
-                            )
-                        } else {
-                            wv.evaluateJavascript(scrollRestoreJs(ratio, completionToken = restoreToken), null)
-                        }
-                    },
-                    onWebViewReady = { webView = it },
-                    onScrollRestoreComplete = { token ->
-                        if (token == pendingRestoreToken) isPageLoaded = true
-                    },
-                    onTap = { isOptionsVisible = !isOptionsVisible },
-                    onSwipe = { direction, axis ->
-                        pendingSwipeTransition = chapterTransitionFor(direction, axis)
-                        val navigate: () -> Unit = {
-                            if (direction == "prev") {
-                                viewModel.goToPrevChapter()
-                            } else {
-                                viewModel.goToNextChapter()
+                    state.isEmpty -> {
+                        EmptyChapterState(
+                            onImportMht = { viewModel.importMhtForChapter(it) },
+                            onBack = { saveScroll { onBack() } }
+                        )
+                    }
+                    else -> {
+                        ReaderWebView(
+                        onScrollChanged = { ratio ->
+                            if (isPageLoaded) {
+                                scrollRatio = ratio
+                                viewModel.updateLiveScroll(ratio)
                             }
-                        }
-                        when {
-                            axis == "v" && direction == "next" -> { viewModel.saveScrollPosition(1f); navigate() }
-                            axis == "v" && direction == "prev" -> { viewModel.saveScrollPosition(0f); navigate() }
-                            else -> saveScroll(navigate)
-                        }
-                    },
-                    modifier = Modifier.fillMaxSize()
-                )
-
-                if (state.isSearchActive) {
-                    SearchResultsPanel(
-                        query = state.searchQuery,
-                        results = state.searchResults,
-                        onResultClick = { chapter, query ->
-                            viewModel.deactivateSearch()
-                            onChapterChange(chapter.id, query)
                         },
-                        onClose = { viewModel.deactivateSearch() }
+                        onPageFinished = { wv, url ->
+                            if (!loadToken.shouldAccept(url)) return@ReaderWebView
+                            val restoreToken = pendingRestoreToken ?: return@ReaderWebView
+                            val ratio = viewModel.getScrollRatio()
+                            scrollRatio = ratio
+                            wv.evaluateJavascript(applyConfigJs(state.config), null)
+                            wv.evaluateJavascript(applyBookmarksJs(state.bookmarks), null)
+                            val search = pendingSearchQuery
+                            if (search != null) {
+                                pendingSearchQuery = null
+                                wv.evaluateJavascript(buildJs(
+                                    code = "window.scrollTo(0, 0);",
+                                    params = emptyMap()
+                                ), null)
+                                wv.evaluateJavascript(
+                                    searchHighlightJs(search, ratio, completionToken = restoreToken),
+                                    null
+                                )
+                            } else {
+                                wv.evaluateJavascript(scrollRestoreJs(ratio, completionToken = restoreToken), null)
+                            }
+                        },
+                        onWebViewReady = { webView = it },
+                        onScrollRestoreComplete = { token ->
+                            if (token == pendingRestoreToken) isPageLoaded = true
+                        },
+                        onTap = { isOptionsVisible = !isOptionsVisible },
+                        onSwipe = { direction, axis ->
+                            pendingSwipeTransition = chapterTransitionFor(direction, axis)
+                            val navigate: () -> Unit = {
+                                if (direction == "prev") {
+                                    viewModel.goToPrevChapter()
+                                } else {
+                                    viewModel.goToNextChapter()
+                                }
+                            }
+                            when {
+                                axis == "v" && direction == "next" -> { viewModel.saveScrollPosition(1f); navigate() }
+                                axis == "v" && direction == "prev" -> { viewModel.saveScrollPosition(0f); navigate() }
+                                else -> saveScroll(navigate)
+                            }
+                        },
+                        modifier = Modifier.fillMaxSize()
                     )
-                }
+
+                    if (state.isSearchActive) {
+                        SearchResultsPanel(
+                            query = state.searchQuery,
+                            results = state.searchResults,
+                            onResultClick = { chapter, query ->
+                                viewModel.deactivateSearch()
+                                onChapterChange(chapter.id, query)
+                            },
+                            onClose = { viewModel.deactivateSearch() }
+                        )
+                    }
+                    }
                 }
             }
         }

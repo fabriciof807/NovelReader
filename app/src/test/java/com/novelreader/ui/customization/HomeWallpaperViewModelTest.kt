@@ -33,6 +33,7 @@ class HomeWallpaperViewModelTest {
         Dispatchers.setMain(UnconfinedTestDispatcher())
         every { appPreferences.homeWallpaper } returns flowOf("builtin:noite")
         every { appPreferences.homeWallpaperBlur } returns flowOf(12)
+        every { appPreferences.wallpaperBehindBars } returns flowOf(true)
         viewModel = HomeWallpaperViewModel(appPreferences, storage)
     }
 
@@ -45,6 +46,15 @@ class HomeWallpaperViewModelTest {
     fun `exposes the stored wallpaper and blur`() = runTest {
         assertThat(viewModel.wallpaper.first()).isEqualTo("builtin:noite")
         assertThat(viewModel.blur.first()).isEqualTo(12)
+    }
+
+    @Test
+    fun `exposes and updates the behind the bars option`() = runTest {
+        assertThat(viewModel.behindBars.first()).isTrue()
+
+        viewModel.updateBehindBars(false)
+
+        coVerify { appPreferences.updateWallpaperBehindBars(false) }
     }
 
     @Test

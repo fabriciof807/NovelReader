@@ -95,6 +95,8 @@
     <string name="reset_appearance_title">Restaurar aparência padrão</string>
     <string name="reset_appearance_message">Paleta, cor de acento, papéis de parede, desfoque e véu voltam ao padrão. Seus temas salvos são mantidos.</string>
     <string name="reset_appearance_confirm">Restaurar</string>
+    <string name="wallpaper_behind_bars">Papel de parede atrás das barras</string>
+    <string name="wallpaper_behind_bars_desc">Deixa a barra de cima e as abas translúcidas na cor do tema, com o papel de parede aparecendo por trás</string>
     <string name="wallpaper_home">Papel de parede da biblioteca</string>
     <string name="wallpaper_reader">Papel de parede do leitor</string>
     <string name="wallpaper_pick">Escolher imagem</string>

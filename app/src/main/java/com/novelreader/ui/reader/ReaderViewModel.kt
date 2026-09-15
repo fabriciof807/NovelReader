@@ -342,6 +342,13 @@ class ReaderViewModel @Inject constructor(
         }
     }
 
+    val wallpaperBehindBars: StateFlow<Boolean> = appPreferences.wallpaperBehindBars
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+
+    fun updateWallpaperBehindBars(enabled: Boolean) {
+        viewModelScope.launch { appPreferences.updateWallpaperBehindBars(enabled) }
+    }
+
     val savedThemes: StateFlow<List<SavedTheme>> = appPreferences.savedThemes
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 

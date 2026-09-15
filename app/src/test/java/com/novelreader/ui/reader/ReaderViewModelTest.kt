@@ -219,6 +219,15 @@ class ReaderViewModelTest {
     }
 
     @Test
+    fun `updateWallpaperBehindBars persists the option`() = runTest {
+        viewModel = createViewModel()
+
+        viewModel.updateWallpaperBehindBars(false)
+
+        coVerify { appPreferences.updateWallpaperBehindBars(false) }
+    }
+
+    @Test
     fun `theme actions go through the visual theme use case`() = runTest {
         val theme = com.novelreader.data.local.preferences.SavedTheme(
             "Noite", "amoled", "#7c4dff", "papel:dark", null

@@ -299,6 +299,9 @@ class ImportDataUseCase @Inject constructor(
         if (settings.has("accentColor")) {
             appPreferences.updateAccentColor(settings.optString("accentColor"))
         }
+        if (settings.has("wallpaperBehindBars")) {
+            appPreferences.updateWallpaperBehindBars(settings.getBoolean("wallpaperBehindBars"))
+        }
         settings.optJSONArray("savedThemes")?.let { themes ->
             appPreferences.updateSavedThemes(SavedThemeCodec.decode(themes.toString()))
         }

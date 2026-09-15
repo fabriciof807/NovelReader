@@ -160,6 +160,7 @@ class ExportDataUseCase @Inject constructor(
             appPreferences.accentColor.first()?.let { put("accentColor", it) }
             put("wallpaperHome", appPreferences.homeWallpaper.first())
             put("wallpaperHomeBlur", appPreferences.homeWallpaperBlur.first())
+            put("wallpaperBehindBars", appPreferences.wallpaperBehindBars.first())
             val themes = appPreferences.savedThemes.first()
             if (themes.isNotEmpty()) {
                 put("savedThemes", JSONArray(SavedThemeCodec.encode(themes)))

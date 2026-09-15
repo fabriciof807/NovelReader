@@ -29,6 +29,13 @@ class HomeWallpaperViewModel @Inject constructor(
     val blur: StateFlow<Int> = appPreferences.homeWallpaperBlur
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
+    val behindBars: StateFlow<Boolean> = appPreferences.wallpaperBehindBars
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+
+    fun updateBehindBars(enabled: Boolean) {
+        viewModelScope.launch { appPreferences.updateWallpaperBehindBars(enabled) }
+    }
+
     fun select(ref: String) {
         viewModelScope.launch { appPreferences.updateHomeWallpaper(ref) }
     }

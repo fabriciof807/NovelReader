@@ -55,6 +55,7 @@ class VisualThemeUseCase @Inject constructor(
         appPreferences.updateAccentColor(null)
         appPreferences.updateHomeWallpaper(PreferenceAllowlists.WALLPAPER_NONE)
         appPreferences.updateHomeWallpaperBlur(0)
+        appPreferences.updateWallpaperBehindBars(true)
         wallpaperStorage.clearSlot(WallpaperStorage.SLOT_HOME)
 
         readerPreferences.updateTheme("auto")

@@ -84,6 +84,7 @@ import com.novelreader.ui.customization.AccentColorPicker
 import com.novelreader.ui.customization.BlurSlider
 import com.novelreader.ui.customization.HomeWallpaperViewModel
 import com.novelreader.ui.customization.SavedThemesSection
+import com.novelreader.ui.customization.WallpaperBehindBarsRow
 import com.novelreader.ui.customization.WallpaperChoiceRow
 import com.novelreader.ui.customization.PalettePicker
 import com.novelreader.ui.customization.appPaletteChoices
@@ -114,6 +115,7 @@ fun SettingsScreen(
     val wallpaperViewModel: HomeWallpaperViewModel = hiltViewModel()
     val homeWallpaper by wallpaperViewModel.wallpaper.collectAsState()
     val homeWallpaperBlur by wallpaperViewModel.blur.collectAsState()
+    val homeWallpaperBehindBars by wallpaperViewModel.behindBars.collectAsState()
     val wallpaperPicker = rememberLauncherForActivityResult(
         ActivityResultContracts.GetContent()
     ) { uri ->
@@ -559,6 +561,11 @@ fun SettingsScreen(
                 BlurSlider(
                     initial = homeWallpaperBlur,
                     onCommit = { wallpaperViewModel.updateBlur(it) }
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                WallpaperBehindBarsRow(
+                    checked = homeWallpaperBehindBars,
+                    onCheckedChange = { wallpaperViewModel.updateBehindBars(it) }
                 )
             }
 
