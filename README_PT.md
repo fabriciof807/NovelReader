@@ -42,6 +42,8 @@ NovelReader é para quem lê muito novel/web novel/light novel e quer:
 - Desfoque em cada papel de parede, na intensidade que você quiser
 - **Véu de leitura** — controle quanto do fundo do leitor fica entre o texto e o papel de parede, para a foto nunca custar legibilidade
 - O tema do leitor pode seguir o app ou ficar fixo numa variante clara/escura
+- **Temas salvos** — guarde até cinco visuais (paleta, cores de acento e tema do leitor) e alterne entre eles; trocar de tema nunca mexe no seu papel de parede
+- **Restaurar aparência** — um botão devolve paleta, acentos, papéis de parede, desfoque e véu ao padrão, mantendo seus temas salvos
 
 ### Organizar personagens
 
@@ -121,7 +123,9 @@ Para novels de sites não listados, o parser genérico tenta extrair o conteúdo
 - Feat: slider de véu de leitura (padrão 80%) e paleta + variante clara/escura próprias do leitor, para o papel de parede nunca ganhar do texto.
 - Fix: o sheet de configurações do leitor agora rola; com as seções novas a metade de baixo ficava inalcançável no celular.
 - Temas antigos do leitor (`light`, `dark`, `sepia`, `gray`) mapeiam exatamente para as paletas novas, então quem já lia mantém as cores.
-- 596 testes unitários passando (eram 506).
+- Feat: até cinco temas salvos (paleta, cores de acento e tema do leitor) mais um botão de restaurar aparência que os mantém.
+- Fix: os sliders gravavam a cada frame do arrasto — e o leitor reaplicava o CSS pela ponte JS em cada um deles — então o thumb prendia e pulava; agora o valor grava uma vez, ao soltar.
+- 637 testes unitários passando (eram 506).
 
 ### v2.9.3 (2026-09-14)
 
@@ -353,7 +357,7 @@ app/src/main/java/com/novelreader/
 | Telas de biblioteca / lista de capítulos / configurações | Unit | 55 |
 | Preferências, storage, tema e customização | Unit | 87 |
 | Workers, navegação, favoritos, diversos | Unit | 96 |
-| **Total (JVM)** | | **596** |
+| **Total (JVM)** | | **637** |
 
 `./gradlew :app:testDebugUnitTest` roda toda a suíte JVM; a suíte de DAOs abaixo precisa de emulador.
 

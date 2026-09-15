@@ -174,6 +174,26 @@ Manual `Migration(start, end)` in `NovelDatabase.Companion`. Each uses raw `exec
 
 4 DataStore instances: `app_prefs`, `reader_prefs`, `import_prefs`, `library_prefs`. Each with its own preferences class.
 
+### Saved themes and reset
+
+`VisualThemeUseCase` owns both: `saveCurrent`/`apply`/`delete` for up to five
+saved themes (`SavedThemeCodec`, JSON in `app_prefs.saved_themes`) and
+`resetToDefaults` for the appearance reset. A saved theme holds **only colours**
+(palette, both accents, reader theme) — never wallpapers, blur or veil, so
+switching a theme cannot change the user's background. The reset keeps the saved
+themes and deletes the wallpaper files. Both surfaces (Settings and the reader
+sheet) render the same `SavedThemesSection`.
+
+### Sliders
+
+Every slider commits **once, on release** (`onValueChangeFinished`) and keeps the
+value in local state while dragging. Do not go back to writing the preference on
+`onValueChange`: `ReaderScreen` re-applies `applyConfigJs` whenever
+`state.config` changes, so a per-frame write means a DataStore write and a
+WebView JS evaluation per frame — the slider sticks and jumps. Where a live
+preview is cheap (wallpaper blur and veil) the screen keeps a transient state
+that is *not* persisted, and the renderer reads that.
+
 ### Wallpapers
 
 Two independent global slots (`WallpaperStorage.SLOT_HOME`, `SLOT_READER`), never per novel. A reference is one string: `none`, `builtin:<id>` (one of 8 gradients in `WallpaperBackground.BUILTIN_WALLPAPERS`) or `file:<name.ext>` — the name must match `^[a-z0-9_]{1,64}\.(jpg|jpeg|png|webp)$` and the resolved canonical path must stay inside `filesDir/wallpapers/`.
@@ -197,10 +217,20 @@ Two independent global slots (`WallpaperStorage.SLOT_HOME`, `SLOT_READER`), neve
 ## Testing
 
 - **Unit tests**: Robolectric, MockK, Turbine, MockWebServer (JVM, no emulator)
+- The JVM suite needs `maxHeapSize = "2g"` (set in `testOptions`): Robolectric's
+  `ShadowLineBreaker` native registry grows with every text layout and exhausts
+  the 512 MiB Gradle default.
+- A Compose `TextField` on screen makes Robolectric never report idle (the cursor
+  animates forever), so any `waitForIdle` times out after 60s. Cover text-entry
+  logic at the view-model/use-case level instead of in the UI test.
+- Coordinate clicks do not reach nodes inside horizontally scrolled rows (or
+  already-scrolled sheet content); use
+  `performSemanticsAction(SemanticsActions.OnClick)`. Likewise `performScrollTo`
+  throws when there is no scrollable ancestor.
 - **Instrumented tests**: Room in-memory DB, Compose Test Rule, Espresso
 - Parser tests use real HTML fixtures
 - ViewModel tests inject mocked DAOs/use cases
-- **Current count: 596 unit tests**
+- **Current count: 637 unit tests**
 - **Always run `./gradlew :app:compileDebugKotlin :app:testDebugUnitTest` before pushing**
 
 ## Recent Sessions
@@ -219,7 +249,7 @@ v2.10.0 (versionCode 31). See [README.md](README.md) (English) and [README_PT.md
 - Feat: library and reader wallpapers (own image or built-in gradient) with independent blur, plus a reader veil slider (default 80%).
 - Fix: the reader settings sheet scrolls — with the new sections the lower half was unreachable.
 - Legacy reader themes map exactly onto the new palettes; no data migration.
-- 596 unit tests passing (was 506).
+- 637 unit tests passing (was 506).
 - Spec: `docs/visual-customization-spec.md`.
 
 ### v2.9.3 highlights
