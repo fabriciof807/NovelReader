@@ -61,6 +61,7 @@
     <string name="english">Inglês</string>
     <string name="settings_dynamic_color_title">Tema dinâmico (Android 12+)</string>
     <string name="settings_dynamic_color_subtitle">Usa as cores do seu sistema</string>
+    <string name="appearance">Aparência</string>
     <string name="palette">Paleta</string>
     <string name="accent_color">Cor de acento</string>
     <string name="accent_color_default">Padrão da paleta</string>

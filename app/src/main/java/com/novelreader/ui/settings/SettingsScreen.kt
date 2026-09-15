@@ -511,7 +511,7 @@ fun SettingsScreen(
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
             SettingsSection(
-                title = stringResource(R.string.palette),
+                title = stringResource(R.string.appearance),
                 expanded = paletteExpanded.value,
                 onToggle = { paletteExpanded.value = !paletteExpanded.value }
             ) {
