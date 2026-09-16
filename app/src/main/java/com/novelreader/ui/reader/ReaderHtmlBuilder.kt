@@ -395,7 +395,13 @@ private fun headingDuplicatesTitle(headingText: String, chapterTitle: String): B
     val title = chapterTitle.trim().replace(WHITESPACE, " ").lowercase()
     if (title.isEmpty() || heading.isEmpty()) return false
     if (title.length > 20 && heading.contains(title)) return true
-    if (!heading.startsWith(title)) return false
+    if (!heading.startsWith(title)) {
+        // Sources that repeat the title behind its own prefix ("Chapter 4: Chapter 4: Centurion") are
+        // only caught by the length rule above once the title is long enough, so match the suffix too.
+        if (!heading.endsWith(title)) return false
+        val prefix = heading.removeSuffix(title).trimEnd()
+        return prefix.isNotEmpty() && TITLE_SEPARATORS.any { prefix.endsWith(it) }
+    }
     val remainder = heading.substring(title.length).trimStart()
     return remainder.isEmpty() || TITLE_SEPARATORS.any { remainder.startsWith(it) }
 }

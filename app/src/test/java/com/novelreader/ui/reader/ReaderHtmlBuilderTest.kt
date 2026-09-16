@@ -333,6 +333,40 @@ class ReaderHtmlBuilderTest {
         assertThat(html).contains("<h4>Chapter 10: Later</h4>")
     }
 
+    // Some sources repeat the title behind its own prefix, and for a short title the `contains` rule
+    // above does not catch it, so the reader showed the chapter title twice.
+    @Test
+    fun `buildReaderHtml strips a doubled heading when the title is short`() {
+        val html = buildReaderHtml(
+            content = "<h4>Chapter 4: Chapter 4: Centurion</h4><p>Body.</p>",
+            config = ReaderConfig(),
+            chapterTitle = "Chapter 4: Centurion"
+        )
+        assertThat(html).doesNotContain("Chapter 4: Chapter 4:")
+        assertThat(html).contains("<h1 class=\"chapter-title\">Chapter 4: Centurion</h1>")
+        assertThat(html).contains("<p>Body.</p>")
+    }
+
+    @Test
+    fun `buildReaderHtml strips a heading that only prefixes the short title`() {
+        val html = buildReaderHtml(
+            content = "<h4>Prologue: Chapter 4: Centurion</h4><p>Body.</p>",
+            config = ReaderConfig(),
+            chapterTitle = "Chapter 4: Centurion"
+        )
+        assertThat(html).doesNotContain("Prologue: Chapter 4: Centurion")
+    }
+
+    @Test
+    fun `buildReaderHtml keeps a short-titled heading that continues the title`() {
+        val html = buildReaderHtml(
+            content = "<h4>Chapter 4: Centurion Returns</h4><p>Body.</p>",
+            config = ReaderConfig(),
+            chapterTitle = "Chapter 4: Centurion"
+        )
+        assertThat(html).contains("<h4>Chapter 4: Centurion Returns</h4>")
+    }
+
     @Test
     fun `buildReaderHtml prepends the chapter title at the top of the content`() {
         val html = buildReaderHtml(

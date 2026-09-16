@@ -318,8 +318,12 @@ v2.10.0 (versionCode 31). See [README.md](README.md) (English) and [README_PT.md
 - Feat: six palettes with light/dark variants + editable accent color (app and reader separately), replacing light/dark/dynamic; `dynamic` becomes one of the palette options.
 - Feat: library and reader wallpapers (own image or built-in gradient) with independent blur, plus a reader veil slider (default 80%).
 - Fix: the reader settings sheet scrolls — with the new sections the lower half was unreachable.
+- Fix: the crop screen kept the crop its gesture handler was built with, so a drag after choosing a zoom snapped the frame back to 100% and the pan never accumulated (device-only: the Robolectric harness re-runs the block, so tests could not see it).
+- Fix: the library's text-bearing containers (filter chips, stats bar, queued rows) stay opaque over a wallpaper — transparent, they measured 2.19:1 and 3.22:1 against a light wallpaper.
+- Fix: the crop saved the window size minus the system bars (1078x2273 on a 1080x2400 screen), so the applied wallpaper drifted ~2.7% per side from the preview.
+- Fix: the reader no longer shows the chapter title twice when the source heading repeats it behind its own prefix ("Chapter 4: Chapter 4: Centurion").
 - Legacy reader themes map exactly onto the new palettes; no data migration.
-- 695 unit tests passing (was 506).
+- 701 unit tests passing (was 506).
 - Spec: `docs/visual-customization-spec.md`.
 
 ### v2.9.3 highlights
