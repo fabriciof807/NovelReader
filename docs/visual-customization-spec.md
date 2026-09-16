@@ -101,6 +101,11 @@ escolhida na sessão: biblioteca e leitor juntos, editável nos dois lugares.
   fundo claro (amanhecer, papel) o texto praticamente sumia.
 - O `Scaffold` da biblioteca continua transparente quando há wallpaper; só as
   barras recebem o véu.
+- O inset da **barra de navegação do sistema** (gestos ou botões) também recebe o
+  véu (`NavigationBarVeil`), senão o wallpaper aparecia cru atrás da barra do
+  Android enquanto a barra de cima estava escurecida. A faixa é desenhada entre o
+  wallpaper e o `Scaffold`, com a mesma cor da barra de cima, e só existe quando
+  há wallpaper.
 
 **Home**: `Scaffold` transparente enquanto há wallpaper, `TopAppBar` e `TabRow`
 com `barColorFor`. Sem wallpaper, idêntico ao anterior.

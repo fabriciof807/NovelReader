@@ -127,7 +127,8 @@ Para novels de sites não listados, o parser genérico tenta extrair o conteúdo
 - Feat: até cinco temas salvos (paleta, cores de acento e tema do leitor) mais um botão de restaurar aparência que os mantém.
 - Fix: os sliders gravavam a cada frame do arrasto — e o leitor reaplicava o CSS pela ponte JS em cada um deles — então o thumb prendia e pulava; agora o valor grava uma vez, ao soltar.
 - Feat: opção de manter o papel de parede visível atrás da barra de cima e das abas (translúcido, com véu na cor do tema) ou deixar essas barras sólidas como antes; ligada por padrão, valendo para biblioteca e leitor.
-- 650 testes unitários passando (eram 506).
+- Fix: a área da barra de navegação do Android ficava com o papel de parede cru enquanto o resto da moldura tinha véu; agora recebe a mesma cor da barra de cima.
+- 651 testes unitários passando (eram 506).
 
 ### v2.9.3 (2026-09-14)
 
@@ -359,7 +360,7 @@ app/src/main/java/com/novelreader/
 | Telas de biblioteca / lista de capítulos / configurações | Unit | 55 |
 | Preferências, storage, tema e customização | Unit | 87 |
 | Workers, navegação, favoritos, diversos | Unit | 96 |
-| **Total (JVM)** | | **650** |
+| **Total (JVM)** | | **651** |
 
 `./gradlew :app:testDebugUnitTest` roda toda a suíte JVM; a suíte de DAOs abaixo precisa de emulador.
 

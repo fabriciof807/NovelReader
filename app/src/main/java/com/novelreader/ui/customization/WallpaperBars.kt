@@ -1,6 +1,12 @@
 package com.novelreader.ui.customization
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.windowInsetsBottomHeight
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -13,14 +19,27 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import com.novelreader.R
 
 const val BAR_VEIL_ALPHA = 0.8f
+const val NAVIGATION_BAR_VEIL_TAG = "navigation_bar_veil"
 
 fun barColorFor(surface: Color, wallpaperActive: Boolean, behindBars: Boolean): Color =
     if (wallpaperActive && behindBars) surface.copy(alpha = BAR_VEIL_ALPHA) else surface
+
+@Composable
+fun NavigationBarVeil(color: Color, modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .windowInsetsBottomHeight(WindowInsets.navigationBars)
+            .testTag(NAVIGATION_BAR_VEIL_TAG)
+            .background(color)
+    )
+}
 
 @Composable
 fun WallpaperBehindBarsRow(

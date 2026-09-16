@@ -230,7 +230,7 @@ Two independent global slots (`WallpaperStorage.SLOT_HOME`, `SLOT_READER`), neve
 - **Instrumented tests**: Room in-memory DB, Compose Test Rule, Espresso
 - Parser tests use real HTML fixtures
 - ViewModel tests inject mocked DAOs/use cases
-- **Current count: 650 unit tests**
+- **Current count: 651 unit tests**
 - **Always run `./gradlew :app:compileDebugKotlin :app:testDebugUnitTest` before pushing**
 
 ## Recent Sessions
@@ -249,7 +249,7 @@ v2.10.0 (versionCode 31). See [README.md](README.md) (English) and [README_PT.md
 - Feat: library and reader wallpapers (own image or built-in gradient) with independent blur, plus a reader veil slider (default 80%).
 - Fix: the reader settings sheet scrolls — with the new sections the lower half was unreachable.
 - Legacy reader themes map exactly onto the new palettes; no data migration.
-- 650 unit tests passing (was 506).
+- 651 unit tests passing (was 506).
 - Spec: `docs/visual-customization-spec.md`.
 
 ### v2.9.3 highlights

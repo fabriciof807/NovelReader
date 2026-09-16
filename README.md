@@ -129,7 +129,8 @@ For novels from sites not listed, the generic parser tries to extract the main c
 - Feat: up to five saved themes (palette, accent colours and reader theme) plus a one-tap appearance reset that keeps them.
 - Fix: sliders persisted on every drag frame — and the reader re-applied its CSS over the JS bridge for each of them — so the thumb stuck and jumped; values now commit once, on release.
 - Feat: option to keep the wallpaper visible behind the top bar and tabs (translucent, with a theme-coloured veil) or leave those bars solid as before; on by default, shared by the library and the reader.
-- 650 unit tests passing (was 506).
+- Fix: the Android navigation bar area kept the raw wallpaper while the rest of the chrome was veiled; it now takes the same colour as the top bar.
+- 651 unit tests passing (was 506).
 
 ### v2.9.3 (2026-09-14)
 
@@ -362,7 +363,7 @@ app/src/main/java/com/novelreader/
 | Library / chapter list / settings screens | Unit | 55 |
 | Preferences, storage, theme and customization | Unit | 87 |
 | Workers, navigation, favorites, misc | Unit | 96 |
-| **Total (JVM)** | | **650** |
+| **Total (JVM)** | | **651** |
 
 `./gradlew :app:testDebugUnitTest` runs the whole JVM suite; the DAO suite below needs an emulator.
 
