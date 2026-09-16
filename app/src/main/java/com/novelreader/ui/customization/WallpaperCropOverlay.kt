@@ -42,6 +42,7 @@ import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
@@ -77,15 +78,22 @@ fun WallpaperCropOverlay(
 ) {
     var crop by remember { mutableStateOf(WallpaperCrop()) }
 
+    // The wallpaper covers the whole window (the activity is edge to edge), while
+    // `screenWidthDp * density` excludes the system bars: saving that size came out ~2.7% off the
+    // preview on each side, so measure the container the preview simulates.
     val configuration = LocalConfiguration.current
     val density = LocalDensity.current.density
-    val screenWidthPx = (configuration.screenWidthDp * density).toInt().coerceAtLeast(1)
-    val screenHeightPx = (configuration.screenHeightDp * density).toInt().coerceAtLeast(1)
+    var containerPx by remember { mutableStateOf(IntSize.Zero) }
+    val screenWidthPx = containerPx.width.takeIf { it > 0 }
+        ?: (configuration.screenWidthDp * density).toInt().coerceAtLeast(1)
+    val screenHeightPx = containerPx.height.takeIf { it > 0 }
+        ?: (configuration.screenHeightDp * density).toInt().coerceAtLeast(1)
     val screenAspect = screenWidthPx.toFloat() / screenHeightPx.toFloat()
 
     Column(
         modifier = modifier
             .fillMaxSize()
+            .onSizeChanged { containerPx = it }
             .background(MaterialTheme.colorScheme.background)
             .padding(16.dp)
     ) {

@@ -195,7 +195,11 @@ There is no standard Android crop API, so cropping happens in the app:
 `WallpaperCropOverlay` previews the image at the screen aspect with the app frame
 simulated (bar colour + veil), and reports `WallpaperCrop(zoom, panX, panY)` plus
 the **screen** pixel size — never the preview size, or the saved wallpaper comes
-out blurry. `panX`/`panY` are fractions of the available slack (-1..1), not
+out blurry. That size is the measured container (`onSizeChanged` on the overlay),
+not `screenWidthDp * density`: the activity is edge to edge, so the dp size skips
+the system bars and saved 1078x2273 on a 1080x2400 screen, leaving the applied
+wallpaper ~2.7% off the preview on each side (compose-ui 1.7.6 has no
+`WindowInfo.containerSize`; that arrived in 1.9). `panX`/`panY` are fractions of the available slack (-1..1), not
 pixels, so a crop means the same at any frame size. The maths is pure and lives in
 `data/storage/WallpaperCrop.kt` (the data layer owns it; `ui` imports from there,
 not the other way round). `saveCropped` also validates by decoding: bytes that are
