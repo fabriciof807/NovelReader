@@ -184,6 +184,19 @@ asserts the two do not overlap). The bar applies `navigationBarsPadding()` itsel
 so its background stops above the Android navigation bar area and the wallpaper
 veil stays visible there.
 
+### Wallpaper crop
+
+There is no standard Android crop API, so cropping happens in the app:
+`WallpaperCropOverlay` previews the image at the screen aspect with the app frame
+simulated (bar colour + veil), and reports `WallpaperCrop(zoom, panX, panY)` plus
+the **screen** pixel size — never the preview size, or the saved wallpaper comes
+out blurry. `panX`/`panY` are fractions of the available slack (-1..1), not
+pixels, so a crop means the same at any frame size. The maths is pure and lives in
+`data/storage/WallpaperCrop.kt` (the data layer owns it; `ui` imports from there,
+not the other way round). `saveCropped` also validates by decoding: bytes that are
+not an image are refused. Beware `BitmapFactory.decodeStream` returning null when
+`inJustDecodeBounds` is set — that is success, not failure.
+
 ### Settings screen
 
 `ui/settings/components/SettingsSection` is the collapsible group used by the
@@ -259,7 +272,7 @@ Two independent global slots (`WallpaperStorage.SLOT_HOME`, `SLOT_READER`), neve
 - **Instrumented tests**: Room in-memory DB, Compose Test Rule, Espresso
 - Parser tests use real HTML fixtures
 - ViewModel tests inject mocked DAOs/use cases
-- **Current count: 668 unit tests**
+- **Current count: 695 unit tests**
 - **Always run `./gradlew :app:compileDebugKotlin :app:testDebugUnitTest` before pushing**
 
 ## Recent Sessions
@@ -278,7 +291,7 @@ v2.10.0 (versionCode 31). See [README.md](README.md) (English) and [README_PT.md
 - Feat: library and reader wallpapers (own image or built-in gradient) with independent blur, plus a reader veil slider (default 80%).
 - Fix: the reader settings sheet scrolls — with the new sections the lower half was unreachable.
 - Legacy reader themes map exactly onto the new palettes; no data migration.
-- 668 unit tests passing (was 506).
+- 695 unit tests passing (was 506).
 - Spec: `docs/visual-customization-spec.md`.
 
 ### v2.9.3 highlights

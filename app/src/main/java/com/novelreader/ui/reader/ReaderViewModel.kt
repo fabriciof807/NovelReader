@@ -18,6 +18,7 @@ import com.novelreader.data.local.preferences.ReaderConfig
 import com.novelreader.data.local.preferences.PreferenceAllowlists
 import com.novelreader.data.local.preferences.ReaderPreferences
 import com.novelreader.data.local.preferences.SavedTheme
+import com.novelreader.data.storage.WallpaperCrop
 import com.novelreader.data.storage.WallpaperStorage
 import com.novelreader.domain.usecase.VisualThemeUseCase
 import com.novelreader.data.local.preferences.AppPreferences
@@ -333,6 +334,31 @@ class ReaderViewModel @Inject constructor(
 
     fun updateVeil(value: Int) {
         viewModelScope.launch { readerPreferences.updateVeil(value) }
+    }
+
+    private val _pendingCrop = MutableStateFlow<Uri?>(null)
+    val pendingCrop: StateFlow<Uri?> = _pendingCrop
+
+    fun startCrop(uri: Uri) {
+        _pendingCrop.value = uri
+    }
+
+    fun cancelCrop() {
+        _pendingCrop.value = null
+    }
+
+    fun applyCrop(crop: WallpaperCrop, targetWidth: Int, targetHeight: Int) {
+        val uri = _pendingCrop.value ?: return
+        _pendingCrop.value = null
+        viewModelScope.launch {
+            wallpaperStorage.saveCropped(
+                slot = WallpaperStorage.SLOT_READER,
+                uri = uri,
+                crop = crop,
+                targetWidth = targetWidth,
+                targetHeight = targetHeight
+            )?.let { readerPreferences.updateWallpaper(it) }
+        }
     }
 
     fun importWallpaper(uri: Uri) {

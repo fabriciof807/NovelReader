@@ -74,6 +74,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.novelreader.R
 import com.novelreader.data.local.preferences.PreferenceAllowlists
 import com.novelreader.ui.customization.WallpaperBackground
+import com.novelreader.ui.customization.WallpaperCropOverlay
 import com.novelreader.ui.customization.barColorFor
 import com.novelreader.ui.theme.parseAccentHex
 import com.novelreader.data.local.db.entity.BookmarkEntity
@@ -136,10 +137,11 @@ fun ReaderScreen(
     LaunchedEffect(state.config.veil) { liveVeil = state.config.veil }
     LaunchedEffect(state.config.wallpaperBlur) { liveBlur = state.config.wallpaperBlur }
 
+    val pendingCrop by viewModel.pendingCrop.collectAsState()
     val wallpaperPicker = rememberLauncherForActivityResult(
         ActivityResultContracts.GetContent()
     ) { uri ->
-        uri?.let { viewModel.importWallpaper(it) }
+        uri?.let { viewModel.startCrop(it) }
     }
 
     fun saveScroll(callback: () -> Unit = {}) {
@@ -625,6 +627,24 @@ fun ReaderScreen(
                     }
                 }
             }
+        }
+        pendingCrop?.let { cropUri ->
+            WallpaperCropOverlay(
+                imageModel = cropUri,
+                title = state.chapter?.title.orEmpty().ifBlank { stringResource(R.string.library) },
+                topBarColor = readerBarColor,
+                bottomBarColor = readerBarColor,
+                veilColor = parseAccentHex(readerSurfaceOf(state.config).bg),
+                veilAlpha = liveVeil / 100f,
+                onApply = { crop, width, height ->
+                    viewModel.applyCrop(crop, width, height)
+                },
+                onSkipCrop = {
+                    viewModel.importWallpaper(cropUri)
+                    viewModel.cancelCrop()
+                },
+                onCancel = { viewModel.cancelCrop() }
+            )
         }
     }
 

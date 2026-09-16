@@ -92,7 +92,36 @@ então uma referência pendurada degrada para "sem wallpaper" em vez de quebrar.
 Blur usa `Modifier.blur` (API 31+) e, abaixo disso, um request reduzido do Coil
 com `FilterQuality.Low` — sem `RenderEffect` no API < 31.
 
-## 6. Render
+## 6. Recorte antes de aplicar
+
+Não existe API padrão de recorte no Android (`com.android.camera.action.CROP` é
+acordo não-oficial, ausente em AOSP/Pixel), então o recorte é **no app**:
+
+1. O seletor SAF devolve a imagem; o slot entra em `pendingCrop` (nada é copiado).
+2. `WallpaperCropOverlay` mostra a prévia na proporção da tela, com arrasto e
+   zoom, mais a moldura do app simulada — barra de cima translúcida e barra de
+   contagem na cor de `barColorFor`, com o véu quando é o leitor. Assim dá para
+   ver o contraste real do texto sobre a imagem escolhida.
+3. "Aplicar" grava `WallpaperCrop(zoom, panX, panY)`; "Usar sem ajustar" cai no
+   `importFromUri` de antes; "Cancelar" não muda nada.
+
+`panX`/`panY` são **frações do espaço disponível** (-1..1), não pixels, então o
+mesmo recorte significa a mesma coisa em qualquer tamanho de moldura. A
+matemática vive em `data/storage/WallpaperCrop.kt` (camada de dados, sem Compose,
+testada como função pura): `coverScale`, `cropSlack`, `cropRectFor`, `clampCrop`,
+`decodeSampleSize`.
+
+- O tamanho de destino vem da **tela** (`screenWidthDp × densidade`), informado
+  pelo overlay junto com o transform: a prévia pode ser menor, o arquivo sai na
+  resolução da tela. Gravar na resolução da prévia seria um wallpaper borrado.
+- `WallpaperStorage.saveCropped` decodifica com `inSampleSize` limitado a
+  4096px no maior lado, recorta, escala para o alvo e grava JPEG 92.
+- A decodificação é também a validação: os bytes precisam decodificar como
+  imagem, senão nada é gravado (o `importFromUri` só confia em MIME/extensão).
+- Rotação: o recorte é feito na proporção da tela atual; girando, o app re-corta
+  o centro da mesma imagem (a barra de cima e as abas continuam corretas).
+
+## 7. Render
 
 ### Barras
 
@@ -125,7 +154,7 @@ recebem `containerColor` (default = superfície do tema, mantendo os testes
 existentes). Véu 80% é o default; 0% deixa o wallpaper cru, por escolha do
 usuário.
 
-## 7. Temas salvos (5 slots)
+## 8. Temas salvos (5 slots)
 
 Um tema salvo guarda **só cores e tema do leitor** — nunca wallpaper, blur ou
 véu (decisão explícita: trocar de tema não deve mexer no fundo de quem gosta do
@@ -147,7 +176,7 @@ SavedTheme(name, palette, accentColor?, readerTheme, readerAccentColor?)
 - Exposto nas duas superfícies (Configurações e sheet do leitor) pelo mesmo
   `SavedThemesSection`.
 
-## 8. Restaurar aparência padrão
+## 9. Restaurar aparência padrão
 
 `VisualThemeUseCase.resetToDefaults` volta paleta (dinâmica no Android 12+,
 indigo abaixo disso), acentos, papéis de parede (apagando os arquivos dos dois
@@ -155,7 +184,7 @@ slots), desfoques, véu e a opção de barras (`wallpaper_behind_bars` → ligad
 padrão. **Os temas salvos são preservados** — o texto
 do diálogo de confirmação diz isso explicitamente.
 
-## 9. Sliders
+## 10. Sliders
 
 Sliders gravam **uma vez, ao soltar** (`onValueChangeFinished`), com o valor
 local durante o arrasto. Antes, cada frame do arrasto gravava no DataStore e
@@ -168,7 +197,7 @@ A prévia ao vivo continua onde é barata (desfoque e véu alimentam
 para fonte, espaçamento, rolagem e cor de acento a página/tema só muda ao
 soltar.
 
-## 10. Backup v3
+## 11. Backup v3
 
 `settings` ganha `appPalette`, `accentColor`, `wallpaperHome`,
 `wallpaperHomeBlur`, `wallpaperBehindBars`, `savedThemes` e, dentro de `reader`,
@@ -180,7 +209,7 @@ Na importação, ref `file:` cujo arquivo não existe no aparelho vira `none`
 descartada pelo sanitizer. Acento inválido é descartado e volta o padrão da
 paleta.
 
-## 11. Correção de bug encontrada no caminho
+## 12. Correção de bug encontrada no caminho
 
 O sheet do leitor não tinha scroll. Com as seções novas (paleta, variante,
 acento, fonte, espaçamento, tela ligada, swipe, wallpaper, desfoque, véu,
@@ -188,7 +217,7 @@ rolagem automática), a metade de baixo ficava inalcançável em celular. O test
 de UI pegou o problema porque o nó do wallpaper não estava "displayed";
 `verticalScroll` na Column resolveu.
 
-## 12. Organização das Configurações
+## 13. Organização das Configurações
 
 A tela é uma pilha de seções colapsáveis (`ui/settings/components/SettingsSection`),
 todas fechadas por padrão e cada uma com **resumo do estado atual** no cabeçalho
@@ -208,7 +237,7 @@ Nomes voltados ao usuário em vez de jargão: "Cor de acento" → **"Cor de dest
 biblioteca" → **"Fundo da biblioteca"**. Cada controle tem um `OptionLabel` com
 título e descrição de uma linha; o sheet do leitor usa os mesmos rótulos.
 
-## 13. Containers opacos
+## 14. Containers opacos
 
 `primaryContainer` é **opaco** (mistura de `primary` com o fundo da variante via
 `lerp`), nunca `primary.copy(alpha = …)`. Um container translúcido deixa o
@@ -217,7 +246,7 @@ wallpaper — e a sombra do `Surface` — aparecerem através do FAB, que é com
 `alpha == 1f` para os quatro containers e contraste ≥ 4.5 do `on*Container` sobre
 o container, inclusive com acento personalizado.
 
-## 14. Fora de escopo
+## 15. Fora de escopo
 
 - Wallpaper por novel/coleção (exigiria Room v13).
 - Paleta derivada da capa do livro.
@@ -226,7 +255,7 @@ o container, inclusive com acento personalizado.
 - Wallpaper dentro de um tema salvo.
 - Renomear um tema salvo existente (hoje: salvar com o mesmo nome sobrescreve).
 
-## 15. Limitações de teste que valem saber
+## 16. Limitações de teste que valem saber
 
 - Com um `TextField` na tela, testes Robolectric+Compose **nunca** ficam idle (o
   cursor piscando anima para sempre) e qualquer `waitForIdle` estoura em 60s.
@@ -241,3 +270,10 @@ o container, inclusive com acento personalizado.
 - A suíte de JVM precisa de heap maior que o padrão do Gradle (2 GiB): o
   registro nativo do Robolectric (`ShadowLineBreaker`) cresce a cada layout de
   texto e estoura 512 MiB.
+- Bitmap de verdade no Robolectric exige `@GraphicsMode(NATIVE)`
+  (`WallpaperCropStorageTest`). Sem isso o `BitmapFactory` falso "decodifica"
+  qualquer byte como imagem, e o teste de recorte não prova nada.
+- `BitmapFactory.decodeStream` com `inJustDecodeBounds` retorna **null de
+  propósito** (a resposta está no `Options`). Tratar esse null como erro foi o bug
+  que só apareceu porque o teste do caminho felizdo recorte existia: o crop nunca
+  gravava nada.

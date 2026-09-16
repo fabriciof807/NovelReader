@@ -5,8 +5,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.novelreader.data.local.preferences.AppPreferences
 import com.novelreader.data.local.preferences.PreferenceAllowlists
+import com.novelreader.data.storage.WallpaperCrop
 import com.novelreader.data.storage.WallpaperStorage
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
@@ -42,6 +44,31 @@ class HomeWallpaperViewModel @Inject constructor(
 
     fun updateBlur(value: Int) {
         viewModelScope.launch { appPreferences.updateHomeWallpaperBlur(value) }
+    }
+
+    private val _pendingCrop = MutableStateFlow<Uri?>(null)
+    val pendingCrop: StateFlow<Uri?> = _pendingCrop
+
+    fun startCrop(uri: Uri) {
+        _pendingCrop.value = uri
+    }
+
+    fun cancelCrop() {
+        _pendingCrop.value = null
+    }
+
+    fun applyCrop(crop: WallpaperCrop, targetWidth: Int, targetHeight: Int) {
+        val uri = _pendingCrop.value ?: return
+        _pendingCrop.value = null
+        viewModelScope.launch {
+            wallpaperStorage.saveCropped(
+                slot = WallpaperStorage.SLOT_HOME,
+                uri = uri,
+                crop = crop,
+                targetWidth = targetWidth,
+                targetHeight = targetHeight
+            )?.let { appPreferences.updateHomeWallpaper(it) }
+        }
     }
 
     fun importFromUri(uri: Uri) {

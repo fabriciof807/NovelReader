@@ -110,6 +110,11 @@
     <string name="reset_appearance_confirm">Reset</string>
     <string name="wallpaper_behind_bars">Background in the bars too</string>
     <string name="wallpaper_behind_bars_desc">Makes the top bar and the tabs translucent, with the background showing</string>
+    <string name="crop_title">Adjust wallpaper</string>
+    <string name="crop_hint">Drag and zoom to choose what shows. The preview shows the app frame.</string>
+    <string name="crop_zoom">Zoom: %d%%</string>
+    <string name="crop_skip">Use as is</string>
+    <string name="crop_apply">Apply</string>
     <string name="wallpaper_home">Library background</string>
     <string name="wallpaper_reader">Reader background</string>
     <string name="wallpaper_pick">Pick image</string>

@@ -110,6 +110,11 @@
     <string name="reset_appearance_confirm">Restaurar</string>
     <string name="wallpaper_behind_bars">Fundo também nas barras</string>
     <string name="wallpaper_behind_bars_desc">Deixa a barra de cima e as abas translúcidas, com o fundo aparecendo</string>
+    <string name="crop_title">Ajustar papel de parede</string>
+    <string name="crop_hint">Arraste e use o zoom para escolher o que aparece. A prévia mostra a moldura do app.</string>
+    <string name="crop_zoom">Zoom: %d%%</string>
+    <string name="crop_skip">Usar sem ajustar</string>
+    <string name="crop_apply">Aplicar</string>
     <string name="wallpaper_home">Fundo da biblioteca</string>
     <string name="wallpaper_reader">Fundo do leitor</string>
     <string name="wallpaper_pick">Escolher imagem</string>

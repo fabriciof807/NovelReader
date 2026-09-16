@@ -4,6 +4,7 @@ import android.net.Uri
 import com.google.common.truth.Truth.assertThat
 import com.novelreader.data.local.preferences.AppPreferences
 import com.novelreader.data.local.preferences.PreferenceAllowlists
+import com.novelreader.data.storage.WallpaperCrop
 import com.novelreader.data.storage.WallpaperStorage
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -46,6 +47,55 @@ class HomeWallpaperViewModelTest {
     fun `exposes the stored wallpaper and blur`() = runTest {
         assertThat(viewModel.wallpaper.first()).isEqualTo("builtin:noite")
         assertThat(viewModel.blur.first()).isEqualTo(12)
+    }
+
+    @Test
+    fun `picking an image opens the crop step instead of copying it`() = runTest {
+        val uri: Uri = mockk()
+
+        viewModel.startCrop(uri)
+
+        assertThat(viewModel.pendingCrop.value).isEqualTo(uri)
+        coVerify(exactly = 0) { storage.importFromUri(any(), any()) }
+    }
+
+    @Test
+    fun `applying the crop saves it at the screen size and clears the step`() = runTest {
+        val uri: Uri = mockk()
+        coEvery {
+            storage.saveCropped(
+                slot = WallpaperStorage.SLOT_HOME,
+                uri = uri,
+                crop = any(),
+                targetWidth = 1080,
+                targetHeight = 2400
+            )
+        } returns "file:home_cropped.jpg"
+        viewModel.startCrop(uri)
+
+        viewModel.applyCrop(WallpaperCrop(zoom = 2f, panX = 0.5f), 1080, 2400)
+
+        coVerify {
+            storage.saveCropped(
+                slot = WallpaperStorage.SLOT_HOME,
+                uri = uri,
+                crop = WallpaperCrop(zoom = 2f, panX = 0.5f),
+                targetWidth = 1080,
+                targetHeight = 2400
+            )
+        }
+        coVerify { appPreferences.updateHomeWallpaper("file:home_cropped.jpg") }
+        assertThat(viewModel.pendingCrop.value).isNull()
+    }
+
+    @Test
+    fun `cancelling the crop keeps the current wallpaper`() = runTest {
+        viewModel.startCrop(mockk())
+
+        viewModel.cancelCrop()
+
+        assertThat(viewModel.pendingCrop.value).isNull()
+        coVerify(exactly = 0) { appPreferences.updateHomeWallpaper(any()) }
     }
 
     @Test

@@ -12,6 +12,7 @@ import com.novelreader.data.local.db.entity.BookmarkEntity
 import com.novelreader.data.local.db.entity.ChapterEntity
 import com.novelreader.data.local.db.FtsSearchService
 import com.novelreader.data.local.preferences.ReaderPreferences
+import com.novelreader.data.storage.WallpaperCrop
 import com.novelreader.data.storage.WallpaperStorage
 import com.novelreader.domain.usecase.ReimportChapterContentUseCase
 import io.mockk.coEvery
@@ -194,6 +195,38 @@ class ReaderViewModelTest {
 
         coVerify { readerPrefs.updateWallpaperBlur(24) }
         coVerify { readerPrefs.updateVeil(55) }
+    }
+
+    @Test
+    fun `picking an image opens the crop step instead of copying it`() = runTest {
+        val uri: Uri = mockk()
+        viewModel = createViewModel()
+
+        viewModel.startCrop(uri)
+
+        assertThat(viewModel.pendingCrop.value).isEqualTo(uri)
+        coVerify(exactly = 0) { wallpaperStorage.importFromUri(any(), any()) }
+    }
+
+    @Test
+    fun `applying the crop saves it at the screen size and clears the step`() = runTest {
+        val uri: Uri = mockk()
+        coEvery {
+            wallpaperStorage.saveCropped(
+                slot = WallpaperStorage.SLOT_READER,
+                uri = uri,
+                crop = any(),
+                targetWidth = 1080,
+                targetHeight = 2400
+            )
+        } returns "file:reader_cropped.jpg"
+        viewModel = createViewModel()
+        viewModel.startCrop(uri)
+
+        viewModel.applyCrop(WallpaperCrop(zoom = 1.5f), 1080, 2400)
+
+        coVerify { readerPrefs.updateWallpaper("file:reader_cropped.jpg") }
+        assertThat(viewModel.pendingCrop.value).isNull()
     }
 
     @Test

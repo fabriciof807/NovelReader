@@ -1,6 +1,8 @@
 package com.novelreader.data.storage
 
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.net.Uri
 import com.novelreader.data.local.preferences.PreferenceAllowlists
 import com.novelreader.di.qualifiers.IoDispatcher
@@ -32,6 +34,76 @@ class WallpaperStorage @Inject constructor(
             false
         }
         if (!copied) {
+            destination.delete()
+            return@withContext null
+        }
+        if (previous != null && previous != "file:${destination.name}") delete(previous)
+        "file:${destination.name}"
+    }
+
+    suspend fun saveCropped(
+        slot: String,
+        uri: Uri,
+        crop: WallpaperCrop,
+        targetWidth: Int,
+        targetHeight: Int
+    ): String? = withContext(io) {
+        if (slot !in SLOTS) return@withContext null
+        if (targetWidth <= 0 || targetHeight <= 0) return@withContext null
+
+        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        val boundsStream = context.contentResolver.openInputStream(uri) ?: return@withContext null
+        try {
+            // inJustDecodeBounds returns null by design: only the Options carry the answer.
+            BitmapFactory.decodeStream(boundsStream, null, bounds)
+        } finally {
+            boundsStream.close()
+        }
+        if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return@withContext null
+
+        val options = BitmapFactory.Options().apply {
+            inSampleSize = decodeSampleSize(bounds.outWidth, bounds.outHeight, MAX_DECODE_EDGE)
+        }
+        val decoded = context.contentResolver.openInputStream(uri)?.use {
+            BitmapFactory.decodeStream(it, null, options)
+        } ?: return@withContext null
+
+        val rect = cropRectFor(
+            crop = crop,
+            srcWidth = decoded.width.toFloat(),
+            srcHeight = decoded.height.toFloat(),
+            targetWidth = targetWidth.toFloat(),
+            targetHeight = targetHeight.toFloat()
+        )
+        val x = rect.left.toInt().coerceIn(0, maxOf(0, decoded.width - 1))
+        val y = rect.top.toInt().coerceIn(0, maxOf(0, decoded.height - 1))
+        val width = rect.width.toInt().coerceAtLeast(1).coerceAtMost(decoded.width - x)
+        val height = rect.height.toInt().coerceAtLeast(1).coerceAtMost(decoded.height - y)
+
+        val cropped = try {
+            Bitmap.createBitmap(decoded, x, y, width, height)
+        } catch (_: Exception) {
+            return@withContext null
+        }
+        val scaled = if (cropped.width == targetWidth && cropped.height == targetHeight) {
+            cropped
+        } else {
+            Bitmap.createScaledBitmap(cropped, targetWidth, targetHeight, true)
+        }
+
+        val previous = currentRef(slot)
+        val destination = fileFor(slot, System.currentTimeMillis(), "jpg")
+        val written = try {
+            destination.outputStream().use { output ->
+                scaled.compress(Bitmap.CompressFormat.JPEG, CROP_QUALITY, output)
+            }
+        } catch (_: Exception) {
+            false
+        }
+        if (scaled !== cropped) scaled.recycle()
+        cropped.recycle()
+        decoded.recycle()
+        if (!written) {
             destination.delete()
             return@withContext null
         }
@@ -105,6 +177,8 @@ class WallpaperStorage @Inject constructor(
         const val SLOT_READER = "reader"
         val SLOTS = setOf(SLOT_HOME, SLOT_READER)
         const val MAX_BYTES = 20L * 1024 * 1024
+        const val MAX_DECODE_EDGE = 4096
+        private const val CROP_QUALITY = 92
 
         private val FILE_NAME = Regex("^[a-z0-9_]{1,64}\\.(jpg|jpeg|png|webp)$")
 
