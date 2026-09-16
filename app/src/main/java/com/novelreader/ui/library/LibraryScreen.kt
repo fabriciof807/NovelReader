@@ -23,7 +23,6 @@ import androidx.compose.material.icons.filled.SortByAlpha
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -60,6 +59,7 @@ import com.novelreader.ui.library.components.AddToCollectionDialog
 import com.novelreader.ui.library.components.CollectionNameDialog
 import com.novelreader.ui.library.components.CoverUrlDialog
 import com.novelreader.ui.library.components.DeleteNovelDialog
+import com.novelreader.ui.library.components.LibraryFab
 import com.novelreader.ui.library.components.LibraryStatsBar
 import com.novelreader.ui.library.components.WhatsNewBottomSheet
 import com.novelreader.ui.library.tabs.ChaptersTab
@@ -337,13 +337,9 @@ fun LibraryScreen(
         },
         floatingActionButton = {
             if (selectedTab == 0) {
-                FloatingActionButton(onClick = onImportClick) {
-                    Text("+", style = MaterialTheme.typography.titleLarge)
-                }
+                LibraryFab(onClick = onImportClick)
             } else if (selectedTab == 1 && selectedNovel == null) {
-                FloatingActionButton(onClick = { showCreateFolderDialog = true }) {
-                    Text("+", style = MaterialTheme.typography.titleLarge)
-                }
+                LibraryFab(onClick = { showCreateFolderDialog = true })
             }
         },
         bottomBar = {

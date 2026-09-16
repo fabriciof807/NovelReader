@@ -180,7 +180,12 @@ Manual `Migration(start, end)` in `NovelDatabase.Companion`. Each uses raw `exec
 `bottomBar`, not a sibling inside the tab content: that is what keeps the "+" FAB
 above it, since the Scaffold offsets its FAB by the bottom bar height. Keep it in
 the `bottomBar` slot (or the FAB covers the counters again — `LibraryStatsBarTest`
-asserts the two do not overlap). The bar applies `navigationBarsPadding()` itself,
+asserts the two do not overlap) and keep the FAB in `LibraryFab`, whose
+`LibraryFabClearance` (12dp) adds breathing room on top of the Scaffold's own
+16dp lift: without it the button reads as flush against the counters. The test
+asserts the gap against the bar's top edge, not against a counter label (the bar
+has 10dp of vertical padding, so measuring the label overstates the clearance by
+~30dp). The bar applies `navigationBarsPadding()` itself,
 so its background stops above the Android navigation bar area and the wallpaper
 veil stays visible there.
 

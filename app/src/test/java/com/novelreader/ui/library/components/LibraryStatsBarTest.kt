@@ -1,14 +1,14 @@
 package com.novelreader.ui.library.components
 
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.unit.dp
 import com.google.common.truth.Truth.assertThat
 import com.novelreader.ui.library.LibraryStats
 import com.novelreader.ui.theme.NovelReaderTheme
@@ -40,30 +40,28 @@ class LibraryStatsBarTest {
         composeTestRule.onNodeWithText("Favoritos").assertExists()
     }
 
-    // The FAB is a Scaffold slot, so it must be the Scaffold's bottomBar that keeps it clear of the
-    // stats bar. If this ever regresses, the button covers the counters again.
+    // The FAB is a Scaffold slot: the Scaffold lifts it above the bottomBar on its own, but its 16dp
+    // default reads as flush against the counters, so LibraryFab adds breathing room on top. If this
+    // ever regresses, the button sits flush against the counters (or covers them) again.
     @Test
-    fun `the scaffold floats the action button above the stats bar`() {
+    fun `the scaffold floats the action button clear of the stats bar`() {
         composeTestRule.setContent {
             NovelReaderTheme {
                 Scaffold(
                     modifier = Modifier.fillMaxSize(),
-                    bottomBar = { LibraryStatsBar(stats) },
-                    floatingActionButton = {
-                        ExtendedFloatingActionButton(
-                            onClick = {},
-                            modifier = Modifier.testTag("fab")
-                        ) { Text("+") }
-                    }
+                    bottomBar = { LibraryStatsBar(stats, Modifier.testTag("statsBar")) },
+                    floatingActionButton = { LibraryFab(onClick = {}) }
                 ) { }
             }
         }
 
-        val fabBottom = composeTestRule.onNodeWithTag("fab")
+        val fabBottom = composeTestRule.onNodeWithText("+")
             .fetchSemanticsNode().boundsInRoot.bottom
-        val statsTop = composeTestRule.onNodeWithText("Romances")
+        val statsTop = composeTestRule.onNodeWithTag("statsBar")
             .fetchSemanticsNode().boundsInRoot.top
+        val scaffoldLift = with(composeTestRule.density) { 16.dp.toPx() }
+        val extraClearance = with(composeTestRule.density) { 8.dp.toPx() }
 
-        assertThat(fabBottom).isAtMost(statsTop)
+        assertThat(statsTop - fabBottom).isAtLeast(scaffoldLift + extraClearance)
     }
 }
