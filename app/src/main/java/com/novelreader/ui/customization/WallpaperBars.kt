@@ -30,6 +30,14 @@ const val NAVIGATION_BAR_VEIL_TAG = "navigation_bar_veil"
 fun barColorFor(surface: Color, wallpaperActive: Boolean, behindBars: Boolean): Color =
     if (wallpaperActive && behindBars) surface.copy(alpha = BAR_VEIL_ALPHA) else surface
 
+/**
+ * Colour for a library container that carries text. A translucent or transparent container lets the
+ * wallpaper through, and light wallpapers wash the text out (the unselected filter chips measured
+ * 2.19:1 against "Amanhecer"), so over a wallpaper these containers stay opaque, like the cards.
+ */
+fun libraryContainerColor(default: Color, surface: Color, wallpaperActive: Boolean): Color =
+    if (wallpaperActive) surface else default
+
 @Composable
 fun NavigationBarVeil(color: Color, modifier: Modifier = Modifier) {
     Box(

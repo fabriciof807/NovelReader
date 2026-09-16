@@ -230,6 +230,16 @@ through the FAB, which is how the "white square behind the + button" bug appeare
 and `containerContent` keeps the label readable (falls back to black/white when a
 custom accent is too light). `AppPaletteTest` asserts both.
 
+The same rule applies to text drawn over a wallpaper: the library's text-bearing
+containers (novel cards, the unselected filter chips, `LibraryStatsBar`, the queued
+rows) go through `libraryContainerColor`, which swaps their translucent/transparent
+fill for the opaque `surface` while a wallpaper is active. Measured on a light
+built-in wallpaper ("Amanhecer") the transparent chips sat at 2.19:1 and the
+translucent stats bar labels at 3.22:1 — both below the 4.5:1 minimum — and 8.89:1 /
+4.72:1 opaque. A veil strong enough to fix that would need ~65% and would hide the
+wallpaper the user picked, so the containers stay opaque instead (`WallpaperBarsTest`
+asserts the swap, the library only passes `wallpaperActive`).
+
 ### Saved themes and reset
 
 `VisualThemeUseCase` owns both: `saveCurrent`/`apply`/`delete` for up to five

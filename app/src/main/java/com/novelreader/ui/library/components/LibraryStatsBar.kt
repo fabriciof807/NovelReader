@@ -16,15 +16,26 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.novelreader.R
+import com.novelreader.ui.customization.libraryContainerColor
 import com.novelreader.ui.library.LibraryStats
 
+const val STATS_BAR_ALPHA = 0.5f
+
 @Composable
-fun LibraryStatsBar(stats: LibraryStats, modifier: Modifier = Modifier) {
+fun LibraryStatsBar(
+    stats: LibraryStats,
+    wallpaperActive: Boolean = false,
+    modifier: Modifier = Modifier
+) {
     Surface(
         modifier = modifier
             .fillMaxWidth()
             .navigationBarsPadding(),
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+        color = libraryContainerColor(
+            default = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = STATS_BAR_ALPHA),
+            surface = MaterialTheme.colorScheme.surface,
+            wallpaperActive = wallpaperActive
+        ),
         tonalElevation = 2.dp
     ) {
         Row(

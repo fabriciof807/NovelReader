@@ -344,7 +344,7 @@ fun LibraryScreen(
         },
         bottomBar = {
             if (selectedTab == 0 && stats.totalNovels > 0) {
-                LibraryStatsBar(stats)
+                LibraryStatsBar(stats, wallpaperActive = wallpaperActive)
             }
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -359,6 +359,7 @@ fun LibraryScreen(
                     newChapterCounts = newChapterCounts,
                     searchQuery = searchQuery,
                     filterChip = filterChip,
+                    wallpaperActive = wallpaperActive,
                     onFilterChipChange = { filterChip = it },
                     onNovelClick = { novel ->
                         if (novel.lastChapterId != null) {

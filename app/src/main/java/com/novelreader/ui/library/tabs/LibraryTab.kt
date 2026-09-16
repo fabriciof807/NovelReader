@@ -36,6 +36,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -47,11 +48,13 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.novelreader.R
+import com.novelreader.ui.customization.libraryContainerColor
 import com.novelreader.data.local.db.entity.NovelEntity
 import com.novelreader.domain.usecase.BackgroundImportState
 import com.novelreader.ui.library.NovelFilter
@@ -100,6 +103,7 @@ fun LibraryTab(
     newChapterCounts: Map<Long, Int> = emptyMap(),
     searchQuery: String = "",
     filterChip: NovelFilter = NovelFilter.ALL,
+    wallpaperActive: Boolean = false,
     onFilterChipChange: (NovelFilter) -> Unit = {},
     onNovelClick: (NovelEntity) -> Unit,
     onLongClick: (NovelEntity) -> Unit,
@@ -140,21 +144,25 @@ fun LibraryTab(
             FilterChip(
                 selected = filterChip == NovelFilter.ALL,
                 onClick = { onFilterChipChange(NovelFilter.ALL) },
+                colors = filterChipColors(wallpaperActive),
                 label = { Text(stringResource(R.string.filter_all)) }
             )
             FilterChip(
                 selected = filterChip == NovelFilter.READING,
                 onClick = { onFilterChipChange(NovelFilter.READING) },
+                colors = filterChipColors(wallpaperActive),
                 label = { Text(stringResource(R.string.filter_reading)) }
             )
             FilterChip(
                 selected = filterChip == NovelFilter.COMPLETED,
                 onClick = { onFilterChipChange(NovelFilter.COMPLETED) },
+                colors = filterChipColors(wallpaperActive),
                 label = { Text(stringResource(R.string.filter_completed)) }
             )
             FilterChip(
                 selected = filterChip == NovelFilter.FAVORITES,
                 onClick = { onFilterChipChange(NovelFilter.FAVORITES) },
+                colors = filterChipColors(wallpaperActive),
                 label = { Text(stringResource(R.string.filter_favorite_novels)) }
             )
         }
@@ -166,7 +174,7 @@ fun LibraryTab(
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 queuedNotShown.forEach { title ->
-                    QueuedNovelRow(title = title)
+                    QueuedNovelRow(title = title, wallpaperActive = wallpaperActive)
                 }
             }
         }
@@ -344,11 +352,25 @@ private fun NovelMenu(
 }
 
 @Composable
-private fun QueuedNovelRow(title: String) {
+private fun filterChipColors(wallpaperActive: Boolean) =
+    FilterChipDefaults.filterChipColors(
+        containerColor = libraryContainerColor(
+            default = Color.Transparent,
+            surface = MaterialTheme.colorScheme.surface,
+            wallpaperActive = wallpaperActive
+        )
+    )
+
+@Composable
+private fun QueuedNovelRow(title: String, wallpaperActive: Boolean) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+            containerColor = libraryContainerColor(
+                default = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                surface = MaterialTheme.colorScheme.surface,
+                wallpaperActive = wallpaperActive
+            )
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {

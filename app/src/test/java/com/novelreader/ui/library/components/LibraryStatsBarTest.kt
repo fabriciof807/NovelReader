@@ -49,7 +49,7 @@ class LibraryStatsBarTest {
             NovelReaderTheme {
                 Scaffold(
                     modifier = Modifier.fillMaxSize(),
-                    bottomBar = { LibraryStatsBar(stats, Modifier.testTag("statsBar")) },
+                    bottomBar = { LibraryStatsBar(stats, modifier = Modifier.testTag("statsBar")) },
                     floatingActionButton = { LibraryFab(onClick = {}) }
                 ) { }
             }

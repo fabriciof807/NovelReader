@@ -37,4 +37,31 @@ class WallpaperBarsTest {
         assertThat(BAR_VEIL_ALPHA).isAtLeast(0.7f)
         assertThat(BAR_VEIL_ALPHA).isLessThan(1f)
     }
+
+    // Text drawn straight on a light wallpaper washes out (the unselected filter chips measured 2.19:1
+    // and the stats bar labels 3.22:1 against "Amanhecer"), so over a wallpaper the library draws its
+    // text-bearing containers opaque, the way the novel cards already do.
+    @Test
+    fun `library containers turn opaque over a wallpaper`() {
+        val translucent = surface.copy(alpha = 0.5f)
+        val transparent = Color.Transparent
+
+        assertThat(libraryContainerColor(translucent, surface, wallpaperActive = true))
+            .isEqualTo(surface)
+        assertThat(libraryContainerColor(transparent, surface, wallpaperActive = true))
+            .isEqualTo(surface)
+        assertThat(libraryContainerColor(translucent, surface, wallpaperActive = true).alpha)
+            .isEqualTo(1f)
+    }
+
+    @Test
+    fun `library containers keep their look when there is no wallpaper`() {
+        val translucent = surface.copy(alpha = 0.5f)
+        val transparent = Color.Transparent
+
+        assertThat(libraryContainerColor(translucent, surface, wallpaperActive = false))
+            .isEqualTo(translucent)
+        assertThat(libraryContainerColor(transparent, surface, wallpaperActive = false))
+            .isEqualTo(transparent)
+    }
 }
