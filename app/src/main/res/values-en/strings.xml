@@ -49,7 +49,6 @@
     <string name="view_mode_list">List</string>
 
     <!-- Settings -->
-    <string name="app_theme">App Theme</string>
     <string name="system">System</string>
     <string name="system_desc">Follows system setting</string>
     <string name="light">Light</string>
@@ -59,11 +58,22 @@
     <string name="language">Language</string>
     <string name="portuguese">Portuguese</string>
     <string name="english">English</string>
-    <string name="settings_dynamic_color_title">Dynamic color (Android 12+)</string>
-    <string name="settings_dynamic_color_subtitle">Use your system colors</string>
-    <string name="appearance">Appearance</string>
+    <string name="wallpaper_none_label">No background</string>
+    <string name="wallpaper_image_label">Chosen image</string>
+    <string name="settings_section_colors">Colours and theme</string>
+    <string name="settings_section_wallpaper">Wallpaper</string>
+    <string name="settings_section_backup">Backup and restore</string>
+    <string name="mode">Mode</string>
+    <string name="mode_desc">Light, dark or following the system</string>
+    <string name="palette_desc">The colours of the whole app</string>
+    <string name="accent_color_desc">Buttons, icons and selections in the app</string>
+    <string name="wallpaper_home_desc">Shows behind your books</string>
+    <string name="wallpaper_reader_desc">Shows behind the text</string>
+    <string name="theme_desc">The reader colours</string>
+    <string name="variant_desc">Light, dark or following the app</string>
+    <string name="reader_accent_desc">Bookmarks and links</string>
     <string name="palette">Palette</string>
-    <string name="accent_color">Accent color</string>
+    <string name="accent_color">Highlight colour</string>
     <string name="accent_color_default">Palette default</string>
     <string name="accent_color_hue">Hue</string>
     <string name="accent_color_saturation">Saturation</string>
@@ -74,6 +84,9 @@
     <string name="palette_ameixa">Plum</string>
     <string name="palette_amoled">AMOLED</string>
     <string name="palette_dynamic">Dynamic</string>
+    <string name="builtin_wallpaper_areia">Sand</string>
+    <string name="builtin_wallpaper_ardosia">Slate</string>
+    <string name="builtin_wallpaper_musgo">Moss</string>
     <string name="builtin_wallpaper_amanhecer">Sunrise</string>
     <string name="builtin_wallpaper_aurora">Aurora</string>
     <string name="builtin_wallpaper_crepusculo">Twilight</string>
@@ -92,13 +105,13 @@
     <string name="delete_theme_title">Remove theme</string>
     <string name="delete_theme_message">Remove "%s"? Its palette, colours and reader theme stop being stored in this slot.</string>
     <string name="reset_appearance">Reset appearance</string>
-    <string name="reset_appearance_title">Reset appearance</string>
+    <string name="reset_appearance_title">Reset appearance?</string>
     <string name="reset_appearance_message">Palette, accent colour, wallpapers, blur and veil go back to the defaults. Your saved themes are kept.</string>
     <string name="reset_appearance_confirm">Reset</string>
-    <string name="wallpaper_behind_bars">Wallpaper behind the bars</string>
-    <string name="wallpaper_behind_bars_desc">Makes the top bar and the tabs translucent in the theme colour, letting the wallpaper show through</string>
-    <string name="wallpaper_home">Library wallpaper</string>
-    <string name="wallpaper_reader">Reader wallpaper</string>
+    <string name="wallpaper_behind_bars">Background in the bars too</string>
+    <string name="wallpaper_behind_bars_desc">Makes the top bar and the tabs translucent, with the background showing</string>
+    <string name="wallpaper_home">Library background</string>
+    <string name="wallpaper_reader">Reader background</string>
     <string name="wallpaper_pick">Pick image</string>
     <string name="wallpaper_remove">Remove</string>
     <string name="wallpaper_blur">Blur: %d</string>

@@ -63,6 +63,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -83,11 +84,17 @@ import com.novelreader.data.storage.WallpaperStorage
 import com.novelreader.ui.customization.AccentColorPicker
 import com.novelreader.ui.customization.BlurSlider
 import com.novelreader.ui.customization.HomeWallpaperViewModel
+import com.novelreader.data.local.preferences.SavedThemeCodec
+import com.novelreader.ui.customization.OptionLabel
+import com.novelreader.ui.customization.ResetAppearanceRow
 import com.novelreader.ui.customization.SavedThemesSection
+import com.novelreader.ui.customization.paletteLabel
+import com.novelreader.ui.customization.wallpaperSummaryLabel
 import com.novelreader.ui.customization.WallpaperBehindBarsRow
 import com.novelreader.ui.customization.WallpaperChoiceRow
 import com.novelreader.ui.customization.PalettePicker
 import com.novelreader.ui.customization.appPaletteChoices
+import com.novelreader.ui.settings.components.SettingsSection
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -122,9 +129,19 @@ fun SettingsScreen(
         uri?.let { wallpaperViewModel.importFromUri(it) }
     }
 
-    val paletteExpanded = remember { mutableStateOf(true) }
-    val themeExpanded = remember { mutableStateOf(true) }
-    val langExpanded = remember { mutableStateOf(false) }
+    val colorsExpanded = rememberSaveable { mutableStateOf(false) }
+    val modeSummary = stringResource(
+        when (appTheme) {
+            "light" -> R.string.light
+            "dark" -> R.string.dark
+            else -> R.string.system
+        }
+    )
+    val paletteSummary = stringResource(paletteLabel(appPalette))
+    val wallpaperExpanded = rememberSaveable { mutableStateOf(false) }
+    val themesExpanded = rememberSaveable { mutableStateOf(false) }
+    val backupExpanded = rememberSaveable { mutableStateOf(false) }
+    val langExpanded = rememberSaveable { mutableStateOf(false) }
     var showExportConfirm by remember { mutableStateOf(false) }
     var exportNovels by remember { mutableStateOf(true) }
     var exportBookmarks by remember { mutableStateOf(true) }
@@ -481,10 +498,16 @@ fun SettingsScreen(
                 .verticalScroll(rememberScrollState())
         ) {
             SettingsSection(
-                title = stringResource(R.string.app_theme),
-                expanded = themeExpanded.value,
-                onToggle = { themeExpanded.value = !themeExpanded.value }
+                title = stringResource(R.string.settings_section_colors),
+                summary = "$modeSummary · $paletteSummary",
+                expanded = colorsExpanded.value,
+                onToggle = { colorsExpanded.value = !colorsExpanded.value }
             ) {
+                OptionLabel(
+                    title = stringResource(R.string.mode),
+                    description = stringResource(R.string.mode_desc)
+                )
+                Spacer(modifier = Modifier.height(6.dp))
                 ThemeOption(
                     label = stringResource(R.string.system),
                     icon = { Icon(Icons.Default.PhoneAndroid, contentDescription = null, modifier = Modifier.size(24.dp)) },
@@ -508,38 +531,44 @@ fun SettingsScreen(
                     selected = appTheme == "dark",
                     onClick = { viewModel.updateAppTheme("dark") }
                 )
-            }
 
-            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-
-            SettingsSection(
-                title = stringResource(R.string.appearance),
-                expanded = paletteExpanded.value,
-                onToggle = { paletteExpanded.value = !paletteExpanded.value }
-            ) {
+                Spacer(modifier = Modifier.height(20.dp))
+                OptionLabel(
+                    title = stringResource(R.string.palette),
+                    description = stringResource(R.string.palette_desc)
+                )
+                Spacer(modifier = Modifier.height(6.dp))
                 PalettePicker(
                     selectedId = appPalette,
                     choices = appPaletteChoices(isDarkTheme, isAndroid12OrLater),
                     onSelect = { viewModel.updateAppPalette(it) }
                 )
-                Spacer(modifier = Modifier.height(12.dp))
-                Text(
-                    text = stringResource(R.string.accent_color),
-                    style = MaterialTheme.typography.titleSmall
+
+                Spacer(modifier = Modifier.height(16.dp))
+                OptionLabel(
+                    title = stringResource(R.string.accent_color),
+                    description = stringResource(R.string.accent_color_desc)
                 )
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(6.dp))
                 AccentColorPicker(
                     selected = accentColor,
                     background = MaterialTheme.colorScheme.background,
                     fallback = MaterialTheme.colorScheme.secondary,
                     onSelect = { viewModel.updateAccentColor(it) }
                 )
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(
-                    text = stringResource(R.string.wallpaper_home),
-                    style = MaterialTheme.typography.titleSmall
+            }
+
+            SettingsSection(
+                title = stringResource(R.string.settings_section_wallpaper),
+                summary = stringResource(wallpaperSummaryLabel(homeWallpaper)),
+                expanded = wallpaperExpanded.value,
+                onToggle = { wallpaperExpanded.value = !wallpaperExpanded.value }
+            ) {
+                OptionLabel(
+                    title = stringResource(R.string.wallpaper_home),
+                    description = stringResource(R.string.wallpaper_home_desc)
                 )
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(6.dp))
                 WallpaperChoiceRow(
                     selectedRef = homeWallpaper,
                     hasImage = WallpaperStorage.fileNameOf(homeWallpaper) != null,
@@ -548,16 +577,6 @@ fun SettingsScreen(
                     onRemove = { wallpaperViewModel.remove() }
                 )
                 Spacer(modifier = Modifier.height(16.dp))
-                SavedThemesSection(
-                    themes = savedThemes,
-                    dark = isDarkTheme,
-                    onSave = { viewModel.saveTheme(it) },
-                    onApply = { viewModel.applyTheme(it) },
-                    onDelete = { viewModel.deleteTheme(it) },
-                    onReset = { viewModel.resetAppearance() }
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
                 BlurSlider(
                     initial = homeWallpaperBlur,
                     onCommit = { wallpaperViewModel.updateBlur(it) }
@@ -569,10 +588,99 @@ fun SettingsScreen(
                 )
             }
 
-            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+            SettingsSection(
+                title = stringResource(R.string.saved_themes),
+                summary = "${savedThemes.size}/${SavedThemeCodec.MAX_THEMES}",
+                expanded = themesExpanded.value,
+                onToggle = { themesExpanded.value = !themesExpanded.value }
+            ) {
+                SavedThemesSection(
+                    themes = savedThemes,
+                    dark = isDarkTheme,
+                    onSave = { viewModel.saveTheme(it) },
+                    onApply = { viewModel.applyTheme(it) },
+                    onDelete = { viewModel.deleteTheme(it) }
+                )
+            }
+
+            ResetAppearanceRow(onReset = { viewModel.resetAppearance() })
+
+            SettingsSection(
+                title = stringResource(R.string.settings_section_backup),
+                expanded = backupExpanded.value,
+                onToggle = { backupExpanded.value = !backupExpanded.value }
+            ) {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            exportNovels = true
+                            exportBookmarks = true
+                            exportCharacters = true
+                            exportCollections = true
+                            exportSettings = true
+                            showExportConfirm = true
+                        },
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer
+                    )
+                ) {
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Default.FileDownload, contentDescription = null, modifier = Modifier.size(24.dp))
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Column {
+                            Text(
+                                stringResource(R.string.export_data),
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.Medium
+                            )
+                            Text(
+                                stringResource(R.string.export_data_desc),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f)
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { showImportConfirm = true },
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                    )
+                ) {
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Default.FileUpload, contentDescription = null, modifier = Modifier.size(24.dp))
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Column {
+                            Text(
+                                stringResource(R.string.import_data),
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.Medium
+                            )
+                            Text(
+                                stringResource(R.string.import_data_desc),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+            }
 
             SettingsSection(
                 title = stringResource(R.string.language),
+                summary = stringResource(if (locale == "pt") R.string.portuguese else R.string.english),
                 expanded = langExpanded.value,
                 onToggle = { langExpanded.value = !langExpanded.value }
             ) {
@@ -597,75 +705,6 @@ fun SettingsScreen(
                         }
                     }
                 )
-            }
-
-            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable {
-                        exportNovels = true
-                        exportBookmarks = true
-                        exportCharacters = true
-                        exportCollections = true
-                        exportSettings = true
-                        showExportConfirm = true
-                    },
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.secondaryContainer
-                )
-            ) {
-                Row(
-                    modifier = Modifier.padding(12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(Icons.Default.FileDownload, contentDescription = null, modifier = Modifier.size(24.dp))
-                    Spacer(modifier = Modifier.width(16.dp))
-                    Column {
-                        Text(
-                            stringResource(R.string.export_data),
-                            style = MaterialTheme.typography.bodyLarge,
-                            fontWeight = FontWeight.Medium
-                        )
-                        Text(
-                            stringResource(R.string.export_data_desc),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f)
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { showImportConfirm = true },
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                )
-            ) {
-                Row(
-                    modifier = Modifier.padding(12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(Icons.Default.FileUpload, contentDescription = null, modifier = Modifier.size(24.dp))
-                    Spacer(modifier = Modifier.width(16.dp))
-                    Column {
-                        Text(
-                            stringResource(R.string.import_data),
-                            style = MaterialTheme.typography.bodyLarge,
-                            fontWeight = FontWeight.Medium
-                        )
-                        Text(
-                            stringResource(R.string.import_data_desc),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
             }
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -740,43 +779,6 @@ private fun ExportOptionRow(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-        }
-    }
-}
-
-@Composable
-private fun SettingsSection(
-    title: String,
-    expanded: Boolean,
-    onToggle: () -> Unit,
-    content: @Composable () -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onToggle)
-            .padding(vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.weight(1f)
-        )
-        Icon(
-            imageVector = if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-    }
-    AnimatedVisibility(
-        visible = expanded,
-        enter = expandVertically(),
-        exit = shrinkVertically()
-    ) {
-        Column {
-            content()
         }
     }
 }

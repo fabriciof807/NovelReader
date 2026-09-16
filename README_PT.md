@@ -39,6 +39,7 @@ NovelReader é para quem lê muito novel/web novel/light novel e quer:
 ### Deixe do seu jeito
 
 - **Papel de parede da biblioteca** e um **papel de parede separado para o leitor** — use uma imagem sua ou um dos fundos prontos
+- Três cores lisas (Areia, Ardósia, Musgo) para quem quer um fundo plano em vez de gradiente
 - Desfoque em cada papel de parede, na intensidade que você quiser
 - **Véu de leitura** — controle quanto do fundo do leitor fica entre o texto e o papel de parede, para a foto nunca custar legibilidade
 - O tema do leitor pode seguir o app ou ficar fixo numa variante clara/escura
@@ -128,8 +129,10 @@ Para novels de sites não listados, o parser genérico tenta extrair o conteúdo
 - Fix: os sliders gravavam a cada frame do arrasto — e o leitor reaplicava o CSS pela ponte JS em cada um deles — então o thumb prendia e pulava; agora o valor grava uma vez, ao soltar.
 - Feat: opção de manter o papel de parede visível atrás da barra de cima e das abas (translúcido, com véu na cor do tema) ou deixar essas barras sólidas como antes; ligada por padrão, valendo para biblioteca e leitor.
 - Fix: a área da barra de navegação do Android ficava com o papel de parede cru enquanto o resto da moldura tinha véu; agora recebe a mesma cor da barra de cima.
-- Fix: o botão "+" não cobre mais os contadores de romances/capítulos/favoritos — a barra de contadores passou a ser o bottom bar do Scaffold, então o botão fica acima dela.
-- 653 testes unitários passando (eram 506).
+- Fix: o botão "+" não cobre mais os contadores de romances/capítulos/favoritos — a barra de contadores passou a ser o bottom bar do Scaffold, então o botão fica acima dela, e ela não invade mais a área da barra de navegação do Android.
+- Feat: três cores lisas de fundo, e a tela de configurações reorganizada — grupos que se escondem e mostram o estado atual no cabeçalho, papel de parede e temas salvos em grupos próprios, e nomes voltados ao usuário ("Cor de destaque" em vez de "Cor de acento").
+- Fix: o botão "+" tinha um quadrado branco atrás — os containers da paleta eram construídos com alpha, então o botão (e a sombra do Surface) deixavam o papel de parede aparecer.
+- 668 testes unitários passando (eram 506).
 
 ### v2.9.3 (2026-09-14)
 
@@ -361,7 +364,7 @@ app/src/main/java/com/novelreader/
 | Telas de biblioteca / lista de capítulos / configurações | Unit | 55 |
 | Preferências, storage, tema e customização | Unit | 87 |
 | Workers, navegação, favoritos, diversos | Unit | 96 |
-| **Total (JVM)** | | **653** |
+| **Total (JVM)** | | **668** |
 
 `./gradlew :app:testDebugUnitTest` roda toda a suíte JVM; a suíte de DAOs abaixo precisa de emulador.
 

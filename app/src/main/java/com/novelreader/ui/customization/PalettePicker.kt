@@ -83,6 +83,13 @@ fun readerPaletteChoices(
     return listOf(auto) + palettes
 }
 
+fun paletteLabel(id: String): Int =
+    if (id == PreferenceAllowlists.PALETTE_DYNAMIC) {
+        R.string.palette_dynamic
+    } else {
+        paletteLabelRes(AppPalette.fromId(id))
+    }
+
 private fun paletteLabelRes(palette: AppPalette): Int = when (palette) {
     AppPalette.INDIGO -> R.string.palette_indigo
     AppPalette.PAPEL -> R.string.palette_papel

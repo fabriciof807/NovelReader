@@ -23,7 +23,12 @@ import com.novelreader.data.storage.WallpaperStorage
 const val WALLPAPER_TAG = "wallpaper_background"
 const val WALLPAPER_VEIL_TAG = "wallpaper_veil"
 
+private fun solid(color: Color): List<Color> = listOf(color, color)
+
 val BUILTIN_WALLPAPERS: Map<String, List<Color>> = mapOf(
+    "areia" to solid(Color(0xFFE8DCC8)),
+    "ardosia" to solid(Color(0xFF1B1F24)),
+    "musgo" to solid(Color(0xFF16301F)),
     "amanhecer" to listOf(Color(0xFFFDCB82), Color(0xFFF98E5A), Color(0xFFC9557F)),
     "aurora" to listOf(Color(0xFF4A148C), Color(0xFF1B7A8C), Color(0xFF66BB6A)),
     "crepusculo" to listOf(Color(0xFF2B1055), Color(0xFF7597DE), Color(0xFFF3B7C8)),

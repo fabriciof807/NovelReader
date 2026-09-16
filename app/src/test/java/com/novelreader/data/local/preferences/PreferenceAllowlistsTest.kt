@@ -108,6 +108,13 @@ class PreferenceAllowlistsTest {
     }
 
     @Test
+    fun `the solid builtin wallpapers are allowed`() {
+        listOf("builtin:areia", "builtin:ardosia", "builtin:musgo").forEach { ref ->
+            assertThat(PreferenceAllowlists.sanitizeWallpaperRef(ref)).isEqualTo(ref)
+        }
+    }
+
+    @Test
     fun `sanitizeWallpaperRef accepts only a flat image file name`() {
         assertThat(PreferenceAllowlists.sanitizeWallpaperRef("file:home_1700000000.jpg"))
             .isEqualTo("file:home_1700000000.jpg")

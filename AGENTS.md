@@ -180,7 +180,28 @@ Manual `Migration(start, end)` in `NovelDatabase.Companion`. Each uses raw `exec
 `bottomBar`, not a sibling inside the tab content: that is what keeps the "+" FAB
 above it, since the Scaffold offsets its FAB by the bottom bar height. Keep it in
 the `bottomBar` slot (or the FAB covers the counters again — `LibraryStatsBarTest`
-asserts the two do not overlap).
+asserts the two do not overlap). The bar applies `navigationBarsPadding()` itself,
+so its background stops above the Android navigation bar area and the wallpaper
+veil stays visible there.
+
+### Settings screen
+
+`ui/settings/components/SettingsSection` is the collapsible group used by the
+screen: title, a **summary of the current state** ("Claro · Índigo", "Amanhecer",
+"2/5"), chevron, all collapsed by default with `rememberSaveable`. Controls carry
+an `OptionLabel(title, description)` instead of a bare label; the reader sheet
+reuses the same labels. `ResetAppearanceRow` is a standalone action (it is not
+part of `SavedThemesSection`), and its dialog title ends with "?" so tests and
+users can tell it from the row that opens it.
+
+### Containers must stay opaque
+
+Never build a Material container colour with alpha (`primary.copy(alpha = 0.12f)`):
+a translucent `primaryContainer` lets the wallpaper and the `Surface` shadow show
+through the FAB, which is how the "white square behind the + button" bug appeared.
+`appLightScheme`/`appDarkScheme` use `lerp(background|surface, primary, ContainerTint)`
+and `containerContent` keeps the label readable (falls back to black/white when a
+custom accent is too light). `AppPaletteTest` asserts both.
 
 ### Saved themes and reset
 
@@ -238,7 +259,7 @@ Two independent global slots (`WallpaperStorage.SLOT_HOME`, `SLOT_READER`), neve
 - **Instrumented tests**: Room in-memory DB, Compose Test Rule, Espresso
 - Parser tests use real HTML fixtures
 - ViewModel tests inject mocked DAOs/use cases
-- **Current count: 653 unit tests**
+- **Current count: 668 unit tests**
 - **Always run `./gradlew :app:compileDebugKotlin :app:testDebugUnitTest` before pushing**
 
 ## Recent Sessions
@@ -257,7 +278,7 @@ v2.10.0 (versionCode 31). See [README.md](README.md) (English) and [README_PT.md
 - Feat: library and reader wallpapers (own image or built-in gradient) with independent blur, plus a reader veil slider (default 80%).
 - Fix: the reader settings sheet scrolls — with the new sections the lower half was unreachable.
 - Legacy reader themes map exactly onto the new palettes; no data migration.
-- 653 unit tests passing (was 506).
+- 668 unit tests passing (was 506).
 - Spec: `docs/visual-customization-spec.md`.
 
 ### v2.9.3 highlights

@@ -19,7 +19,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Restore
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
@@ -45,6 +44,7 @@ import com.novelreader.R
 import com.novelreader.data.local.preferences.SavedTheme
 import com.novelreader.data.local.preferences.SavedThemeCodec
 import com.novelreader.ui.theme.AppPalette
+import com.novelreader.ui.theme.parseAccentHex
 
 @Composable
 fun SavedThemesSection(
@@ -53,12 +53,10 @@ fun SavedThemesSection(
     onSave: (String) -> Unit,
     onApply: (SavedTheme) -> Unit,
     onDelete: (SavedTheme) -> Unit,
-    onReset: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     var showNameDialog by remember { mutableStateOf(false) }
     var deleteTarget by remember { mutableStateOf<SavedTheme?>(null) }
-    var showResetDialog by remember { mutableStateOf(false) }
     val full = themes.size >= SavedThemeCodec.MAX_THEMES
 
     Column(modifier = modifier.fillMaxWidth()) {
@@ -110,14 +108,6 @@ fun SavedThemesSection(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        TextButton(onClick = { showResetDialog = true }) {
-            Icon(Icons.Default.Restore, contentDescription = null, modifier = Modifier.size(18.dp))
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(stringResource(R.string.reset_appearance))
-        }
     }
 
     if (showNameDialog) {
@@ -147,29 +137,6 @@ fun SavedThemesSection(
             },
             dismissButton = {
                 TextButton(onClick = { deleteTarget = null }) {
-                    Text(stringResource(R.string.cancel))
-                }
-            }
-        )
-    }
-
-    if (showResetDialog) {
-        AlertDialog(
-            onDismissRequest = { showResetDialog = false },
-            title = { Text(stringResource(R.string.reset_appearance_title)) },
-            text = { Text(stringResource(R.string.reset_appearance_message)) },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        onReset()
-                        showResetDialog = false
-                    }
-                ) {
-                    Text(stringResource(R.string.reset_appearance_confirm))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showResetDialog = false }) {
                     Text(stringResource(R.string.cancel))
                 }
             }
@@ -221,8 +188,7 @@ private fun ThemeChip(
 ) {
     val palette = AppPalette.fromId(theme.palette)
     val scheme = if (dark) palette.dark else palette.light
-    val accent = theme.accentColor?.let { com.novelreader.ui.theme.parseAccentHex(it) }
-        ?: scheme.primary
+    val accent = theme.accentColor?.let { parseAccentHex(it) } ?: scheme.primary
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier

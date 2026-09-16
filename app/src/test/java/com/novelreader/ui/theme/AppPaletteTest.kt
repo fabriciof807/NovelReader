@@ -64,6 +64,42 @@ class AppPaletteTest {
     }
 
     @Test
+    fun `every container colour is opaque`() {
+        // A translucent container lets whatever is behind (the wallpaper, a Surface shadow) show
+        // through the FAB and the selected chips.
+        AppPalette.entries.forEach { palette ->
+            listOf(palette.light, palette.dark).forEach { scheme ->
+                assertThat(scheme.primaryContainer.alpha).isEqualTo(1f)
+                assertThat(scheme.secondaryContainer.alpha).isEqualTo(1f)
+                assertThat(scheme.surfaceVariant.alpha).isEqualTo(1f)
+                assertThat(scheme.errorContainer.alpha).isEqualTo(1f)
+            }
+        }
+    }
+
+    @Test
+    fun `text on a container stays readable`() {
+        AppPalette.entries.forEach { palette ->
+            listOf(palette.light, palette.dark).forEach { scheme ->
+                assertThat(contrastRatio(scheme.onPrimaryContainer, scheme.primaryContainer))
+                    .isAtLeast(MinContrast)
+                assertThat(contrastRatio(scheme.onSecondaryContainer, scheme.secondaryContainer))
+                    .isAtLeast(MinContrast)
+            }
+        }
+    }
+
+    @Test
+    fun `an accent override keeps the container opaque and readable`() {
+        listOf("#ffff00", "#000080", "#ff6f00", "#808080").forEach { hex ->
+            val scheme = AppPalette.INDIGO.light.withAccent(hex)
+            assertThat(scheme.primaryContainer.alpha).isEqualTo(1f)
+            assertThat(contrastRatio(scheme.onPrimaryContainer, scheme.primaryContainer))
+                .isAtLeast(MinContrast)
+        }
+    }
+
+    @Test
     fun `amoled stays pure black in both variants`() {
         val amoled = AppPalette.AMOLED
         listOf(amoled.light, amoled.dark).forEach { scheme ->

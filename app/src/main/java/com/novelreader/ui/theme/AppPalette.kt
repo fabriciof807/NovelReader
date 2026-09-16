@@ -4,6 +4,7 @@ import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
 import kotlin.math.roundToInt
 
@@ -13,6 +14,8 @@ data class ReaderSurface(
     val accent: String,
     val link: String
 )
+
+private const val ContainerTint = 0.16f
 
 private val LightError = Color(0xFFBA1A1A)
 private val LightErrorContainer = Color(0xFFFFDAD6)
@@ -92,13 +95,17 @@ fun accentHexFor(hue: Float, saturationPercent: Int, background: Color): String 
     return hexString(Color.hsl(normalizedHue, saturation, if (backgroundIsDark) high else low))
 }
 
+private fun containerContent(container: Color, preferred: Color): Color =
+    if (contrastRatio(container, preferred) >= MinContrast) preferred else contrastOn(container)
+
 fun ColorScheme.withAccent(accentHex: String?): ColorScheme {
     val accent = parseAccentHex(accentHex) ?: return this
+    val container = lerp(background, accent, ContainerTint)
     return copy(
         primary = accent,
         onPrimary = contrastOn(accent),
-        primaryContainer = accent.copy(alpha = 0.18f),
-        onPrimaryContainer = accent
+        primaryContainer = container,
+        onPrimaryContainer = containerContent(container, accent)
     )
 }
 
@@ -114,8 +121,8 @@ private fun appLightScheme(
 ) = lightColorScheme(
     primary = primary,
     onPrimary = contrastOn(primary),
-    primaryContainer = primary.copy(alpha = 0.12f),
-    onPrimaryContainer = primary,
+    primaryContainer = lerp(background, primary, ContainerTint),
+    onPrimaryContainer = containerContent(lerp(background, primary, ContainerTint), primary),
     secondary = secondary,
     onSecondary = contrastOn(secondary),
     secondaryContainer = secondaryContainer,
@@ -142,8 +149,8 @@ private fun appDarkScheme(
 ) = darkColorScheme(
     primary = primary,
     onPrimary = contrastOn(primary),
-    primaryContainer = primary.copy(alpha = 0.18f),
-    onPrimaryContainer = primary,
+    primaryContainer = lerp(surface, primary, ContainerTint),
+    onPrimaryContainer = containerContent(lerp(surface, primary, ContainerTint), primary),
     secondary = secondary,
     onSecondary = contrastOn(secondary),
     secondaryContainer = secondaryContainer,

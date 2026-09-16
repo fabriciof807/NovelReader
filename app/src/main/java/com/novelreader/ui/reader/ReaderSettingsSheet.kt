@@ -62,6 +62,8 @@ import com.novelreader.ui.customization.WallpaperBehindBarsRow
 import com.novelreader.ui.customization.WallpaperChoiceRow
 import com.novelreader.ui.customization.PalettePicker
 import com.novelreader.ui.customization.READER_AUTO
+import com.novelreader.ui.customization.OptionLabel
+import com.novelreader.ui.customization.ResetAppearanceRow
 import com.novelreader.ui.customization.SavedThemesSection
 import com.novelreader.ui.customization.readerPaletteChoices
 import com.novelreader.ui.theme.parseAccentHex
@@ -120,7 +122,10 @@ fun SettingsSheet(
             HorizontalDivider()
             Spacer(modifier = Modifier.height(16.dp))
 
-            Text(stringResource(R.string.theme), style = MaterialTheme.typography.titleSmall)
+            OptionLabel(
+                title = stringResource(R.string.theme),
+                description = stringResource(R.string.theme_desc)
+            )
             Spacer(modifier = Modifier.height(8.dp))
             PalettePicker(
                 selectedId = ReaderTheme.paletteId(themeSelection) ?: READER_AUTO,
@@ -134,9 +139,9 @@ fun SettingsSheet(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            Text(
-                stringResource(R.string.reader_variant),
-                style = MaterialTheme.typography.titleSmall
+            OptionLabel(
+                title = stringResource(R.string.reader_variant),
+                description = stringResource(R.string.variant_desc)
             )
             Spacer(modifier = Modifier.height(4.dp))
             Row(
@@ -170,9 +175,9 @@ fun SettingsSheet(
             HorizontalDivider()
             Spacer(modifier = Modifier.height(16.dp))
 
-            Text(
-                stringResource(R.string.accent_color),
-                style = MaterialTheme.typography.titleSmall
+            OptionLabel(
+                title = stringResource(R.string.accent_color),
+                description = stringResource(R.string.reader_accent_desc)
             )
             Spacer(modifier = Modifier.height(4.dp))
             AccentColorPicker(
@@ -288,9 +293,9 @@ fun SettingsSheet(
             HorizontalDivider()
             Spacer(modifier = Modifier.height(16.dp))
 
-            Text(
-                stringResource(R.string.wallpaper_reader),
-                style = MaterialTheme.typography.titleSmall
+            OptionLabel(
+                title = stringResource(R.string.wallpaper_reader),
+                description = stringResource(R.string.wallpaper_reader_desc)
             )
             Spacer(modifier = Modifier.height(4.dp))
             WallpaperChoiceRow(
@@ -309,9 +314,9 @@ fun SettingsSheet(
                 dark = config.themeDark,
                 onSave = onSaveTheme,
                 onApply = onApplyTheme,
-                onDelete = onDeleteTheme,
-                onReset = onResetAppearance
+                onDelete = onDeleteTheme
             )
+            ResetAppearanceRow(onReset = onResetAppearance)
 
             Spacer(modifier = Modifier.height(12.dp))
             BlurSlider(

@@ -38,23 +38,22 @@ class WallpaperBehindBarsRowTest {
     fun `shows the title and the explanation`() {
         setRow(checked = true)
 
-        composeTestRule.onNodeWithText("Papel de parede atrás das barras").assertExists()
+        composeTestRule.onNodeWithText("Fundo também nas barras").assertExists()
         composeTestRule.onNodeWithText(
-            "Deixa a barra de cima e as abas translúcidas na cor do tema, " +
-                "com o papel de parede aparecendo por trás"
+            "Deixa a barra de cima e as abas translúcidas, com o fundo aparecendo"
         ).assertExists()
     }
 
     @Test
     fun `reflects the stored value`() {
         setRow(checked = true)
-        composeTestRule.onNodeWithText("Papel de parede atrás das barras").assertIsOn()
+        composeTestRule.onNodeWithText("Fundo também nas barras").assertIsOn()
     }
 
     @Test
     fun `reflects an opted out value`() {
         setRow(checked = false)
-        composeTestRule.onNodeWithText("Papel de parede atrás das barras").assertIsOff()
+        composeTestRule.onNodeWithText("Fundo também nas barras").assertIsOff()
     }
 
     @Test
@@ -62,7 +61,7 @@ class WallpaperBehindBarsRowTest {
         var reported: Boolean? = null
         setRow(checked = true, onCheckedChange = { reported = it })
 
-        composeTestRule.onNodeWithText("Papel de parede atrás das barras")
+        composeTestRule.onNodeWithText("Fundo também nas barras")
             .performSemanticsAction(SemanticsActions.OnClick)
 
         assertThat(reported).isFalse()

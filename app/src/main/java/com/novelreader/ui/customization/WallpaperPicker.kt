@@ -38,6 +38,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.novelreader.R
 import com.novelreader.data.local.preferences.PreferenceAllowlists
+import com.novelreader.data.storage.WallpaperStorage
 
 @Composable
 fun WallpaperChoiceRow(
@@ -157,7 +158,16 @@ private fun BuiltinSwatch(
     }
 }
 
+fun wallpaperSummaryLabel(id: String): Int = when {
+    id == PreferenceAllowlists.WALLPAPER_NONE -> R.string.wallpaper_none_label
+    WallpaperStorage.fileNameOf(id) != null -> R.string.wallpaper_image_label
+    else -> builtinWallpaperLabelRes(id.removePrefix("builtin:"))
+}
+
 private fun builtinWallpaperLabelRes(id: String): Int = when (id) {
+    "areia" -> R.string.builtin_wallpaper_areia
+    "ardosia" -> R.string.builtin_wallpaper_ardosia
+    "musgo" -> R.string.builtin_wallpaper_musgo
     "amanhecer" -> R.string.builtin_wallpaper_amanhecer
     "aurora" -> R.string.builtin_wallpaper_aurora
     "crepusculo" -> R.string.builtin_wallpaper_crepusculo

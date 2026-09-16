@@ -11,7 +11,7 @@ Decisões de produto fechadas em sessão; a implementação segue fiel a elas.
 | Cor de acento | Duas chaves independentes: `accent_color` (app) e `reader_accent_color` (leitor) |
 | Wallpaper | Dois slots globais independentes: home (biblioteca) e leitor |
 | Alcance | Global. Não há wallpaper por novel |
-| Origem | Imagem do usuário (SAF) + 8 fundos embutidos (gradientes) |
+| Origem | Imagem do usuário (SAF) + 11 fundos embutidos (8 gradientes + 3 cores sólidas) |
 | Blur | Slider 0..60 por slot |
 | Véu do leitor | Slider 0..100%, default 80%, na cor de fundo da paleta do leitor |
 
@@ -72,6 +72,12 @@ paletas × 2 variantes × 24 matizes × 3 saturações.
 (`theme` = id canônico, `themeDark` = variante) que chega em `themeVars`.
 
 ## 5. Wallpaper
+
+Fundos embutidos: 8 gradientes (`amanhecer`, `aurora`, `bosque`, `carvao`,
+`crepusculo`, `noite`, `oceano`, `pergaminho`) e 3 cores sólidas (`areia`,
+`ardosia`, `musgo`), estas últimas para quem quer um fundo liso. `BuiltinWallpapersTest`
+garante que a allowlist de `PreferenceAllowlists` não divirja dos fundos que o
+renderer conhece, e que as três sólidas são planas.
 
 Referência única por slot: `none` | `builtin:<id>` | `file:<nome.ext>`.
 
@@ -182,7 +188,36 @@ rolagem automática), a metade de baixo ficava inalcançável em celular. O test
 de UI pegou o problema porque o nó do wallpaper não estava "displayed";
 `verticalScroll` na Column resolveu.
 
-## 12. Fora de escopo
+## 12. Organização das Configurações
+
+A tela é uma pilha de seções colapsáveis (`ui/settings/components/SettingsSection`),
+todas fechadas por padrão e cada uma com **resumo do estado atual** no cabeçalho
+("Claro · Índigo", "Amanhecer", "2/5", "Português"), de modo que a tela fechada já
+informa o que está configurado:
+
+1. **Cores e tema** — Modo (sistema/claro/escuro), Paleta, Cor de destaque.
+2. **Papel de parede** — Fundo da biblioteca, Desfoque, Fundo também nas barras.
+3. **Meus temas** — os 5 slots.
+4. `ResetAppearanceRow` — ação isolada, com confirmação que diz que os temas salvos ficam.
+5. **Backup e restauração** — exportar/importar.
+6. **Idioma** — pt/en.
+7. Card **Sobre** (navegação, sem seção).
+
+Nomes voltados ao usuário em vez de jargão: "Cor de acento" → **"Cor de destaque"**
+(com a descrição "Botões, ícones e seleções do app"), "Papel de parede da
+biblioteca" → **"Fundo da biblioteca"**. Cada controle tem um `OptionLabel` com
+título e descrição de uma linha; o sheet do leitor usa os mesmos rótulos.
+
+## 13. Containers opacos
+
+`primaryContainer` é **opaco** (mistura de `primary` com o fundo da variante via
+`lerp`), nunca `primary.copy(alpha = …)`. Um container translúcido deixa o
+wallpaper — e a sombra do `Surface` — aparecerem através do FAB, que é como o
+"quadrado branco atrás do botão +" apareceu. `AppPaletteTest` asserta
+`alpha == 1f` para os quatro containers e contraste ≥ 4.5 do `on*Container` sobre
+o container, inclusive com acento personalizado.
+
+## 14. Fora de escopo
 
 - Wallpaper por novel/coleção (exigiria Room v13).
 - Paleta derivada da capa do livro.
@@ -191,7 +226,7 @@ de UI pegou o problema porque o nó do wallpaper não estava "displayed";
 - Wallpaper dentro de um tema salvo.
 - Renomear um tema salvo existente (hoje: salvar com o mesmo nome sobrescreve).
 
-## 13. Limitações de teste que valem saber
+## 15. Limitações de teste que valem saber
 
 - Com um `TextField` na tela, testes Robolectric+Compose **nunca** ficam idle (o
   cursor piscando anima para sempre) e qualquer `waitForIdle` estoura em 60s.

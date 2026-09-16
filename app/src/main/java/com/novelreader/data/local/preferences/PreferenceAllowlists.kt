@@ -25,6 +25,7 @@ object PreferenceAllowlists {
     private val WALLPAPER_FILE = Regex("^[a-z0-9_]{1,64}\\.(jpg|jpeg|png|webp)$")
 
     val BUILTIN_WALLPAPERS = setOf(
+        "areia", "ardosia", "musgo",
         "amanhecer", "aurora", "bosque", "carvao",
         "crepusculo", "noite", "oceano", "pergaminho"
     )

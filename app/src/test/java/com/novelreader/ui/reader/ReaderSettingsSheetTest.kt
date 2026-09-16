@@ -138,7 +138,7 @@ class ReaderSettingsSheetTest {
     fun `shows the reader wallpaper section with its sliders`() {
         setSheet(config = ReaderConfig(theme = "indigo", wallpaper = "builtin:noite", veil = 80))
 
-        composeTestRule.onNodeWithText("Papel de parede do leitor").assertExists()
+        composeTestRule.onNodeWithText("Fundo do leitor").assertExists()
         composeTestRule.onNodeWithText("Desfoque: 0").assertExists()
         composeTestRule.onNodeWithText("Véu de leitura: 80%").assertExists()
         composeTestRule.onNodeWithContentDescription("Noite").assertIsSelected()

@@ -36,8 +36,7 @@ class SavedThemesSectionTest {
         themes: List<SavedTheme> = listOf(noite),
         onSave: (String) -> Unit = {},
         onApply: (SavedTheme) -> Unit = {},
-        onDelete: (SavedTheme) -> Unit = {},
-        onReset: () -> Unit = {}
+        onDelete: (SavedTheme) -> Unit = {}
     ) {
         composeTestRule.setContent {
             NovelReaderTheme {
@@ -47,8 +46,7 @@ class SavedThemesSectionTest {
                         dark = true,
                         onSave = onSave,
                         onApply = onApply,
-                        onDelete = onDelete,
-                        onReset = onReset
+                        onDelete = onDelete
                     )
                 }
             }
@@ -112,18 +110,6 @@ class SavedThemesSectionTest {
         composeTestRule.onNodeWithText("Cancelar").performClick()
 
         assertThat(deleted).isNull()
-    }
-
-    @Test
-    fun `resetting appearance asks for confirmation and reports it`() {
-        var reset = false
-        setSection(onReset = { reset = true })
-
-        composeTestRule.onNodeWithText("Restaurar aparência padrão")
-            .performSemanticsAction(SemanticsActions.OnClick)
-        composeTestRule.onNodeWithText("Restaurar").performClick()
-
-        assertThat(reset).isTrue()
     }
 
     @Test
