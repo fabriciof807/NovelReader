@@ -130,7 +130,8 @@ For novels from sites not listed, the generic parser tries to extract the main c
 - Fix: sliders persisted on every drag frame — and the reader re-applied its CSS over the JS bridge for each of them — so the thumb stuck and jumped; values now commit once, on release.
 - Feat: option to keep the wallpaper visible behind the top bar and tabs (translucent, with a theme-coloured veil) or leave those bars solid as before; on by default, shared by the library and the reader.
 - Fix: the Android navigation bar area kept the raw wallpaper while the rest of the chrome was veiled; it now takes the same colour as the top bar.
-- 651 unit tests passing (was 506).
+- Fix: the "+" button no longer covers the novels/chapters/favourites counters — the counters bar is now the Scaffold's bottom bar, so the button sits above it.
+- 653 unit tests passing (was 506).
 
 ### v2.9.3 (2026-09-14)
 
@@ -363,7 +364,7 @@ app/src/main/java/com/novelreader/
 | Library / chapter list / settings screens | Unit | 55 |
 | Preferences, storage, theme and customization | Unit | 87 |
 | Workers, navigation, favorites, misc | Unit | 96 |
-| **Total (JVM)** | | **651** |
+| **Total (JVM)** | | **653** |
 
 `./gradlew :app:testDebugUnitTest` runs the whole JVM suite; the DAO suite below needs an emulator.
 

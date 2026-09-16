@@ -174,6 +174,14 @@ Manual `Migration(start, end)` in `NovelDatabase.Companion`. Each uses raw `exec
 
 4 DataStore instances: `app_prefs`, `reader_prefs`, `import_prefs`, `library_prefs`. Each with its own preferences class.
 
+### Library bottom bar
+
+`LibraryStatsBar` (novels/chapters/bookmarks counters) is the `Scaffold`'s
+`bottomBar`, not a sibling inside the tab content: that is what keeps the "+" FAB
+above it, since the Scaffold offsets its FAB by the bottom bar height. Keep it in
+the `bottomBar` slot (or the FAB covers the counters again — `LibraryStatsBarTest`
+asserts the two do not overlap).
+
 ### Saved themes and reset
 
 `VisualThemeUseCase` owns both: `saveCurrent`/`apply`/`delete` for up to five
@@ -230,7 +238,7 @@ Two independent global slots (`WallpaperStorage.SLOT_HOME`, `SLOT_READER`), neve
 - **Instrumented tests**: Room in-memory DB, Compose Test Rule, Espresso
 - Parser tests use real HTML fixtures
 - ViewModel tests inject mocked DAOs/use cases
-- **Current count: 651 unit tests**
+- **Current count: 653 unit tests**
 - **Always run `./gradlew :app:compileDebugKotlin :app:testDebugUnitTest` before pushing**
 
 ## Recent Sessions
@@ -249,7 +257,7 @@ v2.10.0 (versionCode 31). See [README.md](README.md) (English) and [README_PT.md
 - Feat: library and reader wallpapers (own image or built-in gradient) with independent blur, plus a reader veil slider (default 80%).
 - Fix: the reader settings sheet scrolls — with the new sections the lower half was unreachable.
 - Legacy reader themes map exactly onto the new palettes; no data migration.
-- 651 unit tests passing (was 506).
+- 653 unit tests passing (was 506).
 - Spec: `docs/visual-customization-spec.md`.
 
 ### v2.9.3 highlights

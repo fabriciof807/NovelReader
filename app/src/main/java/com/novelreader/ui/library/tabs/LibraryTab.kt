@@ -38,7 +38,6 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -55,7 +54,6 @@ import androidx.compose.ui.unit.dp
 import com.novelreader.R
 import com.novelreader.data.local.db.entity.NovelEntity
 import com.novelreader.domain.usecase.BackgroundImportState
-import com.novelreader.ui.library.LibraryStats
 import com.novelreader.ui.library.NovelFilter
 import com.novelreader.ui.library.ViewMode
 import com.novelreader.ui.library.components.ImportProgressBanner
@@ -96,7 +94,6 @@ internal fun favoriteIcon(isFavorite: Boolean) =
 @Composable
 fun LibraryTab(
     novels: List<NovelEntity>,
-    stats: LibraryStats,
     backgroundImportState: BackgroundImportState,
     viewMode: ViewMode = ViewMode.GRID,
     readProgress: Map<Long, Float> = emptyMap(),
@@ -256,54 +253,6 @@ fun LibraryTab(
                 }
             }
         }
-        if (stats.totalNovels > 0) {
-            StatsBar(stats)
-        }
-    }
-}
-
-@Composable
-private fun StatsBar(stats: LibraryStats) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-        tonalElevation = 2.dp
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 10.dp),
-            horizontalArrangement = Arrangement.SpaceEvenly
-        ) {
-            StatItem(
-                label = stringResource(R.string.novels),
-                value = stats.totalNovels.toString()
-            )
-            StatItem(
-                label = stringResource(R.string.chapters),
-                value = stats.totalChapters.toString()
-            )
-            StatItem(
-                label = stringResource(R.string.favorites),
-                value = stats.totalBookmarks.toString()
-            )
-        }
-    }
-}
-
-@Composable
-private fun StatItem(label: String, value: String) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(
-            text = value,
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.Bold
-        )
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-        )
     }
 }
 

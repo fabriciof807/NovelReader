@@ -60,6 +60,7 @@ import com.novelreader.ui.library.components.AddToCollectionDialog
 import com.novelreader.ui.library.components.CollectionNameDialog
 import com.novelreader.ui.library.components.CoverUrlDialog
 import com.novelreader.ui.library.components.DeleteNovelDialog
+import com.novelreader.ui.library.components.LibraryStatsBar
 import com.novelreader.ui.library.components.WhatsNewBottomSheet
 import com.novelreader.ui.library.tabs.ChaptersTab
 import com.novelreader.ui.library.tabs.CollectionsTab
@@ -345,13 +346,17 @@ fun LibraryScreen(
                 }
             }
         },
+        bottomBar = {
+            if (selectedTab == 0 && stats.totalNovels > 0) {
+                LibraryStatsBar(stats)
+            }
+        },
         snackbarHost = { SnackbarHost(snackbarHostState) },
     ) { padding ->
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
             when (selectedTab) {
                 0 -> LibraryTab(
                     novels = novels,
-                    stats = stats,
                     backgroundImportState = backgroundImportState,
                     viewMode = viewMode,
                     readProgress = readProgress,
