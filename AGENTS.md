@@ -202,6 +202,15 @@ not the other way round). `saveCropped` also validates by decoding: bytes that a
 not an image are refused. Beware `BitmapFactory.decodeStream` returning null when
 `inJustDecodeBounds` is set — that is success, not failure.
 
+The gesture handler inside `CropPreview` must read the **live** crop
+(`rememberUpdatedState`), not the `crop` parameter: `pointerInput(sourceSize)`
+keeps the block it was built with, and a captured snapshot made a drag undo a
+newly chosen zoom (the frame snapped back to 100%) and never accumulate the pan.
+The Robolectric suite cannot catch this — its harness re-runs the block per
+recomposition and the pan accumulates in tests — so it was found and verified on
+an emulator with a log of every gesture event (`from=` printed a stale `panX=0.0`
+while the state held the write). Verify gestures on a device, not just in tests.
+
 ### Settings screen
 
 `ui/settings/components/SettingsSection` is the collapsible group used by the

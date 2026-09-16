@@ -30,6 +30,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -167,6 +168,9 @@ private fun CropPreview(
     onCropChange: (WallpaperCrop) -> Unit
 ) {
     var sourceSize by remember { mutableStateOf<IntSize?>(null) }
+    // The gesture handler outlives recompositions, so it must read the current crop, not the one it
+    // was built with: a stale read made a drag undo the chosen zoom and never accumulate the pan.
+    val latestCrop by rememberUpdatedState(crop)
 
     Box(
         modifier = Modifier
@@ -177,7 +181,8 @@ private fun CropPreview(
             .testTag(CROP_PREVIEW_TAG)
             .pointerInput(sourceSize) {
                 detectTransformGestures { _, pan, gestureZoom, _ ->
-                    val zoom = clampZoom(crop.zoom * gestureZoom)
+                    val base = latestCrop
+                    val zoom = clampZoom(base.zoom * gestureZoom)
                     val slack = previewSlack(
                         boxWidth = size.width.toFloat(),
                         boxHeight = size.height.toFloat(),
@@ -187,8 +192,8 @@ private fun CropPreview(
                     onCropChange(
                         clampCrop(
                             zoom = zoom,
-                            panX = if (slack.x > 0f) crop.panX + pan.x / slack.x else crop.panX,
-                            panY = if (slack.y > 0f) crop.panY + pan.y / slack.y else crop.panY
+                            panX = if (slack.x > 0f) base.panX + pan.x / slack.x else base.panX,
+                            panY = if (slack.y > 0f) base.panY + pan.y / slack.y else base.panY
                         )
                     )
                 }

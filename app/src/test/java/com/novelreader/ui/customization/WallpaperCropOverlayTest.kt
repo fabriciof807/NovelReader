@@ -1,11 +1,17 @@
 package com.novelreader.ui.customization
 
+import android.graphics.Bitmap
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performSemanticsAction
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.pinch
+import androidx.compose.ui.test.swipe
 import com.google.common.truth.Truth.assertThat
 import com.novelreader.data.storage.MAX_CROP_ZOOM
 import com.novelreader.data.storage.WallpaperCrop
@@ -27,11 +33,11 @@ class WallpaperCropOverlayTest {
     private var skipped = false
     private var cancelled = false
 
-    private fun setOverlay(veil: Boolean = false) {
+    private fun setOverlay(veil: Boolean = false, bitmap: Bitmap? = null) {
         composeTestRule.setContent {
             NovelReaderTheme {
                 WallpaperCropOverlay(
-                    imageModel = null,
+                    imageModel = bitmap,
                     title = "Biblioteca",
                     topBarColor = Color(0xCC16213E),
                     bottomBarColor = Color(0xCC16213E),
@@ -124,5 +130,30 @@ class WallpaperCropOverlayTest {
             .performSemanticsAction(SemanticsActions.OnClick)
 
         assertThat(applied).isNotNull()
+    }
+
+    // The gesture detector is a long-lived pointerInput block, so reading the crop it was built with
+    // means a drag made after the zoom slider overwrote the zoom with the stale value (the frame
+    // snapped back to 100%) and the pan never accumulated.
+    // The gesture detector reads the crop it captured when its pointerInput block was built, so a
+    // pan made after the image loaded used the stale pan and overwrote a newer zoom.
+    @Test
+    fun `dragging after choosing a zoom keeps the zoom and moves the frame`() {
+        setOverlay(bitmap = Bitmap.createBitmap(400, 1200, Bitmap.Config.ARGB_8888))
+
+        composeTestRule.onAllNodes(SemanticsMatcher.keyIsDefined(SemanticsActions.SetProgress))[0]
+            .performSemanticsAction(SemanticsActions.SetProgress) { it(2f) }
+        composeTestRule.onNodeWithText("Zoom: 200%").assertExists()
+
+        composeTestRule.onNodeWithTag(CROP_PREVIEW_TAG).performTouchInput {
+            swipe(center, center + Offset(80f, 0f), 200)
+        }
+
+        composeTestRule.onNodeWithText("Zoom: 200%").assertExists()
+        composeTestRule.onNodeWithText("Aplicar")
+            .performSemanticsAction(SemanticsActions.OnClick)
+        val crop = requireNotNull(applied).first
+        assertThat(crop.zoom).isEqualTo(2f)
+        assertThat(crop.panX).isGreaterThan(0.02f)
     }
 }
