@@ -215,6 +215,13 @@ recomposition and the pan accumulates in tests — so it was found and verified 
 an emulator with a log of every gesture event (`from=` printed a stale `panX=0.0`
 while the state held the write). Verify gestures on a device, not just in tests.
 
+**The rule is general:** any `pointerInput` handler that outlives recomposition
+must read live state (`rememberUpdatedState`) instead of the parameters it was
+built with. The same trap bit `HueWheel` (`onDragEnd` committed the selection the
+drag started from, so releasing the wheel re-applied the previous accent) — that
+one *is* pinned by a unit test, `dragging to the left of the wheel selects the hue
+under the finger`.
+
 ### Settings screen
 
 `ui/settings/components/SettingsSection` is the collapsible group used by the
@@ -281,7 +288,7 @@ Two independent global slots (`WallpaperStorage.SLOT_HOME`, `SLOT_READER`), neve
 
 - `app_palette`: palette id or `dynamic` (system colours, Android 12+; below 31 it falls back to `indigo`). `dynamic_color_enabled` is still written as a mirror for backup compatibility.
 - `reader theme` (stored): `auto`, `<palette>`, or `<palette>:light|dark`. `auto` follows the app palette and variant; a bare palette follows the app variant; the explicit variant pins it. `ReaderTheme` owns the parse/compose helpers, `ReaderTheme.resolve` returns the resolved `(palette, themeDark)` pair that `ReaderConfig` carries into `ReaderHtmlBuilder.themeVars`.
-- Accent: `accent_color` (app) and `reader_accent_color` are independent. `AppPalette.accentHexFor` derives the actual hex by binary-searching HSL lightness until it reaches a 5:1 contrast against the palette background, so any hue/saturation the user picks stays readable.
+- Accent: `accent_color` (app) and `reader_accent_color` are independent. `AppPalette.accentHexFor` derives the actual hex by binary-searching HSL lightness until it reaches a 5:1 contrast against the palette background, so any hue/saturation the user picks stays readable. `AccentColorPicker` offers the presets plus `HueWheel`: the angle is the hue (0° to the right, clockwise, matching the `Brush.sweepGradient` that draws it) and the radius is the saturation, because lightness is not the user's to choose. Its gesture handlers read live state (see the crop note) and it exposes four custom accessibility actions, since a `Canvas` is unreachable for a screen reader.
 - `fontFamily`, accent hexes and every wallpaper ref pass through `PreferenceAllowlists` **and** the CSS sink re-validates (`safeCssColor` in `ReaderHtmlBuilder`): the `fontFamily` injection (piolium F1) is the reason the sink defends itself instead of trusting the prefs layer.
 
 ## Testing
@@ -300,7 +307,7 @@ Two independent global slots (`WallpaperStorage.SLOT_HOME`, `SLOT_READER`), neve
 - **Instrumented tests**: Room in-memory DB, Compose Test Rule, Espresso
 - Parser tests use real HTML fixtures
 - ViewModel tests inject mocked DAOs/use cases
-- **Current count: 695 unit tests**
+- **Current count: 712 unit tests**
 - **Always run `./gradlew :app:compileDebugKotlin :app:testDebugUnitTest` before pushing**
 
 ## Recent Sessions
@@ -323,7 +330,7 @@ v2.10.0 (versionCode 31). See [README.md](README.md) (English) and [README_PT.md
 - Fix: the crop saved the window size minus the system bars (1078x2273 on a 1080x2400 screen), so the applied wallpaper drifted ~2.7% per side from the preview.
 - Fix: the reader no longer shows the chapter title twice when the source heading repeats it behind its own prefix ("Chapter 4: Chapter 4: Centurion").
 - Legacy reader themes map exactly onto the new palettes; no data migration.
-- 701 unit tests passing (was 506).
+- 712 unit tests passing (was 506).
 - Spec: `docs/visual-customization-spec.md`.
 
 ### v2.9.3 highlights

@@ -74,9 +74,13 @@
     <string name="reader_accent_desc">Bookmarks and links</string>
     <string name="palette">Palette</string>
     <string name="accent_color">Highlight colour</string>
+    <string name="accent_wheel_description">Colour wheel. Hue %1$d degrees, saturation %2$d percent</string>
+    <string name="accent_wheel_more_hue">Increase hue</string>
+    <string name="accent_wheel_less_hue">Decrease hue</string>
+    <string name="accent_wheel_more_saturation">Increase saturation</string>
+    <string name="accent_wheel_less_saturation">Decrease saturation</string>
+    <string name="accent_color_result">Result</string>
     <string name="accent_color_default">Palette default</string>
-    <string name="accent_color_hue">Hue</string>
-    <string name="accent_color_saturation">Saturation</string>
     <string name="palette_indigo">Indigo</string>
     <string name="palette_papel">Paper</string>
     <string name="palette_grafite">Graphite</string>

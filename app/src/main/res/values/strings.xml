@@ -74,9 +74,13 @@
     <string name="reader_accent_desc">Bookmarks e links</string>
     <string name="palette">Paleta</string>
     <string name="accent_color">Cor de destaque</string>
+    <string name="accent_wheel_description">Roda de cores. Matiz %1$d graus, saturação %2$d por cento</string>
+    <string name="accent_wheel_more_hue">Aumentar matiz</string>
+    <string name="accent_wheel_less_hue">Diminuir matiz</string>
+    <string name="accent_wheel_more_saturation">Aumentar saturação</string>
+    <string name="accent_wheel_less_saturation">Diminuir saturação</string>
+    <string name="accent_color_result">Resultado</string>
     <string name="accent_color_default">Padrão da paleta</string>
-    <string name="accent_color_hue">Matiz</string>
-    <string name="accent_color_saturation">Saturação</string>
     <string name="palette_indigo">Índigo</string>
     <string name="palette_papel">Papel</string>
     <string name="palette_grafite">Grafite</string>

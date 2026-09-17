@@ -17,7 +17,6 @@ import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -105,40 +104,45 @@ fun AccentColorPicker(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        Text(
-            text = stringResource(R.string.accent_color_hue),
-            style = MaterialTheme.typography.labelMedium
+        HueWheel(
+            hue = hue,
+            saturation = saturation,
+            background = background,
+            onPreview = { hueOf, saturationOf ->
+                hue = hueOf
+                saturation = saturationOf
+            },
+            onCommit = { hueOf, saturationOf ->
+                hue = hueOf
+                saturation = saturationOf
+                emit(accentHexFor(hueOf, saturationOf, background))
+            },
+            modifier = Modifier.align(Alignment.CenterHorizontally)
         )
+
+        Spacer(modifier = Modifier.height(12.dp))
+
         Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = stringResource(R.string.accent_color_result),
+                style = MaterialTheme.typography.labelMedium
+            )
             Box(
                 modifier = Modifier
+                    .padding(start = 10.dp)
                     .size(28.dp)
                     .clip(CircleShape)
                     .background(customColor)
+                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
                     .semantics { contentDescription = customHex }
             )
-            Slider(
-                value = hue,
-                onValueChange = { hue = it },
-                onValueChangeFinished = { emit(accentHexFor(hue, saturation, background)) },
-                valueRange = 0f..360f,
-                modifier = Modifier
-                    .weight(1f)
-                    .padding(start = 12.dp)
+            Text(
+                text = customHex,
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(start = 10.dp)
             )
         }
-
-        Text(
-            text = stringResource(R.string.accent_color_saturation),
-            style = MaterialTheme.typography.labelMedium
-        )
-        Slider(
-            value = saturation.toFloat(),
-            onValueChange = { saturation = it.toInt() },
-            onValueChangeFinished = { emit(accentHexFor(hue, saturation, background)) },
-            valueRange = 0f..100f,
-            modifier = Modifier.fillMaxWidth()
-        )
     }
 }
 

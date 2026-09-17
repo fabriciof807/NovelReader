@@ -51,6 +51,18 @@ Assim, qualquer matiz/saturação que o usuário escolha continua legível; o te
 `the derived accent stays readable over every palette background` cobre 6
 paletas × 2 variantes × 24 matizes × 3 saturações.
 
+A escolha é feita numa **roda** (`HueWheel`): o ângulo escolhe a matiz (0° à
+direita, crescendo no sentido horário, igual ao `Brush.sweepGradient` que a
+desenha) e a distância do centro escolhe a saturação. Como a *lightness* é
+derivada, a roda só expõe os dois eixos que existem de fato: um terceiro eixo
+deixaria o usuário escolher contraste baixo. O handle segue a mesma função que o
+tap/arrasto (`wheelSelectionAt`/`wheelPointFor`, inversas uma da outra), o
+centro é a saturação 0 aproximada pelo fundo da paleta e a linha "Resultado"
+mostra o hex derivado — que não é o mesmo que a posição do handle, já que a
+lightness entra depois. Sendo um `Canvas`, expõe quatro ações de acessibilidade
+(matiz e saturação, ±10) e `contentDescription` com matiz/saturação atuais; como
+todos os controles desta feature, grava ao soltar.
+
 ## 4. Preferências (sem DataStore novo)
 
 `app_prefs`: `app_palette`, `accent_color`, `wallpaper_home`, `wallpaper_home_blur`
@@ -195,7 +207,8 @@ avaliações de JS por segundo, e o controle "prendia"/pulava.
 A prévia ao vivo continua onde é barata (desfoque e véu alimentam
 `WallpaperBackground` por um estado de tela em `ReaderScreen`, sem persistir);
 para fonte, espaçamento, rolagem e cor de acento a página/tema só muda ao
-soltar.
+soltar. A roda de cores segue a mesma regra pelo caminho `onPreview`/`onCommit`:
+durante o arrasto só o estado local muda; o DataStore é escrito no `onDragEnd`.
 
 ## 11. Backup v3
 
