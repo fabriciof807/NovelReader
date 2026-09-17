@@ -120,10 +120,11 @@ For novels from sites not listed, the generic parser tries to extract the main c
 
 ## Version history
 
-### v2.10.0 (2026-09-14)
+### v2.10.0 (2026-09-16)
 
 - Feat: six palettes (Indigo, Paper, Graphite, Forest, Plum, AMOLED) with a light/dark variant each, replacing the plain light/dark/dynamic choice; dynamic color becomes one of the palette options.
 - Feat: editable accent color for the app and, separately, for the reader — the app derives a readable tone for the chosen hue/saturation instead of letting a bright accent wash out the UI (verified against every palette background).
+- Feat: the accent is picked on a **colour wheel** — the angle is the hue, the distance from the centre is the saturation — instead of two abstract sliders. The wheel shows the tone the app will really use, and since it is drawn it also exposes four accessibility actions so a screen reader can adjust it.
 - Feat: wallpapers — one for the library and one for the reader, each with its own blur, either your own image (copied into app-private storage, never in the backup) or one of eight built-in gradients.
 - Feat: reading veil slider (default 80%) plus a per-reader palette and light/dark variant, so the wallpaper never wins over the text.
 - Fix: the reader settings sheet now scrolls; with the new sections the bottom half was unreachable on a phone.
@@ -136,7 +137,11 @@ For novels from sites not listed, the generic parser tries to extract the main c
 - Feat: three flat wallpaper colours, and a reorganised settings screen — collapsible groups that show the current state in their header, wallpapers and saved themes in their own groups, and user-facing names ("Highlight colour" instead of "accent colour").
 - Feat: an adjust screen crops the picked image to the screen, with the app frame previewed on top of it.
 - Fix: the floating "+" button had a white square behind it — the palette containers were built with alpha, so the button (and the Surface shadow) let the wallpaper through.
-- 695 unit tests passing (was 506).
+- Fix: the "+" button sat flush against the counters bar; it now keeps a distance, measured against the bar itself.
+- Fix: the counters bar and the filter chips were translucent over a wallpaper, so light wallpapers washed their text out (2.2:1 and 3.2:1 against the "Dawn" gradient). Over a wallpaper they now stay opaque, like the novel cards, and the wallpaper keeps its full colour.
+- Fix: a source heading that repeated the chapter title behind its own prefix ("Chapter 4: Chapter 4: Centurion") was kept next to the title, so the chapter title appeared twice on short titles.
+- Fix: the crop screen threw the chosen zoom away when you dragged the image to reposition it, and the saved image came out slightly narrower than the preview (1078×2273 on a 1080×2400 screen) — dragging now moves the frame and the crop matches the screen exactly.
+- 712 unit tests passing (was 506).
 
 ### v2.9.3 (2026-09-14)
 

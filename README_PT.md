@@ -118,10 +118,11 @@ Para novels de sites não listados, o parser genérico tenta extrair o conteúdo
 
 ## Histórico de versões
 
-### v2.10.0 (2026-09-14)
+### v2.10.0 (2026-09-16)
 
 - Feat: seis paletas (Índigo, Papel, Grafite, Floresta, Ameixa, AMOLED) com variante clara e escura, substituindo a escolha simples de claro/escuro/dinâmico; a cor dinâmica vira uma das opções de paleta.
 - Feat: cor de acento editável para o app e, em separado, para o leitor — o app deriva um tom legível para a matiz/saturação escolhida, em vez de deixar um acento claro lavar a interface (verificado contra o fundo de todas as paletas).
+- Feat: a cor de destaque é escolhida numa **roda de cores** — o ângulo é a matiz, a distância do centro é a saturação — em vez de dois sliders abstratos. A roda mostra o tom que o app vai realmente usar e, por ser desenhada, também expõe quatro ações de acessibilidade para leitor de tela ajustar.
 - Feat: papéis de parede — um para a biblioteca e um para o leitor, cada um com desfoque próprio, usando imagem sua (copiada para o armazenamento privado do app, nunca no backup) ou um dos oito fundos prontos.
 - Feat: slider de véu de leitura (padrão 80%) e paleta + variante clara/escura próprias do leitor, para o papel de parede nunca ganhar do texto.
 - Fix: o sheet de configurações do leitor agora rola; com as seções novas a metade de baixo ficava inalcançável no celular.
@@ -134,7 +135,11 @@ Para novels de sites não listados, o parser genérico tenta extrair o conteúdo
 - Feat: três cores lisas de fundo, e a tela de configurações reorganizada — grupos que se escondem e mostram o estado atual no cabeçalho, papel de parede e temas salvos em grupos próprios, e nomes voltados ao usuário ("Cor de destaque" em vez de "Cor de acento").
 - Feat: tela de ajuste que recorta a imagem escolhida para a tela, com a moldura do app sobreposta na prévia.
 - Fix: o botão "+" tinha um quadrado branco atrás — os containers da paleta eram construídos com alpha, então o botão (e a sombra do Surface) deixavam o papel de parede aparecer.
-- 695 testes unitários passando (eram 506).
+- Fix: o botão "+" ficava colado na barra de contadores; agora guarda distância, medida contra a própria barra.
+- Fix: a barra de contadores e os chips de filtro eram translúcidos sobre o papel de parede, então fundos claros lavavam o texto (2,2:1 e 3,2:1 contra o gradiente "Amanhecer"). Com papel de parede eles agora ficam opacos, como os cards de livro, e o papel de parede mantém a cor cheia.
+- Fix: um título da fonte que repetia o título do capítulo atrás do próprio prefixo ("Chapter 4: Chapter 4: Centurion") era mantido ao lado do título, então o título do capítulo aparecia duas vezes nos títulos curtos.
+- Fix: a tela de ajuste perdia o zoom escolhido quando você arrastava a imagem para reposicionar, e a imagem salva saía um pouco mais estreita que a prévia (1078×2273 numa tela de 1080×2400) — agora arrastar move o enquadramento e o recorte bate exatamente com a tela.
+- 712 testes unitários passando (eram 506).
 
 ### v2.9.3 (2026-09-14)
 
