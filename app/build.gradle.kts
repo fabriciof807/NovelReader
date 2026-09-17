@@ -7,6 +7,11 @@ plugins {
     alias(libs.plugins.kotlin.compose)
 }
 
+// CI has no keystore, so the release build type must be able to produce an *unsigned* APK there
+// (release.yml builds one as a smoke test and never publishes it). With key.properties present the
+// build signs, and a wrong path inside it still fails loudly instead of shipping an unsigned APK.
+val releaseKeystore = rootProject.file("key.properties").takeIf { it.exists() }
+
 android {
     namespace = "com.novelreader"
     compileSdk = 37
@@ -21,10 +26,9 @@ android {
 
     signingConfigs {
         create("release") {
-            val keyProps = rootProject.file("key.properties")
-            if (keyProps.exists()) {
+            if (releaseKeystore != null) {
                 val p = Properties()
-                keyProps.inputStream().use { p.load(it) }
+                releaseKeystore.inputStream().use { p.load(it) }
                 storeFile = p["storeFile"]?.let { file(it as String) }
                 storePassword = p["storePassword"] as String?
                 keyAlias = p["keyAlias"] as String?
@@ -41,7 +45,9 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            signingConfig = signingConfigs.getByName("release")
+            if (releaseKeystore != null) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
     }
 
