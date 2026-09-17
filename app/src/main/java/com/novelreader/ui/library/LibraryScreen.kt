@@ -41,6 +41,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -130,9 +131,9 @@ fun LibraryScreen(
     }
 
     var showSortMenu by remember { mutableStateOf(false) }
-    var isSearchActive by remember { mutableStateOf(false) }
-    var searchQuery by remember { mutableStateOf("") }
-    var filterChip by remember { mutableStateOf(NovelFilter.ALL) }
+    // Saveable: the library is disposed while the reader is on screen, so plain `remember` sent the
+    // user back with the search box closed and the query gone.
+    val browse = rememberSaveable(saver = LibraryBrowseState.Saver) { LibraryBrowseState() }
     val snackbarHostState = remember { SnackbarHostState() }
     val previousBgRunning = remember { mutableStateOf(false) }
 
@@ -215,10 +216,10 @@ fun LibraryScreen(
             Column {
                 TopAppBar(
                     title = {
-                        if (isSearchActive && selectedTab == 0) {
+                        if (browse.isSearchActive && selectedTab == 0) {
                             OutlinedTextField(
-                                value = searchQuery,
-                                onValueChange = { searchQuery = it },
+                                value = browse.searchQuery,
+                                onValueChange = { browse.searchQuery = it },
                                 placeholder = { Text(stringResource(R.string.search_hint)) },
                                 singleLine = true,
                                 modifier = Modifier.fillMaxWidth(),
@@ -238,8 +239,8 @@ fun LibraryScreen(
                             IconButton(onClick = { viewModel.deselectNovel() }) {
                                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                             }
-                        } else if (isSearchActive) {
-                            IconButton(onClick = { isSearchActive = false; searchQuery = "" }) {
+                        } else if (browse.isSearchActive) {
+                            IconButton(onClick = { browse.isSearchActive = false; browse.searchQuery = "" }) {
                                 Icon(Icons.Default.Close, contentDescription = stringResource(R.string.close))
                             }
                         }
@@ -250,12 +251,12 @@ fun LibraryScreen(
                     ),
                     actions = {
                         if (selectedTab == 0) {
-                            if (isSearchActive) {
-                                IconButton(onClick = { isSearchActive = false; searchQuery = "" }) {
+                            if (browse.isSearchActive) {
+                                IconButton(onClick = { browse.isSearchActive = false; browse.searchQuery = "" }) {
                                     Icon(Icons.Default.Close, contentDescription = stringResource(R.string.close))
                                 }
                             } else {
-                                IconButton(onClick = { isSearchActive = true }) {
+                                IconButton(onClick = { browse.isSearchActive = true }) {
                                     Icon(Icons.Default.Search, contentDescription = stringResource(R.string.search))
                                 }
                             }
@@ -357,10 +358,10 @@ fun LibraryScreen(
                     viewMode = viewMode,
                     readProgress = readProgress,
                     newChapterCounts = newChapterCounts,
-                    searchQuery = searchQuery,
-                    filterChip = filterChip,
+                    searchQuery = browse.searchQuery,
+                    filterChip = browse.filterChip,
                     wallpaperActive = wallpaperActive,
-                    onFilterChipChange = { filterChip = it },
+                    onFilterChipChange = { browse.filterChip = it },
                     onNovelClick = { novel ->
                         if (novel.lastChapterId != null) {
                             onChapterClick(novel.id, novel.lastChapterId)

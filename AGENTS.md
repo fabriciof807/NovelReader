@@ -185,6 +185,10 @@ move to the top, which is the point (`LibraryTabScrollTest` pins both views). Th
 hoisted to `menuNovelId` for the same reason: a per-row `remember` would stick to whatever row ends up
 at that position.
 
+The search box, its query and the filter chip live in one saveable `LibraryBrowseState`: as plain
+`remember` they were thrown away while the reader was on screen, so the reader came back to a closed
+search box (`LibraryBrowseStateTest` covers the round trip).
+
 ### Library bottom bar
 
 `LibraryStatsBar` (novels/chapters/bookmarks counters) is the `Scaffold`'s
