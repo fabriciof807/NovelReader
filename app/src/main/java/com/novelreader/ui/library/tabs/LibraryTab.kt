@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
@@ -44,6 +45,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -127,7 +129,12 @@ fun LibraryTab(
         queuedNovelsNotShown(backgroundImportState.queuedNovelTitles, novels)
     }
 
-    val listState = rememberSaveable(saver = LazyListState.Saver) { LazyListState() }
+    // Rows are keyed by position, not by novel id: the library re-sorts itself (`ORDER BY lastReadAt
+    // DESC`) whenever a novel is opened, and an item-keyed list drags the viewport along with the
+    // novel that moved. The open-menu state lives here so it cannot stick to the wrong row.
+    var menuNovelId by rememberSaveable { mutableStateOf<Long?>(null) }
+    val listState = rememberSaveable(saver = LibraryScrollPosition) { LazyListState() }
+    val gridState = rememberSaveable(saver = LibraryGridScrollPosition) { LazyGridState() }
 
     Column(modifier = modifier.fillMaxSize()) {
         ImportProgressBanner(
@@ -192,37 +199,37 @@ fun LibraryTab(
             )
         } else if (viewMode == ViewMode.GRID) {
             LazyVerticalGrid(
+                state = gridState,
                 columns = GridCells.Adaptive(160.dp),
                 contentPadding = PaddingValues(12.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
                 modifier = Modifier.weight(1f).fillMaxWidth()
             ) {
-                items(chipFiltered, key = { it.id }) { novel ->
-                    var showMenu by remember { mutableStateOf(false) }
+                items(chipFiltered) { novel ->
                     NovelCard(
                         novel = novel,
                         readProgress = readProgress[novel.id] ?: 0f,
                         newChapterCount = newChapterCounts[novel.id] ?: 0,
                         bgState = backgroundImportState,
                         onClick = { onNovelClick(novel) },
-                        onLongClick = { showMenu = true },
-                        onShowMenu = { showMenu = true },
+                        onLongClick = { menuNovelId = novel.id },
+                        onShowMenu = { menuNovelId = novel.id },
                         onContinueClick = { onContinueReading(novel) }
                     )
                     NovelMenu(
                         novel = novel,
-                        expanded = showMenu,
-                        onDismiss = { showMenu = false },
-                        onChangeCover = { showMenu = false; onRequestChangeCover(novel) },
-                        onCoverByUrl = { showMenu = false; onRequestCoverByUrl(novel) },
-                        onToggleAutoUpdate = { showMenu = false; onToggleAutoUpdate(novel) },
-                        onCheckForUpdates = { showMenu = false; onCheckForUpdates(novel) },
-                        onResyncChapters = { showMenu = false; onResyncChapters(novel) },
-                        onChapters = { showMenu = false; onChapters(novel) },
-                        onAddToCollection = { showMenu = false; onAddToCollection(novel) },
+                        expanded = menuNovelId == novel.id,
+                        onDismiss = { menuNovelId = null },
+                        onChangeCover = { menuNovelId = null; onRequestChangeCover(novel) },
+                        onCoverByUrl = { menuNovelId = null; onRequestCoverByUrl(novel) },
+                        onToggleAutoUpdate = { menuNovelId = null; onToggleAutoUpdate(novel) },
+                        onCheckForUpdates = { menuNovelId = null; onCheckForUpdates(novel) },
+                        onResyncChapters = { menuNovelId = null; onResyncChapters(novel) },
+                        onChapters = { menuNovelId = null; onChapters(novel) },
+                        onAddToCollection = { menuNovelId = null; onAddToCollection(novel) },
                         onToggleFavorite = { updatedNovel -> onToggleFavorite(updatedNovel) },
-                        onDelete = { showMenu = false; onLongClick(novel) }
+                        onDelete = { menuNovelId = null; onLongClick(novel) }
                     )
                 }
             }
@@ -233,30 +240,29 @@ fun LibraryTab(
                 verticalArrangement = Arrangement.spacedBy(4.dp),
                 modifier = Modifier.weight(1f).fillMaxWidth()
             ) {
-                items(chipFiltered, key = { it.id }) { novel ->
-                    var showMenu by remember { mutableStateOf(false) }
+                items(chipFiltered) { novel ->
                     NovelListItem(
                         novel = novel,
                         readProgress = readProgress[novel.id] ?: 0f,
                         newChapterCount = newChapterCounts[novel.id] ?: 0,
                         bgState = backgroundImportState,
                         onClick = { onNovelClick(novel) },
-                        onLongClick = { showMenu = true },
-                        onShowMenu = { showMenu = true }
+                        onLongClick = { menuNovelId = novel.id },
+                        onShowMenu = { menuNovelId = novel.id }
                     )
                     NovelMenu(
                         novel = novel,
-                        expanded = showMenu,
-                        onDismiss = { showMenu = false },
-                        onChangeCover = { showMenu = false; onRequestChangeCover(novel) },
-                        onCoverByUrl = { showMenu = false; onRequestCoverByUrl(novel) },
-                        onToggleAutoUpdate = { showMenu = false; onToggleAutoUpdate(novel) },
-                        onCheckForUpdates = { showMenu = false; onCheckForUpdates(novel) },
-                        onResyncChapters = { showMenu = false; onResyncChapters(novel) },
-                        onChapters = { showMenu = false; onChapters(novel) },
-                        onAddToCollection = { showMenu = false; onAddToCollection(novel) },
+                        expanded = menuNovelId == novel.id,
+                        onDismiss = { menuNovelId = null },
+                        onChangeCover = { menuNovelId = null; onRequestChangeCover(novel) },
+                        onCoverByUrl = { menuNovelId = null; onRequestCoverByUrl(novel) },
+                        onToggleAutoUpdate = { menuNovelId = null; onToggleAutoUpdate(novel) },
+                        onCheckForUpdates = { menuNovelId = null; onCheckForUpdates(novel) },
+                        onResyncChapters = { menuNovelId = null; onResyncChapters(novel) },
+                        onChapters = { menuNovelId = null; onChapters(novel) },
+                        onAddToCollection = { menuNovelId = null; onAddToCollection(novel) },
                         onToggleFavorite = { updatedNovel -> onToggleFavorite(updatedNovel) },
-                        onDelete = { showMenu = false; onLongClick(novel) }
+                        onDelete = { menuNovelId = null; onLongClick(novel) }
                     )
                 }
             }
@@ -397,3 +403,18 @@ private fun QueuedNovelRow(title: String, wallpaperActive: Boolean) {
         }
     }
 }
+
+/**
+ * Saves the scroll *position* and not the key of the first visible item, which is what
+ * `LazyListState.Saver` does: opening a novel re-sorts it to the top (`ORDER BY lastReadAt DESC`), so
+ * the default saver dragged the reader back to the top of the library when they returned.
+ */
+internal val LibraryScrollPosition = Saver<LazyListState, List<Int>>(
+    save = { listOf(it.firstVisibleItemIndex, it.firstVisibleItemScrollOffset) },
+    restore = { LazyListState(it[0], it[1]) }
+)
+
+internal val LibraryGridScrollPosition = Saver<LazyGridState, List<Int>>(
+    save = { listOf(it.firstVisibleItemIndex, it.firstVisibleItemScrollOffset) },
+    restore = { LazyGridState(it[0], it[1]) }
+)

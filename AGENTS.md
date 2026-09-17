@@ -174,6 +174,17 @@ Manual `Migration(start, end)` in `NovelDatabase.Companion`. Each uses raw `exec
 
 4 DataStore instances: `app_prefs`, `reader_prefs`, `import_prefs`, `library_prefs`. Each with its own preferences class.
 
+### Library list
+
+The novel rows are keyed by **position**, not by novel id. The library re-sorts itself on every open
+(`ORDER BY lastReadAt DESC`), and the reorder reaches the screen while it is still composed — it stays
+on screen through the navigation transition, which is also why the search box is empty when you come
+back. With item keys the viewport follows the novel that moved: opening the topmost visible novel sent
+the reader back to the top of the library. Positional keys keep the place and let the opened novel
+move to the top, which is the point (`LibraryTabScrollTest` pins both views). The open-menu state is
+hoisted to `menuNovelId` for the same reason: a per-row `remember` would stick to whatever row ends up
+at that position.
+
 ### Library bottom bar
 
 `LibraryStatsBar` (novels/chapters/bookmarks counters) is the `Scaffold`'s
