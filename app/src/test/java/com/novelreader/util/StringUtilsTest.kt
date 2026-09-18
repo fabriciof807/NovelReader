@@ -30,4 +30,10 @@ class StringUtilsTest {
         assertThat(StringUtils.hostMatchesDomain("FreeWebNovel.com.", "freewebnovel.com")).isTrue()
         assertThat(StringUtils.hostMatchesDomain("m.freewebnovel.com:8080", "freewebnovel.com")).isTrue()
     }
+
+    @Test fun `hostMatchesDomain requires exact equality for bracketed IPv6 literals`() {
+        assertThat(StringUtils.hostMatchesDomain("[2001:4860:4860::8888]", "[2001:4860:4860::8888]")).isTrue()
+        assertThat(StringUtils.hostMatchesDomain("[2001:4860:4860::8888]", "[2001:4860:4860::8844]")).isFalse()
+        assertThat(StringUtils.hostMatchesDomain("[2001:4860:4860::8888]", "freewebnovel.com")).isFalse()
+    }
 }

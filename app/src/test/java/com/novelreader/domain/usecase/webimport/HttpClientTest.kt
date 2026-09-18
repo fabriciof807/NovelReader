@@ -41,6 +41,14 @@ class HttpClientTest {
     }
 
     @Test
+    fun sameNovelDomain_requiresExactIpv6LiteralEquality() {
+        val policy = RemoteRequestPolicy.SameNovelDomain("[2001:4860:4860::8888]")
+
+        assertThat(policy.allows("https://[2001:4860:4860::8888]/chapter")).isTrue()
+        assertThat(policy.allows("https://[2001:4860:4860::8844]/chapter")).isFalse()
+    }
+
+    @Test
     fun get_rejectsCrossDomainRedirectBeforeContactingTarget() = runBlocking {
         val foreign = MockWebServer().apply { start() }
         try {

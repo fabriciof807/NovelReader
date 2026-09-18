@@ -31,9 +31,16 @@ object StringUtils {
     }
 
     fun hostMatchesDomain(host: String, expected: String): Boolean {
-        val h = host.lowercase().substringBefore(':').removePrefix("www.").trimEnd('.')
-        val e = expected.lowercase().substringBefore(':').removePrefix("www.").trimEnd('.')
-        if (e.isEmpty()) return false
-        return h == e || h.endsWith(".${e}")
+        val h = host.lowercase()
+        val e = expected.lowercase()
+        val hIsIpv6 = h.startsWith("[") && h.endsWith("]")
+        val eIsIpv6 = e.startsWith("[") && e.endsWith("]")
+        if (hIsIpv6 || eIsIpv6) {
+            return hIsIpv6 && eIsIpv6 && h == e
+        }
+        val hn = h.substringBefore(':').removePrefix("www.").trimEnd('.')
+        val en = e.substringBefore(':').removePrefix("www.").trimEnd('.')
+        if (en.isEmpty()) return false
+        return hn == en || hn.endsWith(".${en}")
     }
 }
