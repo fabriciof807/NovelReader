@@ -1,15 +1,21 @@
 # Contributing to NovelReader
 
-Thank you for considering contributing to NovelReader.
+Thank you for helping improve NovelReader. It is an offline-first Android reader built with Kotlin and Jetpack Compose.
+
+## Before you start
+
+- Search [existing issues](https://github.com/fabriciof807/NovelReader/issues) before opening a new one.
+- For a substantial feature or architecture change, open an issue first so the approach can be discussed.
+- Keep each pull request focused on one fix or feature.
 
 ## Prerequisites
 
 - JDK 17
-- Android Studio Ladybug (2024.2+) or later
-- Android SDK with API 34 and Build Tools 35
-- Emulator or physical device for instrumented tests
+- Android Studio Ladybug (2024.2) or later
+- Android SDK Platform 37
+- An emulator or device for instrumented tests
 
-## Setup
+## Set up the project
 
 ```bash
 git clone https://github.com/fabriciof807/NovelReader.git
@@ -17,83 +23,70 @@ cd NovelReader
 ./gradlew :app:assembleDebug
 ```
 
-## Development Workflow
+Run the regular verification suite before opening a pull request:
 
-1. Create a feature branch from `main`
-2. Make your changes
-3. Run tests before committing:
-   ```bash
-   ./gradlew :app:compileDebugKotlin :app:testDebugUnitTest
-   ```
-4. Open a pull request
+```bash
+./gradlew :app:compileDebugKotlin :app:testDebugUnitTest
+```
 
-## Code Style
+Run instrumented tests when your change needs a device, Android framework behaviour, Room integration, or Compose UI coverage:
 
-- Follow the [Kotlin coding conventions](https://kotlinlang.org/docs/coding-conventions.html)
-- Use `ktfmt` or Android Studio's built-in formatter
-- No comments in code unless explicitly requested
-- Prefer `val` over `var`
-- Use sealed classes for state representation
+```bash
+./gradlew :app:connectedDebugAndroidTest
+```
 
-## Architecture Conventions
+## Development workflow
 
-### Adding a New Parser
+1. Create a branch from `main` (or fork the repository if you do not have write access).
+2. Make the smallest change that solves the issue.
+3. Format Kotlin with Android Studio's built-in formatter and follow the [Kotlin coding conventions](https://kotlinlang.org/docs/coding-conventions.html).
+4. Add or update tests for changed behaviour.
+5. Run the relevant verification commands.
+6. Open a pull request against `main`.
 
-1. Create a class implementing `NovelParser` or extending `AbstractNovelParser`
-2. Implement `canParse(domain: String): Boolean` and `parse(doc: Document, fileName: String): ParsedChapter`
-3. Bind it in `ParserModule.kt` using `@Binds @IntoSet`:
-   ```kotlin
-   @Binds @IntoSet
-   abstract fun bindMyParser(impl: MyParser): NovelParser
-   ```
-4. Add tests in `data/parser/` with real HTML fixtures
+## Project conventions
 
-### Adding a New DAO
+- Prefer immutable `val` values and Kotlin's official style.
+- Keep comments for non-obvious decisions; let clear names and structure explain routine code.
+- Keep UI state in `StateFlow`, inject dependencies with Hilt, and call DAOs through use cases where the existing feature follows that pattern. Do not add a repository layer solely as a pass-through.
+- Add a new website parser through `NovelParser`/`AbstractNovelParser`, bind it with `@Binds @IntoSet` in `ParserModule`, and add real HTML fixtures and parser tests.
+- All production programmatic remote reads must use `HttpClient` and its request policies. Do not add `java.net.URL`, `openConnection`, or `Jsoup.connect` for remote reads.
 
-1. Define the DAO interface with Room annotations
-2. Add the abstract method to `NovelDatabase`
-3. Provide it in `DatabaseModule.kt`
-4. Write instrumented tests in `androidTest/`
+### Database changes
 
-### Adding a New Screen
+For a new entity or persisted field:
 
-1. Create the screen composable in `ui/yourfeature/`
-2. Create a ViewModel with `@HiltViewModel`
-3. Add the route to `Routes` object in `NavGraph.kt`
-4. Wire up navigation in `NovelReaderNavGraph`
+1. Update the Room entity and `NovelDatabase`.
+2. Add and register a manual migration in `NovelDatabase.Companion`.
+3. Export and commit the updated schema JSON in `app/schemas/`.
+4. Add migration and DAO tests as appropriate.
 
-### Adding a New Entity
+Use `./gradlew :app:exportSchema` when schema export is needed.
 
-1. Create the entity class with `@Entity` annotation
-2. Add it to the `@Database` entities list in `NovelDatabase`
-3. Create a migration in `NovelDatabase.Companion`
-4. Increment the database version
-5. Test the migration
+### UI changes
 
-## Testing Guidelines
+- Put screens and components in the existing feature-oriented `ui/` structure.
+- Use `@HiltViewModel` for screen state and add routes in `Routes` and `NovelReaderNavGraph` when navigation changes.
+- Include screenshots in the pull request when the visible UI changes.
+- Test accessibility labels and state semantics for icon-only controls and custom controls.
 
-- Unit tests: Use Robolectric for Android context, MockK for mocking, Turbine for Flow testing
-- Instrumented tests: Use Room in-memory DB, Compose Test Rule for UI
-- Parser tests: Use real HTML fixture files from `src/test/resources/`
-- Always test edge cases (empty input, malformed HTML, network errors)
+## Pull request checklist
 
-## Commit Messages
+- [ ] The PR targets `main` and has a concise description.
+- [ ] It is limited to one coherent change.
+- [ ] Tests cover changed behaviour and the relevant Gradle commands pass.
+- [ ] Room schemas and migrations are included when persistence changes.
+- [ ] UI changes include screenshots where practical.
+- [ ] No secrets, keystores, local data, generated APKs, or build output are included.
 
-- Use present tense ("Add feature" not "Added feature")
-- Keep first line under 72 characters
-- Reference issues when applicable
+## Reporting bugs
 
-## Pull Request Guidelines
+Open an issue with steps to reproduce, expected and actual behaviour, device/Android version, and relevant logs with sensitive data removed.
 
-- PR should target `main`
-- Include a clear description of changes
-- Add screenshots for UI changes
-- Ensure all tests pass
-- Keep PRs focused — one feature/fix per PR
+## Reporting security vulnerabilities
 
-## Reporting Issues
+Do not open a public issue for a suspected vulnerability. Instead, use a [private GitHub security advisory](https://github.com/fabriciof807/NovelReader/security/advisories/new) with reproduction steps and impact. Do not include credentials, tokens, private keys, or personal data.
 
-- Use GitHub Issues
-- Include steps to reproduce
-- Include device/OS version
-- Attach logs if applicable
+## License
+
+By contributing, you agree that your contribution is licensed under the repository's [MIT License](LICENSE).
