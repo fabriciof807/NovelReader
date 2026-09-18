@@ -190,6 +190,8 @@ created per crawl and shared by `ChapterCrawler` and both list augmenters, and
 
 `ImportWorkScheduler` -> `ChapterImportWorker` -> `WebImportUseCase.importChapters`. Supports SEQUENTIAL (queue-based) and PARALLEL modes via `ImportPreferences`. `WorkCompletionObserver` tracks progress and triggers next job. `WorkManager` shows a foreground notification during import. `BackgroundImportManager` tracks import state, queue, cancel per novel (via `ImportPreferences.getJobsByNovelTitle`).
 
+One import is split into 100-chapter batches (`ImportJobSpec.BATCH_SIZE`), queued as specs and run one batch at a time under the single unique work name `chapter_import_active`. Inside a batch, `importChapters` flushes the pending chapters to the database every `INSERT_FLUSH_EVERY` (20) fetched chapters, plus a final flush, and calls `NovelImporter.finalizeChapterOrder` once at the end. That flush is what makes chapters (and the novel's `totalChapters`) visible while the batch is still downloading — do not go back to a single insert after the loop, or nothing appears until a whole batch finishes. `orderIndex` comes from `orderIndexOffset + index` (position inside the batch), so flushing earlier does not change ordering; `normalize` runs once per batch, in `finalizeChapterOrder`.
+
 ### Failed Chapter Recovery
 
 `ScanMissingChaptersUseCase` is the primary recovery path:
@@ -359,7 +361,7 @@ Two independent global slots (`WallpaperStorage.SLOT_HOME`, `SLOT_READER`), neve
 - **Instrumented tests**: Room in-memory DB, Compose Test Rule, Espresso
 - Parser tests use real HTML fixtures
 - ViewModel tests inject mocked DAOs/use cases
-- **Current count: 762 unit tests**
+- **Current count: 765 unit tests**
 - **Always run `./gradlew :app:compileDebugKotlin :app:testDebugUnitTest` before pushing**
 
 ## Recent Sessions
