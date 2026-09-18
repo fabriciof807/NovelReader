@@ -13,6 +13,7 @@ import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
 import io.mockk.slot
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.test.runTest
 import org.junit.Before
@@ -189,6 +190,39 @@ class MvlempyrCharacterImporterTest {
 
         assertThat(count).isEqualTo(1)
         assertThat(designFile().exists()).isFalse()
+        assertThat(characterDir().listFiles().orEmpty().map { it.name }).isEmpty()
+    }
+
+    @Test
+    fun `api cancellation is rethrown instead of skipping the page`() = runTest {
+        coEvery { httpClient.get(SOURCE_URL, any(), any(), any(), any(), any()) } returns
+            response(SOURCE_URL, """filter(e => "42" === e.BookId)""")
+        coEvery { httpClient.get(match { pageOf(it) == 1 }, any(), any(), any(), any(), any()) } returns
+            response("api-1", """[{"BookId":"42","Name":"A"}]""")
+        coEvery { httpClient.get(match { pageOf(it) >= 2 }, any(), any(), any(), any(), any()) } throws
+            CancellationException("cancelled")
+
+        val error = runCatching { importer.importCharacters(SOURCE_URL, NOVEL_ID) }.exceptionOrNull()
+
+        assertThat(error).isInstanceOf(CancellationException::class.java)
+        coVerify(exactly = 1) {
+            httpClient.get(match { pageOf(it) == 2 }, any(), any(), any(), any(), any())
+        }
+        coVerify(exactly = 0) { characterDao.insert(any()) }
+    }
+
+    @Test
+    fun `image cancellation is rethrown instead of being swallowed`() = runTest {
+        coEvery { httpClient.get(SOURCE_URL, any(), any(), any(), any(), any()) } returns
+            response(SOURCE_URL, """filter(e => "42" === e.BookId)""")
+        stubApi(1 to characterJson("A", DESIGN_IMAGE_URL), 2 to "[]")
+        coEvery { httpClient.get(DESIGN_IMAGE_URL, any(), any(), any(), any(), any()) } throws
+            CancellationException("cancelled")
+
+        val error = runCatching { importer.importCharacters(SOURCE_URL, NOVEL_ID) }.exceptionOrNull()
+
+        assertThat(error).isInstanceOf(CancellationException::class.java)
+        coVerify(exactly = 0) { characterDao.insert(any()) }
         assertThat(characterDir().listFiles().orEmpty().map { it.name }).isEmpty()
     }
 

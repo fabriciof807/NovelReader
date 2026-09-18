@@ -12,6 +12,7 @@ import com.novelreader.domain.usecase.webimport.HttpResponse
 import com.novelreader.domain.usecase.webimport.RemoteRequestPolicy
 import com.novelreader.util.StringUtils
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
@@ -59,7 +60,13 @@ class MvlempyrCharacterImporter @Inject constructor(
         val allCharacters = mutableListOf<JSONObject>()
         var consecutiveFailures = 0
         for (page in 1..MAX_API_PAGES) {
-            val response = runCatching { fetchApiPage(page) }.getOrNull()
+            val response = try {
+                fetchApiPage(page)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                null
+            }
             val pageItems = response
                 ?.takeIf { it.statusCode in 200..299 }
                 ?.let { runCatching { JSONArray(it.body) }.getOrNull() }
@@ -147,6 +154,8 @@ class MvlempyrCharacterImporter @Inject constructor(
             temp.writeBytes(bytes)
             if (!temp.renameTo(dest)) return null
             dest
+        } catch (e: CancellationException) {
+            throw e
         } catch (_: Exception) {
             null
         } finally {
