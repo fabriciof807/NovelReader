@@ -92,10 +92,20 @@ fun CloudflareChallengeDialog(
                             )
                             settings.javaScriptEnabled = true
                             settings.domStorageEnabled = true
+                            settings.allowContentAccess = false
+                            settings.allowFileAccess = false
                             CookieManager.getInstance().setAcceptCookie(true)
-                            CookieManager.getInstance().setAcceptThirdPartyCookies(this, true)
+                            CookieManager.getInstance().setAcceptThirdPartyCookies(this, false)
                             webChromeClient = WebChromeClient()
                             webViewClient = object : WebViewClient() {
+                                override fun shouldOverrideUrlLoading(
+                                    view: WebView,
+                                    request: android.webkit.WebResourceRequest
+                                ): Boolean = CloudflareChallengePolicy.shouldBlockNavigation(
+                                    request.url.toString(),
+                                    expectedHost
+                                )
+
                                 override fun onPageFinished(view: WebView, loadedUrl: String) {
                                     scope.launch {
                                         delay(2000)

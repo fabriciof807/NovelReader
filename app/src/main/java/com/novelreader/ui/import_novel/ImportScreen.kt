@@ -435,12 +435,9 @@ private fun WebImportTab(
         }
 
         state.cloudflareChallenge?.let { challenge ->
-            val expectedHost = remember(challenge.url) {
-                try { Uri.parse(challenge.url).host ?: "" } catch (_: Exception) { "" }
-            }
             CloudflareChallengeDialog(
                 url = challenge.url,
-                expectedHost = expectedHost,
+                expectedHost = challenge.expectedHost,
                 onCookiesCollected = viewModel::onCloudflareCookiesCollected,
                 onCancel = viewModel::onCloudflareChallengeCancelled
             )

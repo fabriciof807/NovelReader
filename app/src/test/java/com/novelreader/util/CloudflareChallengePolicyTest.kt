@@ -42,4 +42,34 @@ class CloudflareChallengePolicyTest {
         assertThat(CloudflareChallengePolicy.isAllowed("not a url", "freewebnovel.com")).isFalse()
         assertThat(CloudflareChallengePolicy.isAllowed("https://freewebnovel.com/x", "")).isFalse()
     }
+
+    @Test
+    fun `navigation rejects a foreign https host`() {
+        assertThat(
+            CloudflareChallengePolicy.shouldBlockNavigation(
+                "https://evil.example/landing",
+                "freewebnovel.com"
+            )
+        ).isTrue()
+    }
+
+    @Test
+    fun `navigation permits the expected host`() {
+        assertThat(
+            CloudflareChallengePolicy.shouldBlockNavigation(
+                "https://www.freewebnovel.com/landing",
+                "freewebnovel.com"
+            )
+        ).isFalse()
+    }
+
+    @Test
+    fun `navigation blocks when the expected host is blank`() {
+        assertThat(
+            CloudflareChallengePolicy.shouldBlockNavigation(
+                "https://freewebnovel.com/landing",
+                ""
+            )
+        ).isTrue()
+    }
 }

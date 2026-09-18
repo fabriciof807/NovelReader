@@ -25,7 +25,8 @@ data class WebImportError(
 )
 
 data class CloudflareChallenge(
-    val url: String
+    val url: String,
+    val expectedHost: String
 )
 
 data class WebImportState(
@@ -85,6 +86,7 @@ class WebImportViewModel @Inject constructor(
     fun fetchChapters() {
         val url = _state.value.url.trim()
         if (url.isBlank()) return
+        val expectedHost = hostOf(url)
 
         _state.value = _state.value.copy(
             isLoadingChapters = true,
@@ -117,7 +119,10 @@ class WebImportViewModel @Inject constructor(
                     if (e is CloudflareChallengeRequiredException) {
                         _state.value = _state.value.copy(
                             isLoadingChapters = false,
-                            cloudflareChallenge = CloudflareChallenge(url = e.url)
+                            cloudflareChallenge = CloudflareChallenge(
+                                url = e.url,
+                                expectedHost = expectedHost
+                            )
                         )
                     } else {
                         _state.value = _state.value.copy(
@@ -205,6 +210,9 @@ class WebImportViewModel @Inject constructor(
     fun resetState() {
         _state.value = WebImportState()
     }
+
+    private fun hostOf(url: String): String =
+        runCatching { java.net.URI(url).host.orEmpty() }.getOrDefault("")
 
     private fun detectNovelTitle(links: List<ChapterLink>): String {
         val fallback = getApplication<Application>().getString(R.string.web_import_unknown_novel)

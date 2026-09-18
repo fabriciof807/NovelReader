@@ -13,4 +13,7 @@ object CloudflareChallengePolicy {
         val host = uri.host ?: return false
         return StringUtils.hostMatchesDomain(host, expectedHost)
     }
+
+    fun shouldBlockNavigation(url: String, expectedHost: String): Boolean =
+        !isAllowed(url, expectedHost)
 }
