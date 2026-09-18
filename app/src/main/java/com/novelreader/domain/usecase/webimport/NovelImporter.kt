@@ -93,9 +93,12 @@ class NovelImporter @Inject constructor(
                 isNew = true
             )
         })
+        novelDao.updateChapterCount(novelId, chapterDao.countByNovel(novelId))
+    }
+
+    suspend fun finalizeChapterOrder(novelId: Long) {
         chapterOrderNormalizer.normalize(novelId)
-        val totalChapters = chapterDao.getChaptersByNovelSync(novelId).size
-        novelDao.updateChapterCount(novelId, totalChapters)
+        novelDao.updateChapterCount(novelId, chapterDao.countByNovel(novelId))
     }
 
     fun fileNameFromUrl(url: String, chapterNumber: Int): String {

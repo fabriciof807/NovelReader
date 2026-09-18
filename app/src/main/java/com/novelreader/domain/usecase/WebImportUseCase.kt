@@ -40,6 +40,7 @@ class WebImportUseCase @Inject constructor(
 ) {
     companion object {
         private const val CHAPTER_FETCH_PACING_MS = 5_000L
+        private const val INSERT_FLUSH_EVERY = 20
     }
 
     suspend fun fetchChapterList(homeUrl: String): Result<FetchResult> = withContext(io) {
@@ -95,6 +96,7 @@ class WebImportUseCase @Inject constructor(
 
             val sorted = links.sortedBy { it.chapterNumber }
             var successCount = 0
+            var insertedAny = false
             val importedChapters = mutableListOf<ImportedChapter>()
 
             for ((index, link) in sorted.withIndex()) {
@@ -165,16 +167,25 @@ class WebImportUseCase @Inject constructor(
                     deleteExistingChapter(novelId, fileName, existingFileNames, existingByFileName)
                 }
                 onProgress?.invoke(successCount, sorted.size)
+
+                if (importedChapters.size >= INSERT_FLUSH_EVERY) {
+                    novelImporter.insertChapters(novelId, importedChapters)
+                    importedChapters.clear()
+                    insertedAny = true
+                }
             }
 
             if (importedChapters.isNotEmpty()) {
                 novelImporter.insertChapters(novelId, importedChapters)
+                importedChapters.clear()
+                insertedAny = true
+            }
+            novelImporter.finalizeChapterOrder(novelId)
+            if (insertedAny) {
                 val wasExisting = existingChapters.isNotEmpty() || targetNovelId != null
                 if (wasExisting) {
                     novelDao.setHasUpdates(novelId, true)
                 }
-            } else {
-                novelDao.updateChapterCount(novelId, chapterDao.getChaptersByNovelSync(novelId).size)
             }
             Result.success(novelId)
         } catch (e: Exception) {

@@ -23,10 +23,14 @@ import com.novelreader.domain.usecase.webimport.NovelListAugmenter
 import com.novelreader.domain.usecase.webimport.InMemoryCloudflareCookieStore
 import com.novelreader.domain.usecase.webimport.NovelImporter
 import com.novelreader.domain.usecase.webimport.RateLimitedException
+import com.novelreader.util.StringUtils
 import io.mockk.coEvery
 import io.mockk.mockk
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -54,26 +58,28 @@ class WebImportUseCaseTest {
         novelDao = database.novelDao()
         chapterDao = database.chapterDao()
         failedChapterDao = database.failedChapterDao()
+        chapterFetcher = mockk(relaxed = true)
+        useCase = buildUseCase(Dispatchers.Unconfined)
+    }
+
+    private fun buildUseCase(io: CoroutineDispatcher): WebImportUseCase {
+        val context = ApplicationProvider.getApplicationContext<Context>()
         val parserRegistry = ParserRegistry(
             parsers = emptySet(),
             fallbackParser = GenericFallbackParser(),
             mhtParser = MhtParser()
         )
         val httpClient = HttpClient(InMemoryCloudflareCookieStore())
-        val coverDownloader = CoverDownloader(novelDao, httpClient)
-        val novelImporter = NovelImporter(novelDao, chapterDao, ChapterOrderNormalizer(chapterDao), database.novelSourceDao())
-        chapterFetcher = mockk(relaxed = true)
-
-        useCase = WebImportUseCase(
+        return WebImportUseCase(
             context = context,
             chapterCrawler = ChapterCrawler(httpClient, emptySet<NovelListAugmenter>()),
             chapterFetcher = chapterFetcher,
-            coverDownloader = coverDownloader,
-            novelImporter = novelImporter,
+            coverDownloader = CoverDownloader(novelDao, httpClient),
+            novelImporter = NovelImporter(novelDao, chapterDao, ChapterOrderNormalizer(chapterDao), database.novelSourceDao()),
             failedChapterDao = failedChapterDao,
             novelDao = novelDao,
             chapterDao = chapterDao,
-            io = Dispatchers.Unconfined
+            io = io
         )
     }
 
@@ -340,5 +346,94 @@ class WebImportUseCaseTest {
 
         val novel = novelDao.getNovelByTitle("Total Consistent Novel")!!
         assertThat(novel.totalChapters).isEqualTo(2)
+    }
+
+    @Test
+    fun importChapters_flushesEvery20ChaptersBeforeTheBatchEnds() = runTest {
+        val links = (1..25).map {
+            ChapterLink(title = "Chapter $it", url = "https://example.com/ch$it.html", chapterNumber = it)
+        }
+        val chaptersInDbAtFetch = mutableListOf<Int>()
+        val novelTotalAtFetch = mutableListOf<Int>()
+        coEvery { chapterFetcher.fetch(any(), any(), any(), any()) } coAnswers {
+            val url = invocation.args[0] as String
+            val novel = novelDao.getNovelByTitle("Incremental Novel")
+            chaptersInDbAtFetch += novel?.let { chapterDao.getChaptersByNovelSync(it.id).size } ?: 0
+            novelTotalAtFetch += novel?.totalChapters ?: -1
+            FetchedChapter(
+                title = "Chapter",
+                content = "<p>${"Real content. ".repeat(30)}</p>",
+                fileName = StringUtils.fileNameFromUrl(url, "chapter")
+            )
+        }
+
+        val result = buildUseCase(UnconfinedTestDispatcher(testScheduler)).importChapters(
+            novelTitle = "Incremental Novel",
+            links = links,
+            sourceUrl = "https://example.com/novel"
+        )
+
+        assertThat(result.isSuccess).isTrue()
+        assertThat(chaptersInDbAtFetch).hasSize(25)
+        assertThat(chaptersInDbAtFetch[19]).isEqualTo(0)
+        assertThat(chaptersInDbAtFetch[20]).isEqualTo(20)
+        assertThat(novelTotalAtFetch[20]).isEqualTo(20)
+
+        val novel = novelDao.getNovelByTitle("Incremental Novel")!!
+        assertThat(chapterDao.getChaptersByNovelSync(novel.id)).hasSize(25)
+        assertThat(novelDao.getNovelById(novel.id)!!.totalChapters).isEqualTo(25)
+    }
+
+    @Test
+    fun importChapters_keepsChapterOrderAcrossIncrementalFlushes() = runTest {
+        val links = (1..25).map {
+            ChapterLink(title = "Chapter $it", url = "https://example.com/order$it.html", chapterNumber = it)
+        }
+        coEvery { chapterFetcher.fetch(any(), any(), any(), any()) } coAnswers {
+            val url = invocation.args[0] as String
+            FetchedChapter(
+                title = "Chapter",
+                content = "<p>${"Real content. ".repeat(30)}</p>",
+                fileName = StringUtils.fileNameFromUrl(url, "chapter")
+            )
+        }
+
+        val result = buildUseCase(UnconfinedTestDispatcher(testScheduler)).importChapters(
+            novelTitle = "Ordered Novel",
+            links = links,
+            sourceUrl = "https://example.com/novel"
+        )
+
+        assertThat(result.isSuccess).isTrue()
+        val novel = novelDao.getNovelByTitle("Ordered Novel")!!
+        val chapters = chapterDao.getChaptersByNovelSync(novel.id)
+        assertThat(chapters.map { it.orderIndex }).isEqualTo((0 until 25).toList())
+        assertThat(chapters.map { it.fileName }).isEqualTo((1..25).map { "order$it" })
+    }
+
+    @Test
+    fun importChapters_belowTheFlushThresholdPersistsEverythingAtTheEnd() = runTest {
+        val links = (1..5).map {
+            ChapterLink(title = "Chapter $it", url = "https://example.com/small$it.html", chapterNumber = it)
+        }
+        coEvery { chapterFetcher.fetch(any(), any(), any(), any()) } coAnswers {
+            val url = invocation.args[0] as String
+            FetchedChapter(
+                title = "Chapter",
+                content = "<p>${"Real content. ".repeat(30)}</p>",
+                fileName = StringUtils.fileNameFromUrl(url, "chapter")
+            )
+        }
+
+        val result = buildUseCase(UnconfinedTestDispatcher(testScheduler)).importChapters(
+            novelTitle = "Small Novel",
+            links = links,
+            sourceUrl = "https://example.com/novel"
+        )
+
+        assertThat(result.isSuccess).isTrue()
+        val novel = novelDao.getNovelByTitle("Small Novel")!!
+        assertThat(chapterDao.getChaptersByNovelSync(novel.id)).hasSize(5)
+        assertThat(novelDao.getNovelById(novel.id)!!.totalChapters).isEqualTo(5)
     }
 }

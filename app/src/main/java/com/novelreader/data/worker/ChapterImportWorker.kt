@@ -11,7 +11,6 @@ import androidx.work.workDataOf
 import com.novelreader.data.local.db.dao.NovelDao
 import com.novelreader.domain.usecase.BackgroundImportError
 import com.novelreader.domain.usecase.ChapterLink
-import com.novelreader.domain.usecase.ChapterOrderNormalizer
 import com.novelreader.domain.usecase.ImportJobSpec
 import com.novelreader.domain.usecase.WebImportUseCase
 import dagger.assisted.Assisted
@@ -28,7 +27,6 @@ class ChapterImportWorker @AssistedInject constructor(
     private val webImportUseCase: WebImportUseCase,
     private val notificationHelper: ImportNotificationHelper,
     private val workCompletionObserver: WorkCompletionObserver,
-    private val chapterOrderNormalizer: ChapterOrderNormalizer,
     private val specFileStore: SpecFileStore,
     private val novelDao: NovelDao
 ) : CoroutineWorker(appContext, params) {
@@ -79,7 +77,6 @@ class ChapterImportWorker @AssistedInject constructor(
 
         if (result.isSuccess) {
             result.getOrNull()?.let { novelId ->
-                chapterOrderNormalizer.normalize(novelId)
                 if (spec.splitIndex == spec.splitCount - 1) {
                     spec.isFavorite?.let { novelDao.updateFavorite(novelId, it) }
                 }
