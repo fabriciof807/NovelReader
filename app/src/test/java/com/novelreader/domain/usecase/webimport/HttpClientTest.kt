@@ -2,12 +2,15 @@ package com.novelreader.domain.usecase.webimport
 
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.runBlocking
+import okhttp3.Dns
 import okhttp3.OkHttpClient
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import org.junit.After
+import org.junit.Assert.assertThrows
 import org.junit.Before
 import org.junit.Test
+import java.net.InetAddress
 import java.util.concurrent.TimeUnit
 
 class HttpClientTest {
@@ -19,18 +22,66 @@ class HttpClientTest {
     fun setUp() {
         server = MockWebServer()
         server.start()
-        val okClient = OkHttpClient.Builder()
-            .connectTimeout(30, TimeUnit.SECONDS)
-            .readTimeout(30, TimeUnit.SECONDS)
-            .followRedirects(true)
-            .followSslRedirects(true)
-            .build()
-        client = HttpClient(InMemoryCloudflareCookieStore(), okClient)
+        client = testClient()
     }
 
     @After
     fun tearDown() {
         server.shutdown()
+    }
+
+    @Test
+    fun sameNovelDomain_rejectsForeignHostsAndCleartext() {
+        val policy = RemoteRequestPolicy.SameNovelDomain("freewebnovel.com")
+
+        assertThat(policy.allows("https://www.freewebnovel.com/chapter")).isTrue()
+        assertThat(policy.allows("https://cdn.freewebnovel.com/chapter")).isTrue()
+        assertThat(policy.allows("https://evil.example/chapter")).isFalse()
+        assertThat(policy.allows("http://freewebnovel.com/chapter")).isFalse()
+    }
+
+    @Test
+    fun get_rejectsCrossDomainRedirectBeforeContactingTarget() = runBlocking {
+        val foreign = MockWebServer().apply { start() }
+        try {
+            server.enqueue(
+                MockResponse()
+                    .setResponseCode(302)
+                    .setHeader("Location", "http://evil.example:${foreign.port}/landing")
+            )
+            val guarded = testClient(
+                hosts = mapOf(
+                    "novel.example" to InetAddress.getByName("127.0.0.1"),
+                    "evil.example" to InetAddress.getByName("127.0.0.1")
+                )
+            )
+
+            assertThrows(RemoteRequestRejectedException::class.java) {
+                runBlocking {
+                    guarded.get(
+                        "http://novel.example:${server.port}/start",
+                        policy = RemoteRequestPolicy.SameNovelDomain("novel.example")
+                    )
+                }
+            }
+            assertThat(foreign.requestCount).isEqualTo(0)
+        } finally {
+            foreign.shutdown()
+        }
+    }
+
+    @Test
+    fun get_stopsAfterFiveRedirects() = runBlocking<Unit> {
+        repeat(6) { index ->
+            server.enqueue(
+                MockResponse().setResponseCode(302).setHeader("Location", "/hop-${index + 1}")
+            )
+        }
+
+        assertThrows(RemoteRequestRejectedException::class.java) {
+            runBlocking { client.get("http://127.0.0.1:${server.port}/start") }
+        }
+        assertThat(server.requestCount).isEqualTo(6)
     }
 
     @Test
@@ -53,9 +104,13 @@ class HttpClientTest {
     @Test
     fun get_rejectsBodiesLargerThanTheLimit() = runBlocking<Unit> {
         client.maxBodyBytes = 1024
-        server.enqueue(MockResponse().setBody("x".repeat(4096)).setResponseCode(200))
+        server.enqueue(
+            MockResponse()
+                .setChunkedBody("x".repeat(4096), 128)
+                .setResponseCode(200)
+        )
 
-        org.junit.Assert.assertThrows(java.io.IOException::class.java) {
+        assertThrows(java.io.IOException::class.java) {
             runBlocking { client.get("http://127.0.0.1:${server.port}/huge") }
         }
     }
@@ -73,7 +128,7 @@ class HttpClientTest {
                 .setResponseCode(200)
         )
 
-        org.junit.Assert.assertThrows(java.io.IOException::class.java) {
+        assertThrows(java.io.IOException::class.java) {
             runBlocking { client.get("http://127.0.0.1:${server.port}/bomb") }
         }
     }
@@ -96,12 +151,7 @@ class HttpClientTest {
             url = "http://127.0.0.1:${server.port}",
             cookies = listOf(StoredCookie(name = "cf_clearance", value = "abc123", domain = "127.0.0.1", path = "/", expiresAt = System.currentTimeMillis() + 3_600_000L))
         )
-        val clientWithStore = HttpClient(store, OkHttpClient.Builder()
-            .connectTimeout(30, TimeUnit.SECONDS)
-            .readTimeout(30, TimeUnit.SECONDS)
-            .followRedirects(true)
-            .followSslRedirects(true)
-            .build())
+        val clientWithStore = testClient(store = store)
         server.enqueue(MockResponse().setBody("ok").setResponseCode(200))
 
         clientWithStore.get("http://127.0.0.1:${server.port}/page")
@@ -149,12 +199,7 @@ class HttpClientTest {
     @Test
     fun get_persistsSetCookieAndSendsItOnSubsequentRequest() = runBlocking {
         val store = InMemoryCloudflareCookieStore()
-        val clientWithStore = HttpClient(store, OkHttpClient.Builder()
-            .connectTimeout(30, TimeUnit.SECONDS)
-            .readTimeout(30, TimeUnit.SECONDS)
-            .followRedirects(true)
-            .followSslRedirects(true)
-            .build())
+        val clientWithStore = testClient(store = store)
         server.enqueue(
             MockResponse()
                 .setResponseCode(200)
@@ -175,5 +220,23 @@ class HttpClientTest {
 
         val secondRequest = server.takeRequest()
         assertThat(secondRequest.getHeader("Cookie") ?: "").contains("articlevisited=1")
+    }
+
+    private fun testClient(
+        hosts: Map<String, InetAddress> = emptyMap(),
+        store: CloudflareCookieStore = InMemoryCloudflareCookieStore()
+    ): HttpClient {
+        val dns = object : Dns {
+            override fun lookup(hostname: String): List<InetAddress> =
+                hosts[hostname]?.let { listOf(it) } ?: Dns.SYSTEM.lookup(hostname)
+        }
+        val okClient = OkHttpClient.Builder()
+            .connectTimeout(30, TimeUnit.SECONDS)
+            .readTimeout(30, TimeUnit.SECONDS)
+            .followRedirects(true)
+            .followSslRedirects(true)
+            .dns(dns)
+            .build()
+        return HttpClient(store, okClient)
     }
 }

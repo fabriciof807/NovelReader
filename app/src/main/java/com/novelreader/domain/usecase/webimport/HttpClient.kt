@@ -8,6 +8,7 @@ import okhttp3.CookieJar
 import okhttp3.HttpUrl
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.Response
 import com.novelreader.util.PublicOnlyDns
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
@@ -19,15 +20,20 @@ class HttpClient @Inject constructor(
 ) {
     @androidx.annotation.VisibleForTesting
     constructor(cookieStore: CloudflareCookieStore, okHttpClient: OkHttpClient) : this(cookieStore) {
-        this.ok = okHttpClient.newBuilder().cookieJar(CloudflareCookieJar(cookieStore)).build()
+        this.ok = okHttpClient.newBuilder()
+            .followRedirects(false)
+            .followSslRedirects(false)
+            .cookieJar(CloudflareCookieJar(cookieStore))
+            .build()
+        this.allowCleartextForTests = true
     }
 
     private var ok: OkHttpClient = OkHttpClient.Builder()
         .connectTimeout(30, TimeUnit.SECONDS)
         .readTimeout(30, TimeUnit.SECONDS)
         .writeTimeout(30, TimeUnit.SECONDS)
-        .followRedirects(true)
-        .followSslRedirects(true)
+        .followRedirects(false)
+        .followSslRedirects(false)
         .cookieJar(CloudflareCookieJar(cookieStore))
         .dns(PublicOnlyDns())
         .build()
@@ -38,11 +44,48 @@ class HttpClient @Inject constructor(
     @androidx.annotation.VisibleForTesting
     internal var maxDecompressedBytes: Int = DEFAULT_MAX_DECOMPRESSED_BYTES
 
+    private var allowCleartextForTests: Boolean = false
+
     suspend fun get(
         url: String,
         referrer: String? = null,
-        extraHeaders: Map<String, String> = emptyMap()
+        extraHeaders: Map<String, String> = emptyMap(),
+        policy: RemoteRequestPolicy = RemoteRequestPolicy.AnyPublicHttps,
+        maxBodyBytes: Int = this.maxBodyBytes,
+        maxDecompressedBytes: Int = this.maxDecompressedBytes
     ): HttpResponse = withContext(Dispatchers.IO) {
+        var currentUrl = url
+        var redirects = 0
+        var result: HttpResponse? = null
+        while (result == null) {
+            if (!policy.allows(currentUrl, allowCleartextForTests)) {
+                throw RemoteRequestRejectedException("Blocked remote destination")
+            }
+            val response = ok.newCall(buildRequest(currentUrl, referrer, extraHeaders)).execute()
+            if (response.code in 300..399) {
+                val location = response.header("Location")
+                val next = location?.let { response.request.url.resolve(it)?.toString() }
+                response.close()
+                if (next == null || redirects >= MAX_REDIRECTS) {
+                    throw RemoteRequestRejectedException("Blocked redirect")
+                }
+                if (!policy.allows(next, allowCleartextForTests)) {
+                    throw RemoteRequestRejectedException("Blocked redirect destination")
+                }
+                redirects++
+                currentUrl = next
+            } else {
+                result = readResponse(response, maxBodyBytes, maxDecompressedBytes)
+            }
+        }
+        result ?: error("unreachable")
+    }
+
+    private fun buildRequest(
+        url: String,
+        referrer: String?,
+        extraHeaders: Map<String, String>
+    ): Request {
         val requestBuilder = Request.Builder()
             .url(url)
             .header("User-Agent", USER_AGENT)
@@ -60,10 +103,13 @@ class HttpClient @Inject constructor(
         for ((name, value) in extraHeaders) {
             requestBuilder.header(name, value)
         }
-        val response = ok.newCall(requestBuilder.build()).execute()
+        return requestBuilder.build()
+    }
+
+    private fun readResponse(response: Response, maxBodyBytes: Int, maxDecompressedBytes: Int): HttpResponse {
         response.use { r ->
             val finalUrl = r.request.url.toString()
-            val bodySource = r.body ?: return@use HttpResponse(
+            val bodySource = r.body ?: return HttpResponse(
                 statusCode = r.code,
                 body = "",
                 headers = r.headers.toMap(),
@@ -72,12 +118,12 @@ class HttpClient @Inject constructor(
             val raw = bodySource.byteStream().use { readBounded(it, maxBodyBytes) }
             val contentEncoding = r.header("Content-Encoding")?.lowercase()
             val decompressed = when (contentEncoding) {
-                "gzip" -> decompressGzip(raw)
-                "br" -> decompressBrotli(raw)
-                "deflate" -> decompressDeflate(raw)
+                "gzip" -> decompressGzip(raw, maxDecompressedBytes)
+                "br" -> decompressBrotli(raw, maxDecompressedBytes)
+                "deflate" -> decompressDeflate(raw, maxDecompressedBytes)
                 else -> raw
             }
-            HttpResponse(
+            return HttpResponse(
                 statusCode = r.code,
                 body = decompressed.toString(Charsets.UTF_8),
                 headers = r.headers.toMap(),
@@ -101,19 +147,20 @@ class HttpClient @Inject constructor(
         return out.toByteArray()
     }
 
-    private fun decompressGzip(bytes: ByteArray): ByteArray =
-        java.util.zip.GZIPInputStream(bytes.inputStream()).use { readBounded(it, maxDecompressedBytes) }
+    private fun decompressGzip(bytes: ByteArray, limit: Int): ByteArray =
+        java.util.zip.GZIPInputStream(bytes.inputStream()).use { readBounded(it, limit) }
 
-    private fun decompressBrotli(bytes: ByteArray): ByteArray =
-        org.brotli.dec.BrotliInputStream(bytes.inputStream()).use { readBounded(it, maxDecompressedBytes) }
+    private fun decompressBrotli(bytes: ByteArray, limit: Int): ByteArray =
+        org.brotli.dec.BrotliInputStream(bytes.inputStream()).use { readBounded(it, limit) }
 
-    private fun decompressDeflate(bytes: ByteArray): ByteArray =
-        java.util.zip.InflaterInputStream(bytes.inputStream()).use { readBounded(it, maxDecompressedBytes) }
+    private fun decompressDeflate(bytes: ByteArray, limit: Int): ByteArray =
+        java.util.zip.InflaterInputStream(bytes.inputStream()).use { readBounded(it, limit) }
 
     companion object {
         const val USER_AGENT = "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.6778.200 Mobile Safari/537.36"
         const val DEFAULT_MAX_BODY_BYTES = 8 * 1024 * 1024
         const val DEFAULT_MAX_DECOMPRESSED_BYTES = 16 * 1024 * 1024
+        const val MAX_REDIRECTS = 5
     }
 }
 
