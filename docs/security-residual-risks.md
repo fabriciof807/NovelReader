@@ -38,8 +38,10 @@ validation) and `7352ef5` (exact IPv6-literal match in `hostMatchesDomain`, so a
 bracketed literal cannot be satisfied by a suffix match).
 
 Validated at `a935a26` with the focused security regressions (75 tests) and the
-full JVM suite (760 tests, 0 failures) — see section 2 for the controls and
-section 5 for the PoC status.
+full JVM suite (760 tests, 0 failures). The review follow-up on `CoverDownloader`
+(section 2) re-ran the same commands at the branch head: 77 focused tests and 762
+full-suite tests, 0 failures — see section 2 for the controls and section 5 for
+the PoC status.
 
 ## 2. Hardening added after the audit
 
@@ -48,17 +50,19 @@ section 5 for the PoC status.
   `'unsafe-inline'` for `style-src`/`script-src`. Injected markup cannot execute
   even if a future sink escapes sanitization.
 - **A single egress boundary with two destination policies.** `HttpClient`
-  (`domain/usecase/webimport/HttpClient.kt`) is the only production remote-read
-  path, and it owns URL validation, redirect traversal, `PublicOnlyDns`, cookies,
-  timeouts, actual-byte limits and decoding. No production `java.net.URL`,
+  (`domain/usecase/webimport/HttpClient.kt`) is the only production
+  *programmatic* remote-read path, and it owns URL validation, redirect
+  traversal, `PublicOnlyDns`, cookies, timeouts, actual-byte limits and decoding.
+  (The Cloudflare challenge WebView is the one remote load outside it; see the
+  challenge bullet below.) No production `java.net.URL`,
   `openConnection` or `Jsoup.connect` call remains; the surviving `readText()`
   calls (`SpecFileStore`, `PendingRestoreStore`, `ImportDataUseCase`) read local
   app files or a user-picked SAF document, never a network source. Every call
   selects a policy:
   - `RemoteRequestPolicy.SameNovelDomain(expectedHost)` — crawler pages, chapter
-    fetches, Cloudflare challenge reloads, covers discovered in fetched HTML, and
-    failed-chapter retries. It accepts only HTTPS on the expected host, its
-    `www` form, or a subdomain accepted by `StringUtils.hostMatchesDomain`.
+    fetches, covers discovered in fetched HTML, and failed-chapter retries. It
+    accepts only HTTPS on the expected host, its `www` form, or a subdomain
+    accepted by `StringUtils.hostMatchesDomain`.
   - `RemoteRequestPolicy.AnyPublicHttps` — user-entered cover URLs and the
     MVLEMPYR page, listing and image reads (user-directed features). It accepts
     any HTTPS hostname whose resolved addresses pass `PublicOnlyDns`.
@@ -83,7 +87,10 @@ section 5 for the PoC status.
   `isAllowed(url, expectedHost)` fails, disables content and file access, turns off
   third-party cookies, blocks any navigation outside the expected host in
   `shouldOverrideUrlLoading`, and uses the same host for its completion check and
-  cookie persistence.
+  cookie persistence. This WebView is the only remote load that does not go
+  through `HttpClient`: it is contained by `CloudflareChallengePolicy` instead of
+  the request-policy, redirect-validation and byte-limit machinery, so the
+  `HttpClient` egress rule above applies to programmatic reads only.
 - **DNS rebinding guard.** `PublicOnlyDns` (wired into `HttpClient`'s OkHttp
   client) drops loopback, site-local, link-local, CGNAT, unique-local and
   multicast answers. A public hostname that resolves to an internal address is
@@ -101,9 +108,13 @@ section 5 for the PoC status.
   `Content-Length`: it calls `HttpClient` with `AnyPublicHttps` and a 10 MiB cap,
   writes `novel_<id>.jpg.tmp`, and renames only after a complete successful write
   (`finally` deletes the temp file), so a blocked, oversized or malformed response
-  leaves no destination file. `MvlempyrCharacterImporter` reads its page, listing
-  and `DesignImage`/`Avatar` URLs through `HttpClient` under the same
-  temp-file-and-rename rule and the same limits, and rethrows
+  leaves no destination file. `CoverDownloader` follows the same temp-file-and-
+  rename rule for a cover discovered in a fetched page, and pins that download to
+  the source host — `SameNovelDomain(expectedHost)` derived from the user-typed
+  novel URL, not from the host of the discovered cover URL — so a page-chosen
+  cross-domain cover is rejected before it is contacted. `MvlempyrCharacterImporter`
+  reads its page, listing and `DesignImage`/`Avatar` URLs through `HttpClient`
+  under the same temp-file-and-rename rule and the same limits, and rethrows
   `CancellationException` instead of swallowing it.
 - **Shared crawl request budget.** `RequestBudget(50)` is created once per
   `ChapterCrawler.crawlChapterList` and shared by the main page loop and both list

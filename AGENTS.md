@@ -151,23 +151,30 @@ Parsers are bound via `@Binds @IntoSet` in `ParserModule`. `ParserRegistry` disp
 
 ### Web egress policy
 
-Every production remote read goes through `HttpClient`
+Every production programmatic remote read goes through `HttpClient`
 (`domain/usecase/webimport/HttpClient.kt`). Do not reintroduce `java.net.URL`,
 `openConnection` or `Jsoup.connect` for remote reads; `Jsoup`/`readText()` may
 read local files (or a user-picked SAF document) only. Each call passes a policy:
 
 - `RemoteRequestPolicy.SameNovelDomain(expectedHost)` — crawler pages, chapter
-  fetches, Cloudflare challenge reloads, covers discovered in fetched HTML,
-  failed-chapter retries;
+  fetches, covers discovered in fetched HTML, failed-chapter retries;
 - `RemoteRequestPolicy.AnyPublicHttps` — user-entered cover URLs and the
   MVLEMPYR page/listing/image reads.
+
+The one remote load outside `HttpClient` is the Cloudflare challenge WebView
+(`CloudflareChallengeDialog` loads the challenge with `WebView.loadUrl`); it is
+contained by `CloudflareChallengePolicy` instead — a pre-load
+`isAllowed(url, expectedHost)` gate, `shouldOverrideUrlLoading` blocking every
+off-host navigation, content/file access off, third-party cookies off.
 
 The expected host is always derived from the user-typed source URL (or
 `novels.sourceUrl` on retry) before any request — never from a challenge URL, a
 redirect target or a page-discovered link; the Cloudflare dialog receives
 `CloudflareChallenge(url, expectedHost)` and must not recompute the expectation
-from `challenge.url`. `HttpClient` disables OkHttp redirect following and
-validates each `Location` against the request policy before contacting it
+from `challenge.url`. A cover discovered in fetched HTML is downloaded under that
+same source host, never under the host of the discovered cover URL. `HttpClient`
+disables OkHttp redirect following and validates each `Location` against the
+request policy before contacting it
 (`MAX_REDIRECTS = 5`), keeps `PublicOnlyDns` on the OkHttp client, and counts
 bytes actually read rather than trusting `Content-Length` (8 MiB raw / 16 MiB
 decompressed by default, 10 MiB for covers and character images, 1 MiB per
@@ -352,7 +359,7 @@ Two independent global slots (`WallpaperStorage.SLOT_HOME`, `SLOT_READER`), neve
 - **Instrumented tests**: Room in-memory DB, Compose Test Rule, Espresso
 - Parser tests use real HTML fixtures
 - ViewModel tests inject mocked DAOs/use cases
-- **Current count: 760 unit tests**
+- **Current count: 762 unit tests**
 - **Always run `./gradlew :app:compileDebugKotlin :app:testDebugUnitTest` before pushing**
 
 ## Recent Sessions
