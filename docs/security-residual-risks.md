@@ -23,12 +23,15 @@ verified against the source and fixed:
 
 Source at commit `5715f540`. The audit report and its PoCs remain as evidence under
 `piolium/final-audit-report.md` and `piolium/findings/`; the fixes below landed on
-`agent/security-audit-remediation-impl`, final implementation commit `a935a26`.
+`agent/security-audit-remediation-impl`, final implementation commit `8d5f40b`. That
+follow-up commit pins the page-discovered cover download to the source host and makes
+its write atomic; it is the last commit in the branch that changes app source or tests,
+so every commit after it (`6e98821` and later) is documentation only.
 
 | ID | Severity | Issue | Fix commits |
 |---|---|---|---|
 | M1-cloudflare-challenge-host-allowlist-tautology | medium | The pre-load gate compared a challenge URL's host with itself, so it degenerated to a scheme check and any page-chosen HTTPS URL loaded into the challenge WebView | `d317f86` |
-| M2-page-controlled-crawler-outbound-destination | medium | Crawl traversal trusted page bytes for the next destination, and `followRedirects(true)` let `Location` leave the origin unvalidated | `8208ea4`, `057322b` |
+| M2-page-controlled-crawler-outbound-destination | medium | Crawl traversal trusted page bytes for the next destination, and `followRedirects(true)` let `Location` leave the origin unvalidated; a cover discovered in a fetched page became its own allowed host, so a cross-domain cover was fetched from the page-supplied origin | `8208ea4`, `057322b`, `8d5f40b` |
 | M3-unguarded-raw-url-egress-and-cap-bypass | medium | `CoverStorage` and `MvlempyrCharacterImporter` used raw `java.net.URL` / `Jsoup.connect`, bypassing `PublicOnlyDns` and trusting `Content-Length` for a 10 MiB cap (chunked responses failed open) | `39e7415`, `fb5cdc5`, `a935a26` |
 | M4-remote-controlled-unbounded-pagination-loop | medium | A page-supplied `totalPage` drove an uncapped, unpaced request loop that shared no budget with the crawl path | `31323ae` |
 
@@ -38,8 +41,8 @@ validation) and `7352ef5` (exact IPv6-literal match in `hostMatchesDomain`, so a
 bracketed literal cannot be satisfied by a suffix match).
 
 Validated at `a935a26` with the focused security regressions (75 tests) and the
-full JVM suite (760 tests, 0 failures). The review follow-up on `CoverDownloader`
-(section 2) re-ran the same commands at the branch head: 77 focused tests and 762
+full JVM suite (760 tests, 0 failures). The review follow-up on `CoverDownloader` at
+`8d5f40b` (section 2) re-ran the same commands: 77 focused tests and 762
 full-suite tests, 0 failures — see section 2 for the controls and section 5 for
 the PoC status.
 
@@ -112,10 +115,12 @@ the PoC status.
   rename rule for a cover discovered in a fetched page, and pins that download to
   the source host — `SameNovelDomain(expectedHost)` derived from the user-typed
   novel URL, not from the host of the discovered cover URL — so a page-chosen
-  cross-domain cover is rejected before it is contacted. `MvlempyrCharacterImporter`
-  reads its page, listing and `DesignImage`/`Avatar` URLs through `HttpClient`
-  under the same temp-file-and-rename rule and the same limits, and rethrows
-  `CancellationException` instead of swallowing it.
+  cross-domain cover is rejected before it is contacted (`8d5f40b`).
+  `MvlempyrCharacterImporter` reads its page, its listing pages and each character's
+  `DesignImage` URL through `HttpClient` under the same temp-file-and-rename rule
+  and the same limits, and rethrows `CancellationException` instead of swallowing
+  it. Only `DesignImage` is downloaded: the `Avatar` field is parsed into
+  `ImportedCharacter.avatarUrl` and never fetched, so no `Avatar` URL is requested.
 - **Shared crawl request budget.** `RequestBudget(50)` is created once per
   `ChapterCrawler.crawlChapterList` and shared by the main page loop and both list
   augmenters (`ReadNovelFullListAugmenter`, `FreewebnovelListAugmenter`); every
