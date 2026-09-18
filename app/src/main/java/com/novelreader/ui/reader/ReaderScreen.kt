@@ -10,7 +10,6 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -22,9 +21,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBackIos
@@ -37,7 +33,6 @@ import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -65,7 +60,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
@@ -276,15 +270,10 @@ fun ReaderScreen(
 
     if (showChapterList && state.allChapters.isNotEmpty()) {
         val chapterListSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-        val chapterListState = rememberLazyListState()
         val filtered = remember(chapterSearchQuery, state.allChapters) {
             filterChaptersByQuery(state.allChapters, chapterSearchQuery)
         }
-        val displayList = if (reverseChapterOrder) filtered.asReversed() else filtered
-        LaunchedEffect(Unit) {
-            val index = displayList.indexOfFirst { it.id == state.chapter?.id }
-            if (index >= 0) chapterListState.scrollToItem(index)
-        }
+        val displayList = chapterListDisplayOrder(filtered, reverseChapterOrder)
         ModalBottomSheet(
             onDismissRequest = {
                 chapterSearchQuery = ""
@@ -328,56 +317,18 @@ fun ReaderScreen(
                         )
                     }
                 }
-                if (chapterSearchQuery.isNotBlank() && filtered.isEmpty()) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 32.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = stringResource(R.string.chapter_list_no_matches),
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
-                        )
-                    }
-                } else {
-                    LazyColumn(state = chapterListState, modifier = Modifier.fillMaxWidth()) {
-                        items(displayList, key = { it.id }) { chapter ->
-                            val isCurrent = chapter.id == state.chapter?.id
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable {
-                                        saveScroll {
-                                            viewModel.loadChapter(chapter.id, restorePosition = true)
-                                            chapterSearchQuery = ""
-                                            showChapterList = false
-                                        }
-                                    }
-                                    .background(
-                                        if (isCurrent) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
-                                        else Color.Transparent
-                                    )
-                                    .padding(horizontal = 16.dp, vertical = 12.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = com.novelreader.data.parser.TitleExtractor.cleanChapterTitleForDisplay(chapter.title, state.novel?.title),
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    fontWeight = if (isCurrent || !chapter.isRead) FontWeight.SemiBold else FontWeight.Normal,
-                                    color = if (chapter.isRead && !isCurrent)
-                                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                                    else MaterialTheme.colorScheme.onSurface,
-                                    maxLines = 4,
-                                    overflow = TextOverflow.Ellipsis,
-                                    modifier = Modifier.weight(1f)
-                                )
-                            }
-                            HorizontalDivider()
+                ChapterListSheet(
+                    chapters = displayList,
+                    currentChapterId = state.chapter?.id,
+                    novelTitle = state.novel?.title,
+                    onChapterClick = { chapterId ->
+                        saveScroll {
+                            viewModel.loadChapter(chapterId, restorePosition = true)
+                            chapterSearchQuery = ""
+                            showChapterList = false
                         }
                     }
-                }
+                )
                 Spacer(modifier = Modifier.height(16.dp))
             }
         }

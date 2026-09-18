@@ -43,4 +43,39 @@ class ChapterListFilterTest {
         val result = filterChaptersByQuery(list, "  Beginning  ")
         assertThat(result.map { it.id }).containsExactly(1L)
     }
+
+    @Test
+    fun `display order keeps the list as given when not reversed`() {
+        val list = listOf(ch(1, "Chapter 1"), ch(2, "Chapter 2"))
+        assertThat(chapterListDisplayOrder(list, reversed = false).map { it.id })
+            .containsExactly(1L, 2L).inOrder()
+    }
+
+    @Test
+    fun `display order reverses the list for the reversed sheet`() {
+        val list = listOf(ch(1, "Chapter 1"), ch(2, "Chapter 2"), ch(3, "Chapter 3"))
+        assertThat(chapterListDisplayOrder(list, reversed = true).map { it.id })
+            .containsExactly(3L, 2L, 1L).inOrder()
+    }
+
+    @Test
+    fun `scroll target is the position of the chapter being read`() {
+        val list = listOf(ch(1, "Chapter 1"), ch(2, "Chapter 2"), ch(3, "Chapter 3"))
+        assertThat(chapterScrollTarget(list, 3L)).isEqualTo(2)
+    }
+
+    @Test
+    fun `scroll target follows the filtered list`() {
+        val list = listOf(ch(1, "Beginning"), ch(2, "Middle"), ch(3, "End"))
+        val filtered = filterChaptersByQuery(list, "Middle")
+        assertThat(chapterScrollTarget(filtered, 2L)).isEqualTo(0)
+    }
+
+    @Test
+    fun `scroll target is -1 when the chapter is not in the list`() {
+        val list = listOf(ch(1, "Chapter 1"), ch(2, "Chapter 2"))
+        assertThat(chapterScrollTarget(list, 99L)).isEqualTo(-1)
+        assertThat(chapterScrollTarget(list, null)).isEqualTo(-1)
+        assertThat(chapterScrollTarget(emptyList(), 1L)).isEqualTo(-1)
+    }
 }
