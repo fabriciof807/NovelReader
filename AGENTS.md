@@ -241,9 +241,14 @@ asserts the two do not overlap) and keep the FAB in `LibraryFab`, whose
 16dp lift: without it the button reads as flush against the counters. The test
 asserts the gap against the bar's top edge, not against a counter label (the bar
 has 10dp of vertical padding, so measuring the label overstates the clearance by
-~30dp). The bar applies `navigationBarsPadding()` itself,
-so its background stops above the Android navigation bar area and the wallpaper
-veil stays visible there.
+~30dp). The bar applies the navigation bar inset to its **content**
+(`windowInsetsPadding` inside the `Surface`, never on it), so the counters colour
+covers the Android navigation bar strip below — on the `Surface` the inset only
+shrinks the painted area and the strip kept the wallpaper veil, so the screen
+ended in a different surface than the counters above it, and the wallpaper stayed
+visible behind the gesture bar. `LibraryScreen` keeps drawing
+`NavigationBarVeil` for the screens without a counters bar (the chapter and
+character tabs, an empty library).
 
 ### Wallpaper crop
 
@@ -391,7 +396,7 @@ Two independent global slots (`WallpaperStorage.SLOT_HOME`, `SLOT_READER`), neve
 - **Instrumented tests**: Room in-memory DB, Compose Test Rule, Espresso
 - Parser tests use real HTML fixtures
 - ViewModel tests inject mocked DAOs/use cases
-- **Current count: 799 unit tests**
+- **Current count: 800 unit tests**
 - **Always run `./gradlew :app:compileDebugKotlin :app:testDebugUnitTest` before pushing**
 
 ## Recent Sessions
@@ -410,7 +415,8 @@ v2.11.0 (versionCode 32). See [README.md](README.md) (English) and [README_PT.md
 - Feat: chapters show up in the library while an import is still running — the pending ones flush to the database every 20 fetched chapters instead of once per 100-chapter batch.
 - Security: the four Medium findings of the piolium audit are remediated — one egress point for every programmatic remote read with a per-request host policy, response and image caps counted as read, covers pinned to the source host, and bounded crawl/listing budgets.
 - Chore: the Vue landing page was removed from the repository.
-- 799 unit tests passing (was 712 at v2.10.0).
+- Fix: the strip where the Android gesture/button bar lives takes the counters bar colour — the counters stopped above it and the strip kept the wallpaper veil, so the screen ended in a surface the user never picked.
+- 800 unit tests passing (was 712 at v2.10.0).
 
 ### v2.10.0 highlights
 

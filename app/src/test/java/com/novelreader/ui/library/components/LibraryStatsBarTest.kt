@@ -1,13 +1,17 @@
 package com.novelreader.ui.library.components
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.unit.dp
 import com.google.common.truth.Truth.assertThat
 import com.novelreader.ui.library.LibraryStats
@@ -63,5 +67,37 @@ class LibraryStatsBarTest {
         val extraClearance = with(composeTestRule.density) { 8.dp.toPx() }
 
         assertThat(statsTop - fabBottom).isAtLeast(scaffoldLift + extraClearance)
+    }
+
+    // The Android navigation bar area (gestures or the three buttons) sits below the counters. The
+    // counters bar now paints that strip itself and only its content is inset — putting the inset on
+    // the Surface instead shrinks what its background covers, which is how the screen ended in the
+    // wallpaper veil while the counters above it were opaque. The painted colour is verified on a
+    // device (Robolectric cannot redraw a window for captureToImage without pixelCopyRenderMode);
+    // what a unit test can hold is that the strip belongs to the bar and the labels stay above it.
+    @Test
+    fun `the counters bar owns the navigation bar strip and keeps its labels above it`() {
+        composeTestRule.setContent {
+            NovelReaderTheme(appTheme = "dark", palette = "grafite") {
+                Box(modifier = Modifier.fillMaxSize()) {
+                    LibraryStatsBar(
+                        stats = stats,
+                        wallpaperActive = true,
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .testTag("statsBar"),
+                        navigationBarInsets = WindowInsets(0.dp, 0.dp, 0.dp, 48.dp)
+                    )
+                }
+            }
+        }
+
+        val root = composeTestRule.onRoot().fetchSemanticsNode().boundsInRoot
+        val bar = composeTestRule.onNodeWithTag("statsBar").fetchSemanticsNode().boundsInRoot
+        val label = composeTestRule.onNodeWithText("Romances").fetchSemanticsNode().boundsInRoot
+        val strip = with(composeTestRule.density) { 48.dp.toPx() }
+
+        assertThat(bar.bottom).isWithin(1f).of(root.bottom)
+        assertThat(root.bottom - label.bottom).isAtLeast(strip)
     }
 }

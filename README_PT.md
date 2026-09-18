@@ -123,7 +123,8 @@ Para novels de sites não listados, o parser genérico tenta extrair o conteúdo
 - Fix: com papel de parede na biblioteca, tudo que carrega texto passa a seguir o tom do papel de parede — barra de cima, abas, chips de filtro, cards de livro, botão "+" e contadores saem claros com texto escuro sobre um fundo claro, e escuros com texto claro sobre um fundo escuro, qualquer que seja a paleta escolhida. Antes ele mantinha o tom da paleta, então uma paleta escura sobre um fundo claro virava dois temas na mesma tela. Imagem sua é amostrada (64 px) para descobrir o tom, e a tela de ajuste pré-visualiza o tom que a imagem vai realmente receber.
 - Fix: os capítulos aparecem na biblioteca enquanto o import ainda está rodando. Antes eles eram gravados uma vez por lote de 100 capítulos, então nada aparecia por até ~8 minutos.
 - Segurança: o caminho de leitura remota foi endurecido depois de uma auditoria — um único ponto de saída com política de host por requisição, teto de tamanho contado conforme os bytes são lidos, capas e personagens presos ao host da fonte da novel, e orçamentos limitados para crawls e listagens.
-- 799 testes unitários passando (eram 712).
+- Fix: a faixa onde fica a barra de gestos/botões do Android passa a usar a cor da barra de contadores, em vez de manter o véu do papel de parede e terminar a tela numa superfície que você não escolheu.
+- 800 testes unitários passando (eram 712).
 
 ### v2.10.0 (2026-09-16)
 

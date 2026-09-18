@@ -3,9 +3,11 @@ package com.novelreader.ui.library.components
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -25,12 +27,11 @@ const val STATS_BAR_ALPHA = 0.5f
 fun LibraryStatsBar(
     stats: LibraryStats,
     wallpaperActive: Boolean = false,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    navigationBarInsets: WindowInsets = WindowInsets.navigationBars
 ) {
     Surface(
-        modifier = modifier
-            .fillMaxWidth()
-            .navigationBarsPadding(),
+        modifier = modifier.fillMaxWidth(),
         color = libraryContainerColor(
             default = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = STATS_BAR_ALPHA),
             surface = MaterialTheme.colorScheme.surface,
@@ -41,6 +42,11 @@ fun LibraryStatsBar(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
+                // Inside the Surface, not on it: the counters colour has to cover the Android
+                // navigation bar strip below (the gesture bar area), which is part of this bar's
+                // surface. On the Surface it only shrank the painted area and the strip kept the
+                // wallpaper veil, so the screen ended in a different surface than it appears to.
+                .windowInsetsPadding(navigationBarInsets)
                 .padding(horizontal = 16.dp, vertical = 10.dp),
             horizontalArrangement = Arrangement.SpaceEvenly
         ) {
