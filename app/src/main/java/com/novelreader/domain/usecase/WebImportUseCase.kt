@@ -72,6 +72,7 @@ class WebImportUseCase @Inject constructor(
         onError: ((url: String, error: String) -> Unit)? = null
     ): Result<Long> = withContext(io) {
         try {
+            val expectedHost = hostOf(sourceUrl)
             val (novelId, existingFileNames) = novelImporter.ensureNovel(novelTitle, sourceUrl, domain, targetNovelId)
 
             val existingChapters = chapterDao.getChaptersByNovelSync(novelId)
@@ -113,7 +114,7 @@ class WebImportUseCase @Inject constructor(
                 }
 
                 try {
-                    val fetched = chapterFetcher.fetch(link.url, fileName, link.title)
+                    val fetched = chapterFetcher.fetch(link.url, fileName, link.title, expectedHost)
                     val validContent = !looksLikeStaleContent(fetched.content)
                     if (!validContent) {
                         Log.w(
@@ -235,4 +236,6 @@ class WebImportUseCase @Inject constructor(
         val message = e.message ?: "Erro desconhecido"
         return type to message
     }
+
+    private fun hostOf(url: String): String = try { java.net.URI(url).host.orEmpty() } catch (_: Exception) { "" }
 }

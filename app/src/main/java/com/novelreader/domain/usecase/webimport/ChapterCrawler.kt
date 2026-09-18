@@ -46,6 +46,7 @@ class ChapterCrawler @Inject constructor(
         val expectedHost = hostOf(homeUrl)
         require(expectedHost.isNotBlank()) { "Invalid novel host" }
         val policy = RemoteRequestPolicy.SameNovelDomain(expectedHost)
+        val budget = RequestBudget(MAX_PAGES)
         val allLinks = mutableListOf<ChapterLink>()
         val attemptedUrls = mutableListOf<String>()
         var currentUrl: String? = homeUrl
@@ -58,6 +59,7 @@ class ChapterCrawler @Inject constructor(
         var firstPageDoc: Document? = null
 
         while (currentUrl != null && pageCount < MAX_PAGES) {
+            if (!budget.tryConsume()) break
             val fetched = fetchPage(currentUrl, policy)
             attemptedUrls.add(currentUrl)
             lastFetchedStatus = fetched.statusCode
@@ -78,8 +80,8 @@ class ChapterCrawler @Inject constructor(
         firstPageDoc?.let { homeDoc ->
             for (augmenter in augmenters) {
                 if (augmenter.canAugment(homeUrl)) {
-                    val augmented = augmenter.augment(homeUrl, homeDoc, httpClient)
-                    allLinks += augmented
+                    val augmented = augmenter.augment(homeUrl, homeDoc, httpClient, policy, budget)
+                    allLinks += resolveSameDomainLinks(augmented, homeUrl, expectedHost)
                 }
             }
         }
@@ -176,8 +178,21 @@ class ChapterCrawler @Inject constructor(
         return resolveSameDomain(trimmed, baseUrl, expectedHost)
     }
 
-    private fun extractChapterLinks(doc: Document, homeUrl: String, homeDomain: String): List<ChapterLink> {
-        return com.novelreader.domain.usecase.webimport.extractChapterLinks(doc, homeUrl, homeDomain)
+    private fun extractChapterLinks(doc: Document, baseUrl: String, expectedHost: String): List<ChapterLink> {
+        return resolveSameDomainLinks(
+            com.novelreader.domain.usecase.webimport.extractChapterLinks(doc, baseUrl, expectedHost),
+            baseUrl,
+            expectedHost
+        )
+    }
+
+    private fun resolveSameDomainLinks(
+        links: List<ChapterLink>,
+        baseUrl: String,
+        expectedHost: String
+    ): List<ChapterLink> = links.mapNotNull { link ->
+        val resolved = resolveSameDomain(link.url, baseUrl, expectedHost) ?: return@mapNotNull null
+        link.copy(url = resolved)
     }
 
     private fun fileNameFromUrl(url: String, chapterNumber: Int): String {

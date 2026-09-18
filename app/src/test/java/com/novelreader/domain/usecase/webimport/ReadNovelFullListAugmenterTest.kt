@@ -18,6 +18,7 @@ class ReadNovelFullListAugmenterTest {
     private lateinit var server: MockWebServer
     private lateinit var client: HttpClient
     private val augmenter = ReadNovelFullListAugmenter()
+    private val policy = RemoteRequestPolicy.SameNovelDomain("readnovelfull.com")
     private lateinit var homeUrl: String
 
     @Before
@@ -43,6 +44,8 @@ class ReadNovelFullListAugmenterTest {
         client = HttpClient(InMemoryCloudflareCookieStore(), okClient)
     }
 
+    private fun budget() = RequestBudget(50)
+
     @After
     fun tearDown() {
         server.shutdown()
@@ -65,7 +68,7 @@ class ReadNovelFullListAugmenterTest {
     fun augment_returnsEmptyWhenDataNovelIdMissing() = runBlocking {
         val doc = Jsoup.parse("<html><body></body></html>")
         server.enqueue(MockResponse().setResponseCode(200).setBody("should-not-be-called"))
-        val result = augmenter.augment(homeUrl, doc, client)
+        val result = augmenter.augment(homeUrl, doc, client, policy, budget())
         assertThat(result).isEmpty()
         assertThat(server.requestCount).isEqualTo(0)
     }
@@ -77,7 +80,7 @@ class ReadNovelFullListAugmenterTest {
         val archiveHtml = java.io.File("src/test/resources/readnovelfull/chapter_archive_sample.html").readText()
         server.enqueue(MockResponse().setResponseCode(200).setBody(archiveHtml))
 
-        val result = augmenter.augment(homeUrl, doc, client)
+        val result = augmenter.augment(homeUrl, doc, client, policy, budget())
 
         assertThat(result).hasSize(10)
         assertThat(result.first().title).isEqualTo("Chapter 1")
@@ -91,11 +94,22 @@ class ReadNovelFullListAugmenterTest {
         val doc = Jsoup.parse(docHtml)
         server.enqueue(MockResponse().setResponseCode(200).setBody("<ul></ul>"))
 
-        augmenter.augment(homeUrl, doc, client)
+        augmenter.augment(homeUrl, doc, client, policy, budget())
 
         val recorded = server.takeRequest()
         assertThat(recorded.getHeader("X-Requested-With")).isEqualTo("XMLHttpRequest")
         assertThat(recorded.getHeader("Referer")).isEqualTo(homeUrl)
+    }
+
+    @Test
+    fun augment_returnsEmptyWhenTheRequestBudgetIsExhausted() = runBlocking {
+        val docHtml = java.io.File("src/test/resources/readnovelfull/novel_landing_sample.html").readText()
+        val doc = Jsoup.parse(docHtml)
+
+        val result = augmenter.augment(homeUrl, doc, client, policy, RequestBudget(0))
+
+        assertThat(result).isEmpty()
+        assertThat(server.requestCount).isEqualTo(0)
     }
 
     @Test
@@ -104,7 +118,7 @@ class ReadNovelFullListAugmenterTest {
         val doc = Jsoup.parse(docHtml)
         server.enqueue(MockResponse().setResponseCode(404).setBody("not found"))
 
-        val result = augmenter.augment(homeUrl, doc, client)
+        val result = augmenter.augment(homeUrl, doc, client, policy, budget())
 
         assertThat(result).isEmpty()
     }

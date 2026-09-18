@@ -73,7 +73,7 @@ class ChapterFetcherTest {
         server.enqueue(MockResponse().setResponseCode(200).setBody(chapterHtml))
 
         val fetcher = ChapterFetcher(parserRegistry, httpClient, requireHttps = false)
-        val fetched = fetcher.fetch("http://www.freewebnovel.com:$port/novel/test/chapter-1", "chapter-1", "Chapter 1")
+        val fetched = fetcher.fetch("http://www.freewebnovel.com:$port/novel/test/chapter-1", "chapter-1", "Chapter 1", "freewebnovel.com")
 
         assertThat(fetched.content).contains("First paragraph of real content")
         assertThat(fetched.title).isEqualTo("Chapter 1 The Beginning")
@@ -94,7 +94,7 @@ class ChapterFetcherTest {
         server.enqueue(MockResponse().setResponseCode(200).setBody(notFoundHtml))
 
         val fetcher = ChapterFetcher(parserRegistry, httpClient, requireHttps = false)
-        val fetched = fetcher.fetch("http://www.freewebnovel.com:$port/novel/test/chapter-1", "chapter-1", "Chapter 1 The Beginning")
+        val fetched = fetcher.fetch("http://www.freewebnovel.com:$port/novel/test/chapter-1", "chapter-1", "Chapter 1 The Beginning", "freewebnovel.com")
 
         assertThat(fetched.content).doesNotContain("Page not found")
         assertThat(fetched.content).doesNotContain("Novel list")
@@ -115,7 +115,8 @@ class ChapterFetcherTest {
             fetcher.fetch(
                 "http://www.freewebnovel.com:$port/novel/test/chapter-1",
                 "chapter-1",
-                "Chapter 1"
+                "Chapter 1",
+                "freewebnovel.com"
             )
         }.exceptionOrNull()
 
@@ -149,7 +150,8 @@ class ChapterFetcherTest {
         val fetched = fetcher.fetch(
             "http://www.freewebnovel.com:$port/novel/test/chapter-1",
             "chapter-1",
-            "Chapter 1"
+            "Chapter 1",
+            "freewebnovel.com"
         )
 
         assertThat(fetched.content).contains("Recovered after 429s")
@@ -172,11 +174,33 @@ class ChapterFetcherTest {
             fetcher.fetch(
                 "http://www.freewebnovel.com:$port/novel/test/chapter-1",
                 "chapter-1",
-                "Chapter 1"
+                "Chapter 1",
+                "freewebnovel.com"
             )
         }.exceptionOrNull()
 
         assertThat(ex).isInstanceOf(RemoteRequestRejectedException::class.java)
         assertThat(foreign.requestCount).isEqualTo(0)
+    }
+
+    @Test
+    fun fetch_buildsThePolicyFromTheExpectedHostNotFromTheChapterUrl() = runBlocking {
+        val port = server.url("").port
+        server.enqueue(MockResponse().setResponseCode(200).setBody("must-not-be-read"))
+
+        val fetcher = ChapterFetcher(parserRegistry, httpClient, requireHttps = false)
+        fetcher.maxRetries = 1
+
+        val ex = runCatching {
+            fetcher.fetch(
+                "http://www.freewebnovel.com:$port/novel/test/chapter-1",
+                "chapter-1",
+                "Chapter 1",
+                "evil.example"
+            )
+        }.exceptionOrNull()
+
+        assertThat(ex).isInstanceOf(RemoteRequestRejectedException::class.java)
+        assertThat(server.requestCount).isEqualTo(0)
     }
 }

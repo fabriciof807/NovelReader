@@ -7,7 +7,6 @@ import kotlinx.coroutines.delay
 import org.jsoup.HttpStatusException
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
-import java.net.URI
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -40,8 +39,8 @@ class ChapterFetcher @Inject constructor(
 
     private var requireHttps: Boolean = true
 
-    suspend fun fetch(url: String, fileName: String, chapterTitle: String): FetchedChapter {
-        val chapterDoc = fetchWithRetry(url)
+    suspend fun fetch(url: String, fileName: String, chapterTitle: String, expectedHost: String): FetchedChapter {
+        val chapterDoc = fetchWithRetry(url, expectedHost)
         val parser = parserRegistry.getParserForUrl(url)
         val parsed = parser.parse(chapterDoc, fileName)
 
@@ -52,9 +51,9 @@ class ChapterFetcher @Inject constructor(
         return FetchedChapter(title = resultTitle, content = parsed.content, fileName = fileName)
     }
 
-    private suspend fun fetchWithRetry(url: String): Document {
+    private suspend fun fetchWithRetry(url: String, expectedHost: String): Document {
         if (requireHttps && !url.startsWith("https://")) throw SecurityException("Apenas HTTPS permitido")
-        val host = hostOf(url)
+        val policy = RemoteRequestPolicy.SameNovelDomain(expectedHost)
         var lastException: Exception? = null
         var lastStatusCode: Int = 0
         for (attempt in 1..maxRetries) {
@@ -63,7 +62,7 @@ class ChapterFetcher @Inject constructor(
                 val response = httpClient.get(
                     url = url,
                     referrer = url.substringBeforeLast("/"),
-                    policy = RemoteRequestPolicy.SameNovelDomain(host)
+                    policy = policy
                 )
                 val statusCode = response.statusCode
                 lastStatusCode = statusCode
@@ -139,6 +138,4 @@ class ChapterFetcher @Inject constructor(
         }
         throw lastException ?: Exception("Request failed after $maxRetries retries")
     }
-
-    private fun hostOf(url: String): String = try { URI(url).host.orEmpty() } catch (_: Exception) { "" }
 }

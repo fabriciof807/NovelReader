@@ -22,7 +22,9 @@ class ReadNovelFullListAugmenter @Inject constructor() : NovelListAugmenter {
     override suspend fun augment(
         homeUrl: String,
         homeDoc: Document,
-        httpClient: HttpClient
+        httpClient: HttpClient,
+        policy: RemoteRequestPolicy.SameNovelDomain,
+        budget: RequestBudget
     ): List<ChapterLink> {
         val novelId = homeDoc.selectFirst("[data-novel-id]")?.attr("data-novel-id")?.toIntOrNull()
         if (novelId == null) {
@@ -33,10 +35,12 @@ class ReadNovelFullListAugmenter @Inject constructor() : NovelListAugmenter {
         }
         val uri = URI(homeUrl)
         val ajaxUrl = "${uri.scheme}://${uri.authority}/ajax/chapter-archive?novelId=$novelId"
+        if (!budget.tryConsume()) return emptyList()
         val resp = httpClient.get(
             url = ajaxUrl,
             referrer = homeUrl,
-            extraHeaders = mapOf("X-Requested-With" to "XMLHttpRequest")
+            extraHeaders = mapOf("X-Requested-With" to "XMLHttpRequest"),
+            policy = policy
         )
         if (resp.statusCode != 200) return emptyList()
         if (!resp.body.contains("href")) return emptyList()

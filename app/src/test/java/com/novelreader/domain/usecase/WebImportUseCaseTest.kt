@@ -93,7 +93,7 @@ class WebImportUseCaseTest {
     fun importChapters_handlesHttpLinksWithOnError() = runBlocking {
         val link = ChapterLink(title = "Chapter 1", url = "http://example.com/ch1.html", chapterNumber = 1)
 
-        coEvery { chapterFetcher.fetch(any(), any(), any()) } throws SecurityException("Apenas HTTPS permitido")
+        coEvery { chapterFetcher.fetch(any(), any(), any(), any()) } throws SecurityException("Apenas HTTPS permitido")
 
         var errorMessage = ""
         val result = useCase.importChapters(
@@ -106,6 +106,24 @@ class WebImportUseCaseTest {
         assertThat(errorMessage).contains("HTTPS")
         val novel = novelDao.getNovelByTitle("Test Novel")
         assertThat(novel).isNotNull()
+    }
+
+    @Test
+    fun importChapters_passesTheSourceUrlHostToTheFetcher() = runBlocking {
+        val link = ChapterLink(title = "Ch 1", url = "https://mirror.example.com/ch1.html", chapterNumber = 1)
+        coEvery {
+            chapterFetcher.fetch("https://mirror.example.com/ch1.html", "ch1", "Ch 1", "example.com")
+        } returns FetchedChapter(title = "Ch 1", content = "<p>${"Real content. ".repeat(30)}</p>", fileName = "ch1")
+
+        useCase.importChapters(
+            novelTitle = "Host Pinned Novel",
+            links = listOf(link),
+            sourceUrl = "https://example.com/novel"
+        )
+
+        io.mockk.coVerify {
+            chapterFetcher.fetch("https://mirror.example.com/ch1.html", "ch1", "Ch 1", "example.com")
+        }
     }
 
     @Test
@@ -144,7 +162,7 @@ class WebImportUseCaseTest {
     @Test
     fun importChapters_emptyContent_insertsFailedChapterAndDoesNotPersistEmpty() = runBlocking {
         val link = ChapterLink(title = "Chapter 1", url = "https://example.com/ch1.html", chapterNumber = 1)
-        coEvery { chapterFetcher.fetch("https://example.com/ch1.html", "ch1", "Chapter 1") } returns FetchedChapter(
+        coEvery { chapterFetcher.fetch("https://example.com/ch1.html", "ch1", "Chapter 1", "example.com") } returns FetchedChapter(
             title = "",
             content = "",
             fileName = "ch1"
@@ -152,7 +170,8 @@ class WebImportUseCaseTest {
 
         val result = useCase.importChapters(
             novelTitle = "Empty Content Novel",
-            links = listOf(link)
+            links = listOf(link),
+            sourceUrl = "https://example.com/novel"
         )
 
         assertThat(result.isSuccess).isTrue()
@@ -180,13 +199,14 @@ class WebImportUseCaseTest {
         novelDao.updateChapterCount(novelId, 1)
 
         val link = ChapterLink(title = "Chapter 1", url = "https://example.com/ch1.html", chapterNumber = 1)
-        coEvery { chapterFetcher.fetch("https://example.com/ch1.html", "ch1", "Chapter 1") } returns FetchedChapter(
+        coEvery { chapterFetcher.fetch("https://example.com/ch1.html", "ch1", "Chapter 1", "example.com") } returns FetchedChapter(
             title = "", content = "", fileName = "ch1"
         )
 
         val result = useCase.importChapters(
             novelTitle = "Reimport Empty Novel",
-            links = listOf(link)
+            links = listOf(link),
+            sourceUrl = "https://example.com/novel"
         )
 
         assertThat(result.isSuccess).isTrue()
@@ -216,12 +236,13 @@ class WebImportUseCaseTest {
         novelDao.updateChapterCount(novelId, 1)
 
         val link = ChapterLink(title = "Ch 1", url = "https://example.com/ch1.html", chapterNumber = 1)
-        coEvery { chapterFetcher.fetch("https://example.com/ch1.html", "ch1", "Ch 1") } throws
+        coEvery { chapterFetcher.fetch("https://example.com/ch1.html", "ch1", "Ch 1", "example.com") } throws
             RateLimitedException(url = "https://example.com/ch1.html", attempts = 5, lastStatusCode = 429)
 
         val result = useCase.importChapters(
             novelTitle = "Catch Delete Novel",
-            links = listOf(link)
+            links = listOf(link),
+            sourceUrl = "https://example.com/novel"
         )
 
         assertThat(result.isSuccess).isTrue()
@@ -248,7 +269,7 @@ class WebImportUseCaseTest {
         novelDao.updateChapterCount(novelId, 1)
 
         val link = ChapterLink(title = "Ch 1", url = "https://example.com/ch1.html", chapterNumber = 1)
-        coEvery { chapterFetcher.fetch("https://example.com/ch1.html", "ch1", "Ch 1") } returns FetchedChapter(
+        coEvery { chapterFetcher.fetch("https://example.com/ch1.html", "ch1", "Ch 1", "example.com") } returns FetchedChapter(
             title = "", content = "", fileName = "ch1"
         )
 
@@ -274,7 +295,8 @@ class WebImportUseCaseTest {
 
         val result = useCaseWithFailingDao.importChapters(
             novelTitle = "Crash Novel",
-            links = listOf(link)
+            links = listOf(link),
+            sourceUrl = "https://example.com/novel"
         )
 
         assertThat(result.isSuccess).isFalse()
@@ -294,25 +316,26 @@ class WebImportUseCaseTest {
             ChapterLink(title = "Ch 5", url = "https://example.com/ch5.html", chapterNumber = 5)
         )
 
-        coEvery { chapterFetcher.fetch("https://example.com/ch1.html", "ch1", "Ch 1") } returns FetchedChapter(
+        coEvery { chapterFetcher.fetch("https://example.com/ch1.html", "ch1", "Ch 1", "example.com") } returns FetchedChapter(
             title = "Ch 1", content = "<p>${"Real content. ".repeat(30)}</p>", fileName = "ch1"
         )
-        coEvery { chapterFetcher.fetch("https://example.com/ch2.html", "ch2", "Ch 2") } returns FetchedChapter(
+        coEvery { chapterFetcher.fetch("https://example.com/ch2.html", "ch2", "Ch 2", "example.com") } returns FetchedChapter(
             title = "", content = "", fileName = "ch2"
         )
-        coEvery { chapterFetcher.fetch("https://example.com/ch3.html", "ch3", "Ch 3") } returns FetchedChapter(
+        coEvery { chapterFetcher.fetch("https://example.com/ch3.html", "ch3", "Ch 3", "example.com") } returns FetchedChapter(
             title = "Ch 3", content = "<p>${"Real content. ".repeat(30)}</p>", fileName = "ch3"
         )
-        coEvery { chapterFetcher.fetch("https://example.com/ch4.html", "ch4", "Ch 4") } returns FetchedChapter(
+        coEvery { chapterFetcher.fetch("https://example.com/ch4.html", "ch4", "Ch 4", "example.com") } returns FetchedChapter(
             title = "", content = "", fileName = "ch4"
         )
-        coEvery { chapterFetcher.fetch("https://example.com/ch5.html", "ch5", "Ch 5") } returns FetchedChapter(
+        coEvery { chapterFetcher.fetch("https://example.com/ch5.html", "ch5", "Ch 5", "example.com") } returns FetchedChapter(
             title = "", content = "", fileName = "ch5"
         )
 
         useCase.importChapters(
             novelTitle = "Total Consistent Novel",
-            links = links
+            links = links,
+            sourceUrl = "https://example.com/novel"
         )
 
         val novel = novelDao.getNovelByTitle("Total Consistent Novel")!!

@@ -21,7 +21,9 @@ class FreewebnovelListAugmenter @Inject constructor() : NovelListAugmenter {
     override suspend fun augment(
         homeUrl: String,
         homeDoc: Document,
-        httpClient: HttpClient
+        httpClient: HttpClient,
+        policy: RemoteRequestPolicy.SameNovelDomain,
+        budget: RequestBudget
     ): List<ChapterLink> {
         val state = extractChapterPaginationState(homeDoc) ?: return emptyList()
         if (state.totalPage <= 1) return emptyList()
@@ -29,10 +31,12 @@ class FreewebnovelListAugmenter @Inject constructor() : NovelListAugmenter {
         val homeDomain = (URI(homeUrl).host ?: "").removePrefix("www.")
         for (page in 2..state.totalPage) {
             val ajaxUrl = buildChapterPaginationUrl(homeUrl, page, state.pageSize) ?: break
+            if (!budget.tryConsume()) break
             val resp = httpClient.get(
                 url = ajaxUrl,
                 referrer = homeUrl,
-                extraHeaders = mapOf("X-Requested-With" to "XMLHttpRequest")
+                extraHeaders = mapOf("X-Requested-With" to "XMLHttpRequest"),
+                policy = policy
             )
             if (resp.statusCode != 200) continue
             val parsed = parseChapterPaginationJson(resp.body) ?: continue

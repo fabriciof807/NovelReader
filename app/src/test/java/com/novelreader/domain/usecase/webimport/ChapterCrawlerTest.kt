@@ -3,7 +3,11 @@ package com.novelreader.domain.usecase.webimport
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.runBlocking
 import okhttp3.Dns
+import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
+import okhttp3.Protocol
+import okhttp3.Response
+import okhttp3.ResponseBody.Companion.toResponseBody
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import org.junit.After
@@ -50,7 +54,9 @@ class ChapterCrawlerTest {
         foreign.shutdown()
     }
 
-    private fun crawlerForMappedHosts(): ChapterCrawler {
+    private fun crawlerForMappedHosts(
+        augmenters: Set<NovelListAugmenter> = emptySet()
+    ): ChapterCrawler {
         val loopback = InetAddress.getByName("127.0.0.1")
         val dns = object : Dns {
             override fun lookup(hostname: String): List<InetAddress> =
@@ -67,8 +73,28 @@ class ChapterCrawlerTest {
             .build()
         return ChapterCrawler(
             HttpClient(InMemoryCloudflareCookieStore(), okClient),
-            emptySet(),
+            augmenters,
             requireHttps = false
+        )
+    }
+
+    private fun crawlerServingHttps(html: String, requestedUrls: MutableList<String>): ChapterCrawler {
+        val okClient = OkHttpClient.Builder()
+            .addInterceptor { chain ->
+                requestedUrls.add(chain.request().url.toString())
+                Response.Builder()
+                    .request(chain.request())
+                    .protocol(Protocol.HTTP_1_1)
+                    .code(200)
+                    .message("OK")
+                    .body(html.toResponseBody("text/html".toMediaType()))
+                    .build()
+            }
+            .build()
+        return ChapterCrawler(
+            HttpClient(InMemoryCloudflareCookieStore(), okClient),
+            emptySet(),
+            requireHttps = true
         )
     }
 
@@ -121,6 +147,43 @@ class ChapterCrawlerTest {
 
         assertThat(result.links).isEmpty()
         assertThat(foreign.requestCount).isEqualTo(0)
+    }
+
+    @Test
+    fun crawlChapterList_rejectsCrossDomainRedirectFromAugmenterBeforeContact() = runBlocking<Unit> {
+        val homeHtml = java.io.File("src/test/resources/readnovelfull/novel_landing_sample.html").readText()
+        server.enqueue(MockResponse().setResponseCode(200).setBody(homeHtml))
+        server.enqueue(
+            MockResponse()
+                .setResponseCode(302)
+                .setHeader("Location", "http://evil.example:${foreign.port}/ajax/chapter-archive")
+        )
+
+        val ex = runCatching {
+            crawlerForMappedHosts(setOf(ReadNovelFullListAugmenter())).crawlChapterList(homeUrl)
+        }.exceptionOrNull()
+
+        assertThat(ex).isInstanceOf(RemoteRequestRejectedException::class.java)
+        assertThat(foreign.requestCount).isEqualTo(0)
+    }
+
+    @Test
+    fun crawlChapterList_upgradesHttpChapterLinksDiscoveredOnAnHttpsPage() = runBlocking<Unit> {
+        val requestedUrls = mutableListOf<String>()
+        val html = """
+            <a href="http://readnovelfull.com/novel/sample/chapter-1.html">Chapter 1</a>
+            <a href="http://readnovelfull.com/novel/sample/chapter-2.html">Chapter 2</a>
+            <a href="http://evil.example/novel/sample/chapter-9.html">Chapter 9</a>
+        """.trimIndent()
+
+        val result = crawlerServingHttps(html, requestedUrls)
+            .crawlChapterList("https://readnovelfull.com/novel/sample.html")
+
+        assertThat(result.links.map { it.url }).containsExactly(
+            "https://readnovelfull.com/novel/sample/chapter-1.html",
+            "https://readnovelfull.com/novel/sample/chapter-2.html"
+        )
+        assertThat(requestedUrls).containsExactly("https://readnovelfull.com/novel/sample.html")
     }
 
     @Test

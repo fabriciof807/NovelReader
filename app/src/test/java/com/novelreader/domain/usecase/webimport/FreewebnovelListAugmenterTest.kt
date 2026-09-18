@@ -23,6 +23,7 @@ class FreewebnovelListAugmenterTest {
     private lateinit var server: MockWebServer
     private lateinit var client: HttpClient
     private val augmenter = FreewebnovelListAugmenter()
+    private val policy = RemoteRequestPolicy.SameNovelDomain("freewebnovel.com")
     private lateinit var homeUrl: String
 
     @Before
@@ -48,6 +49,8 @@ class FreewebnovelListAugmenterTest {
         client = HttpClient(InMemoryCloudflareCookieStore(), okClient)
     }
 
+    private fun budget(capacity: Int = 50) = RequestBudget(capacity)
+
     @After
     fun tearDown() {
         server.shutdown()
@@ -68,7 +71,7 @@ class FreewebnovelListAugmenterTest {
     @Test
     fun augment_returnsEmptyWhenNoPaginationState() = runBlocking {
         val doc = Jsoup.parse("<html><body>no scripts</body></html>")
-        val result = augmenter.augment(homeUrl, doc, client)
+        val result = augmenter.augment(homeUrl, doc, client, policy, budget())
         assertThat(result).isEmpty()
         assertThat(server.requestCount).isEqualTo(0)
     }
@@ -87,7 +90,7 @@ class FreewebnovelListAugmenterTest {
             server.enqueue(MockResponse().setResponseCode(200).setBody(body))
         }
 
-        val result = augmenter.augment(homeUrl, doc, client)
+        val result = augmenter.augment(homeUrl, doc, client, policy, budget())
 
         assertThat(result).hasSize(2)
         assertThat(result.map { it.title }).containsExactly("C2", "C3")
@@ -106,7 +109,7 @@ class FreewebnovelListAugmenterTest {
             server.enqueue(MockResponse().setResponseCode(200).setBody(body))
         }
 
-        val result = augmenter.augment(homeUrl, doc, client)
+        val result = augmenter.augment(homeUrl, doc, client, policy, budget())
         val requests = (2..8).map { server.takeRequest() }
 
         assertThat(result.map { it.title }).containsExactly(
@@ -128,13 +131,30 @@ class FreewebnovelListAugmenterTest {
         val doc = Jsoup.parse(docHtml)
         server.enqueue(MockResponse().setResponseCode(200).setBody("""{"code":200,"html":"<ul></ul>","page":2}"""))
 
-        augmenter.augment(homeUrl, doc, client)
+        augmenter.augment(homeUrl, doc, client, policy, budget())
 
         val recorded = server.takeRequest()
         assertThat(recorded.getHeader("X-Requested-With")).isEqualTo("XMLHttpRequest")
         assertThat(recorded.getHeader("Referer")).isEqualTo(homeUrl)
         assertThat(recorded.path).contains("ajax=chapters")
         assertThat(recorded.path).contains("page=2")
+    }
+
+    @Test
+    fun augment_stopsAtTheSharedRequestBudget() = runBlocking<Unit> {
+        val doc = Jsoup.parse(
+            """<div id="indexListPage" data-page-size="1" data-total-page="100" data-total-chapters="100"></div>"""
+        )
+        repeat(10) { index ->
+            server.enqueue(
+                MockResponse().setResponseCode(200)
+                    .setBody("""{"code":200,"html":"<ul></ul>","page":${index + 2}}""")
+            )
+        }
+
+        augmenter.augment(homeUrl, doc, client, policy, budget(capacity = 3))
+
+        assertThat(server.requestCount).isEqualTo(3)
     }
 
     @Test
@@ -147,7 +167,7 @@ class FreewebnovelListAugmenterTest {
         val doc = Jsoup.parse(docHtml)
         server.enqueue(MockResponse().setResponseCode(200).setBody("not json"))
 
-        val result = augmenter.augment(homeUrl, doc, client)
+        val result = augmenter.augment(homeUrl, doc, client, policy, budget())
 
         assertThat(result).isEmpty()
     }
@@ -169,7 +189,9 @@ class FreewebnovelListAugmenterTest {
         val result = augmenter.augment(
             "http://www.freewebnovel.com:$port/novel/child-of-destiny",
             homeDoc,
-            client
+            client,
+            policy,
+            budget()
         )
 
         assertThat(result).hasSize(2)

@@ -12,7 +12,9 @@ class NovelListAugmenterTest {
         override suspend fun augment(
             homeUrl: String,
             homeDoc: Document,
-            httpClient: HttpClient
+            httpClient: HttpClient,
+            policy: RemoteRequestPolicy.SameNovelDomain,
+            budget: RequestBudget
         ): List<ChapterLink> = emptyList()
     }
 

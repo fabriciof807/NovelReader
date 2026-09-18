@@ -2,6 +2,7 @@ package com.novelreader.domain.usecase
 
 import android.util.Log
 import com.novelreader.data.local.db.dao.FailedChapterDao
+import com.novelreader.data.local.db.dao.NovelDao
 import com.novelreader.data.local.db.entity.FailedChapterErrorType
 import com.novelreader.domain.usecase.importnovel.ChapterEntry
 import com.novelreader.domain.usecase.importnovel.ChapterInserter
@@ -15,16 +16,21 @@ private const val FAILURE_TAG = "WebImportFailure"
 class RetryChapterUseCase @Inject constructor(
     private val failedChapterDao: FailedChapterDao,
     private val chapterInserter: ChapterInserter,
-    private val chapterFetcher: ChapterFetcher
+    private val chapterFetcher: ChapterFetcher,
+    private val novelDao: NovelDao
 ) {
     suspend fun retryByUrl(failedId: Long): Result<Unit> {
         val failed = failedChapterDao.getById(failedId)
             ?: return Result.failure(IllegalArgumentException("Falha não encontrada"))
         val url = failed.url
             ?: return Result.failure(IllegalStateException("Falha sem URL para re-tentar"))
+        val expectedHost = novelDao.getNovelById(failed.novelId)?.sourceUrl?.let { hostOf(it) }.orEmpty()
+        if (expectedHost.isBlank()) {
+            return Result.failure(IllegalStateException("Novel sem URL de origem para re-tentar"))
+        }
 
         return try {
-            val fetched = chapterFetcher.fetch(url, failed.fileName, failed.title)
+            val fetched = chapterFetcher.fetch(url, failed.fileName, failed.title, expectedHost)
             if (looksLikeStaleContent(fetched.content)) {
                 Log.w(
                     FAILURE_TAG,
@@ -74,4 +80,6 @@ class RetryChapterUseCase @Inject constructor(
             Result.failure(e)
         }
     }
+
+    private fun hostOf(url: String): String = try { java.net.URI(url).host.orEmpty() } catch (_: Exception) { "" }
 }
