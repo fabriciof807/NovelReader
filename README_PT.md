@@ -1,404 +1,87 @@
 # NovelReader
 
-**Um leitor de novels para Android que funciona 100% offline.**
+**Um leitor de novels para Android que mantém sua biblioteca no seu dispositivo.**
 
-Importe novels de sites da web ou de arquivos HTML/MHT que você já tem, leia com conforto, marque onde parou, pesquise em todos os capítulos, e mantenha fichas dos personagens — tudo sem precisar de internet depois de importar, sem cadastro, sem rastreamento, sem nuvem.
+Importe uma novel uma vez e leia offline em qualquer lugar. O NovelReader não tem conta, analytics, rastreamento nem serviço de nuvem próprio.
 
----
+> English version: [README.md](README.md)
 
-## Para que serve
+## Download
 
-NovelReader é para quem lê muito novel/web novel/light novel e quer:
+Baixe o APK mais recente em [GitHub Releases](https://github.com/fabriciof807/NovelReader/releases).
 
-- **Ler offline** — importe uma vez, leia em qualquer lugar (metrô, avião, sem sinal). Os capítulos ficam no seu dispositivo.
-- **Não depender de um site específico** — se o site sair do ar, mudar de URL ou colocar paywall, sua biblioteca continua intacta.
-- **Organizar uma biblioteca grande** — busca full-text, ordenação por título/data/última leitura, filtro por status, contadores de capítulos e bookmarks.
-- **Manter o controle de personagens** — para novels com muitos personagens (xianxia, fantasy), crie fichas com fotos, notas e favoritos.
-- **Personalizar a leitura** — tema claro/escuro, tamanho da fonte, altura da linha, scroll automático.
-- **Não ser rastreado** — nenhum analytics, nenhuma conta, nenhum servidor próprio. Tudo é local.
-
----
+Requer Android 8.0 ou mais recente.
 
 ## O que dá para fazer
 
-### Importar novels
+### Importar e continuar lendo offline
 
-- **Da web** — cole a URL de uma novel em sites suportados; o app descobre a lista de capítulos, baixa o conteúdo e organiza tudo. Downloads rodam em segundo plano com notificação de progresso.
-- **De arquivos locais** — selecione arquivos HTML ou MHT pelo app de arquivos do Android. Útil para novels que você já salvou de outros lugares.
-- **Auto-update** — novelas com URL de origem podem ser verificadas periodicamente; novos capítulos são baixados sozinhos.
+- Importe uma novel de um site suportado ou de arquivos HTML/MHT que já estão no seu dispositivo.
+- Baixe capítulos em segundo plano e acompanhe o progresso pela notificação.
+- Opcionalmente verifique novels importadas da web em busca de capítulos novos.
+- Mantenha seus capítulos mesmo se o site original mudar, sair do ar ou colocar paywall.
 
-### Ler
+### Ler do seu jeito
 
-- Seis paletas (Índigo, Papel, Grafite, Floresta, Ameixa, AMOLED) mais a cor dinâmica do sistema no Android 12+
-- Cor de acento própria, escolhida em separado para o app e para o leitor
-- Tamanho de fonte, altura da linha, scroll automático ajustáveis
-- Cada capítulo lembra onde você parou (mesmo se matar o app)
-- **Busca em texto completo** — procure uma palavra ou frase em todos os capítulos de uma novel
-- Bookmarks com notas — marque passagens importantes
+- Retome cada capítulo de onde você parou.
+- Pesquise palavras e frases em todos os capítulos de uma novel.
+- Adicione bookmarks com notas.
+- Ajuste tamanho da fonte, altura da linha, scroll automático, paleta, tema do leitor e cor de destaque.
+- Escolha um papel de parede ou um gradiente pronto separadamente para a biblioteca e para o leitor; recorte, desfoque e aplique o véu para ler com conforto.
+- Salve até cinco temas de cor sem mudar seus papéis de parede.
 
-### Deixe do seu jeito
+### Organize sua biblioteca
 
-- **Papel de parede da biblioteca** e um **papel de parede separado para o leitor** — use uma imagem sua ou um dos fundos prontos
-- Três cores lisas (Areia, Ardósia, Musgo) para quem quer um fundo plano em vez de gradiente
-- **Ajuste e enquadre sua imagem** — depois de escolher a foto, o app abre uma tela de ajuste: arraste e use o zoom com uma prévia que já mostra a moldura do app (barra de cima, abas, véu), então você vê o contraste antes de salvar
-- Desfoque em cada papel de parede, na intensidade que você quiser
-- **Véu de leitura** — controle quanto do fundo do leitor fica entre o texto e o papel de parede, para a foto nunca custar legibilidade
-- O tema do leitor pode seguir o app ou ficar fixo numa variante clara/escura
-- **Temas salvos** — guarde até cinco visuais (paleta, cores de acento e tema do leitor) e alterne entre eles; trocar de tema nunca mexe no seu papel de parede
-- **Papel de parede atrás das barras** — escolha se a barra de cima e as abas ficam translúcidas sobre o papel de parede, ou sólidas como eram
-- **Restaurar aparência** — um botão devolve paleta, acentos, papéis de parede, desfoque e véu ao padrão, mantendo seus temas salvos
+- Ordene e filtre novels por título, data, estado de leitura, favoritas, capítulos e bookmarks.
+- Crie coleções para suas novels.
+- Mantenha fichas de personagens com anotações, fotos e favoritos.
+- Faça backup e restaure biblioteca, bookmarks, personagens, coleções e configurações em JSON.
 
-### Organizar personagens
+### Recupere importações que falharam
 
-Para novels com muitos personagens, cada novel tem uma aba de **Personagens** onde você pode:
-- Criar fichas com nome, foto, notas
-- Adicionar várias fotos por personagem (galeria)
-- Favoritar os principais
-- Importar fichas prontas do site MVLEMPYR (parceria com base de dados de personagens)
-
-### Verificar o que deu errado
-
-Quando uma importação falha (URL fora do ar, página de erro no lugar do conteúdo, arquivo corrompido), o app:
-- Salva o capítulo com falha no banco
-- Mostra na aba "Capítulos com falha" da novel
-- Permite **re-tentar o download** (se a URL voltou) ou **importar um arquivo MHT manualmente** para aquele capítulo
-- Detecta também capítulos com conteúdo vazio ou ausente (escaneando por número de capítulo)
-
----
+Se um capítulo não puder ser importado, o NovelReader registra a falha e permite tentar a URL de novo, importar um arquivo MHT manualmente ou descartar o item. Ele também encontra números de capítulo faltando e capítulos com conteúdo vazio.
 
 ## Como usar
 
-1. **Instale o APK** (veja a seção de build no final ou baixe uma release)
-2. **Abra o app** — tela inicial mostra a biblioteca
-3. **Toque no "+"** para importar uma novel
-4. **Escolha a fonte**:
-   - **Web**: cole a URL da novel → selecione os capítulos → import inicia
-   - **Arquivos**: selecione arquivos HTML/MHT do seu dispositivo
-5. **Toque na novel** na biblioteca para ver os capítulos
-6. **Toque em um capítulo** para começar a ler
-7. **Use o menu do capítulo** para favoritar, marcar como lido, ver bookmarks
+1. Instale o APK em [Releases](https://github.com/fabriciof807/NovelReader/releases).
+2. Abra o app e toque em **+** na biblioteca.
+3. Escolha **Web** para colar a URL de uma novel, ou **Arquivos** para selecionar arquivos HTML/MHT.
+4. Selecione os capítulos a importar.
+5. Abra a novel na biblioteca e escolha um capítulo para ler.
 
-A aba de **Personagens** aparece quando você seleciona uma novel. A aba de **Favoritos** (no menu superior) mostra todos os seus bookmarks em um só lugar.
-
----
+A aba **Personagens** fica disponível dentro de cada novel. Seus bookmarks ficam reunidos em **Favoritos**.
 
 ## Privacidade
 
-- Nenhum analytics, telemetria ou tracking
-- Nenhuma conta ou login
-- Nenhum servidor próprio — o app não envia nada para lugar nenhum
-- Imports da web usam apenas HTTPS e a URL que você fornece
-- Todos os dados (novels, capítulos, bookmarks, personagens, fotos) ficam no seu dispositivo
-
----
+- Sem conta, analytics, telemetria, rastreamento ou servidor próprio.
+- Biblioteca, capítulos, bookmarks, dados de personagens, fotos e configurações ficam no seu dispositivo.
+- O app acessa um site apenas quando você escolhe uma importação da web ou uma verificação de atualização.
+- O importador opcional de personagens do MVLEMPYR acessa esse serviço apenas quando você inicia uma importação por ele.
 
 ## Idiomas
 
-Português (padrão) e Inglês. Configurável em **Configurações**.
+Português (padrão) e inglês. Troque o idioma em **Configurações**.
 
----
+## Sites suportados para importação da web
 
-## Screenshots
+- [FreeWebNovel](https://freewebnovel.com/)
+- [ReadNovelFull](https://readnovelfull.com/)
+- Outras páginas HTML pelo parser genérico, quando a estrutura é compatível
 
-| Biblioteca | Leitor | Personagens |
-|---|---|---|
-| ![Biblioteca](screenshots/library.png) | ![Leitor](screenshots/reader.png) | ![Personagens](screenshots/characters.png) |
+## Última versão
 
----
+### v2.11.0
 
-## Sites suportados para import da web
+- Os controles da biblioteca acompanham automaticamente um papel de parede claro ou escuro, para um texto legível e consistente.
+- Os capítulos aparecem na biblioteca enquanto uma importação da web ainda está rodando.
+- Importações da web mais seguras e confiáveis.
 
-- **FreeWebNovel**
-- **ReadNovelFull**
-- **Qualquer página HTML** (parser genérico)
+Veja [Releases](https://github.com/fabriciof807/NovelReader/releases) para o changelog completo.
 
-Para novels de sites não listados, o parser genérico tenta extrair o conteúdo principal. Funciona bem em sites com estrutura simples.
+## Contribuindo
 
----
-
-## Histórico de versões
-
-### v2.11.0 (2026-09-18)
-
-- Fix: com papel de parede na biblioteca, tudo que carrega texto passa a seguir o tom do papel de parede — barra de cima, abas, chips de filtro, cards de livro, botão "+" e contadores saem claros com texto escuro sobre um fundo claro, e escuros com texto claro sobre um fundo escuro, qualquer que seja a paleta escolhida. Antes ele mantinha o tom da paleta, então uma paleta escura sobre um fundo claro virava dois temas na mesma tela. Imagem sua é amostrada (64 px) para descobrir o tom, e a tela de ajuste pré-visualiza o tom que a imagem vai realmente receber.
-- Fix: os capítulos aparecem na biblioteca enquanto o import ainda está rodando. Antes eles eram gravados uma vez por lote de 100 capítulos, então nada aparecia por até ~8 minutos.
-- Segurança: o caminho de leitura remota foi endurecido depois de uma auditoria — um único ponto de saída com política de host por requisição, teto de tamanho contado conforme os bytes são lidos, capas e personagens presos ao host da fonte da novel, e orçamentos limitados para crawls e listagens.
-- Fix: a faixa onde fica a barra de gestos/botões do Android passa a usar a cor da barra de contadores, em vez de manter o véu do papel de parede e terminar a tela numa superfície que você não escolheu.
-- 800 testes unitários passando (eram 712).
-
-### v2.10.0 (2026-09-16)
-
-- Feat: seis paletas (Índigo, Papel, Grafite, Floresta, Ameixa, AMOLED) com variante clara e escura, substituindo a escolha simples de claro/escuro/dinâmico; a cor dinâmica vira uma das opções de paleta.
-- Feat: cor de acento editável para o app e, em separado, para o leitor — o app deriva um tom legível para a matiz/saturação escolhida, em vez de deixar um acento claro lavar a interface (verificado contra o fundo de todas as paletas).
-- Feat: a cor de destaque é escolhida numa **roda de cores** — o ângulo é a matiz, a distância do centro é a saturação — em vez de dois sliders abstratos. A roda mostra o tom que o app vai realmente usar e, por ser desenhada, também expõe quatro ações de acessibilidade para leitor de tela ajustar.
-- Feat: papéis de parede — um para a biblioteca e um para o leitor, cada um com desfoque próprio, usando imagem sua (copiada para o armazenamento privado do app, nunca no backup) ou um dos oito fundos prontos.
-- Feat: slider de véu de leitura (padrão 80%) e paleta + variante clara/escura próprias do leitor, para o papel de parede nunca ganhar do texto.
-- Fix: o sheet de configurações do leitor agora rola; com as seções novas a metade de baixo ficava inalcançável no celular.
-- Temas antigos do leitor (`light`, `dark`, `sepia`, `gray`) mapeiam exatamente para as paletas novas, então quem já lia mantém as cores.
-- Feat: até cinco temas salvos (paleta, cores de acento e tema do leitor) mais um botão de restaurar aparência que os mantém.
-- Fix: os sliders gravavam a cada frame do arrasto — e o leitor reaplicava o CSS pela ponte JS em cada um deles — então o thumb prendia e pulava; agora o valor grava uma vez, ao soltar.
-- Feat: opção de manter o papel de parede visível atrás da barra de cima e das abas (translúcido, com véu na cor do tema) ou deixar essas barras sólidas como antes; ligada por padrão, valendo para biblioteca e leitor.
-- Fix: a área da barra de navegação do Android ficava com o papel de parede cru enquanto o resto da moldura tinha véu; agora recebe a mesma cor da barra de cima.
-- Fix: o botão "+" não cobre mais os contadores de romances/capítulos/favoritos — a barra de contadores passou a ser o bottom bar do Scaffold, então o botão fica acima dela, e ela não invade mais a área da barra de navegação do Android.
-- Feat: três cores lisas de fundo, e a tela de configurações reorganizada — grupos que se escondem e mostram o estado atual no cabeçalho, papel de parede e temas salvos em grupos próprios, e nomes voltados ao usuário ("Cor de destaque" em vez de "Cor de acento").
-- Feat: tela de ajuste que recorta a imagem escolhida para a tela, com a moldura do app sobreposta na prévia.
-- Fix: o botão "+" tinha um quadrado branco atrás — os containers da paleta eram construídos com alpha, então o botão (e a sombra do Surface) deixavam o papel de parede aparecer.
-- Fix: o botão "+" ficava colado na barra de contadores; agora guarda distância, medida contra a própria barra.
-- Fix: a barra de contadores e os chips de filtro eram translúcidos sobre o papel de parede, então fundos claros lavavam o texto (2,2:1 e 3,2:1 contra o gradiente "Amanhecer"). Com papel de parede eles agora ficam opacos, como os cards de livro, e o papel de parede mantém a cor cheia.
-- Fix: um título da fonte que repetia o título do capítulo atrás do próprio prefixo ("Chapter 4: Chapter 4: Centurion") era mantido ao lado do título, então o título do capítulo aparecia duas vezes nos títulos curtos.
-- Fix: a tela de ajuste perdia o zoom escolhido quando você arrastava a imagem para reposicionar, e a imagem salva saía um pouco mais estreita que a prévia (1078×2273 numa tela de 1080×2400) — agora arrastar move o enquadramento e o recorte bate exatamente com a tela.
-- 712 testes unitários passando (eram 506).
-
-### v2.9.3 (2026-09-14)
-
-Endurecimento de dependências, tema do leitor e acessibilidade:
-
-- **Leitor**: o sheet de configurações ganhou o chip **Auto**, então dá para voltar a seguir o tema do app depois de escolher uma cor (antes essa escolha ficava inalcançável sem limpar os dados do app)
-- **A11y**: os chips de tema são anunciados como radio buttons, e não como views marcáveis genéricas
-- **Segurança**: `jsoup` 1.22.1 → 1.23.2, fechando CVE-2026-71497 (o advisory só ocorre em safelists que permitem elementos raw-text, o que o `READER_SAFELIST` nunca permitiu); fixtures dos parsers passam sem mudança
-- **Segurança**: advisories da toolchain do landing page corrigidos no lockfile
-- **Docs**: o registro de riscos residuais explica por que migrar o bridge JS do leitor para `addWebMessageListener` não reduziria risco neste app
-
-Sem migração de dados necessária.
-
-### v2.9.2 (2026-09-09)
-
-Endurecimento de segurança de uma auditoria externa, mais correções do leitor:
-
-- **Segurança**: a importação de backup é protegida contra injeção CSS/JS via `fontFamily`, contra SSRF em `sourceUrl` restaurado (hosts loopback, privados e link-local são rejeitados) e contra valores arbitrários de `photoPath`
-- **Segurança**: os parsers casam hosts exatamente, e deep links de notificação carregam um token por instalação
-- **Segurança**: o WebView do leitor usa nonce de CSP por carga (sem `unsafe-inline`), o desafio do Cloudflare valida o host antes de carregar, respostas de DNS privadas são bloqueadas e corpos de resposta são limitados a 8 MiB (16 MiB descomprimidos)
-- **Leitor**: título do capítulo de volta no topo do conteúdo (cabeçalhos duplicados da fonte são removidos), barra superior sempre visível, barra de status inferior com a bateria, barra de opções com um único toque
-- **Leitor**: mudanças de configuração, favorito e tema aplicam na página aberta sem recarregar, e o capítulo carregado antes da morte do processo é restaurado (antes voltava para um capítulo obsoleto)
-- **Correção**: links de capítulo `http://` numa página `https` são promovidos em vez de rejeitados
-- **Novo**: o tema do leitor segue o tema do app por padrão
-
-Sem migração de dados necessária.
-
-### v2.9.0 (2026-08-23)
-
-Coleções e backup completo:
-
-- **Coleções**: criar e fixar coleções e adicionar novels a elas pelo menu da novel
-- **Backup v3**: exporta novels (autor, total de capítulos, atualização automática, último capítulo lido), favoritos e personagens, e agora também coleções e configurações; a restauração pendente é aplicada quando o download em background termina
-- **Importação**: importações só de configurações são suportadas, e novels apenas locais são reportadas como não restauráveis
-- **Banco**: Room v11 → v12 (`folders`, `novel_folder`)
-
-O Room migra automaticamente (v11 → v12).
-
-### v2.7.5 (2026-08-23)
-
-Polimento do leitor e da biblioteca:
-
-- **Leitor**: alternar os controles com um toque curto; a lista de capítulos rola até o capítulo atual; cabeçalho da fonte que duplica o título do capítulo é removido
-- **Biblioteca**: o badge da novel mostra a contagem de capítulos novos, com fallback para o ponto
-- **Importação**: novels na fila de importação em background aparecem como "Aguardando importação" até chegarem
-
-Sem migração de dados necessária.
-
-### v2.7.0 (2026-08-20)
-
-- **Leitor**: controles alternam com toque longo, ordem reversa da lista de capítulos, e a posição de scroll ao vivo é capturada via JS para retomar certo ao voltar de um capítulo
-- **Biblioteca**: sheet "What's New" ao abrir o app quando há capítulos novos
-- **Interno**: o dispatcher `LibraryIntent` foi substituído por chamadas diretas ao ViewModel; código morto removido
-- **Banco**: Room v10 → v11 (`chapters.isNew`)
-
-O Room migra automaticamente (v10 → v11).
-
-### v2.6.0-fix (2026-08-04)
-
-Correções do swipe no leitor:
-
-- Swipe vertical só troca de capítulo nos limites da página
-- O capítulo anterior volta ao fim depois de um swipe para cima
-
-Sem migração de dados necessária.
-
-### v2.6.0 (2026-08-02)
-
-Favoritos, cancelamento direcionado e correções de importação:
-
-- **Biblioteca**: novels favoritas (toggle e filtro no menu de 3 pontos) e backup JSON seletivo
-- **Importação**: fila por novel com cancelamento direcionado de jobs em background
-- **Leitor**: transição direcional de entrada ao trocar de capítulo por gesto, e posição de scroll correta restaurada entre navegações
-- **Correção**: um `StackOverflowError` derrubava o leitor a cada swipe (os campos de callback do bridge sombreavam os métodos anotados)
-- **Correção**: o FreeWebNovel importa a lista completa de capítulos (antes só os 40 primeiros), e capas são gravadas em bytes binários exatos
-- **Banco**: Room v9 → v10
-
-O Room migra automaticamente (v9 → v10).
-
-### v2.5.4 (2026-07-17)
-
-- **Leitor**: direção do swipe configurável (vertical, horizontal, ambos ou nenhum), estado de capítulo vazio com recuperação via MHT, reimportação de arquivo MHT/HTML para um capítulo existente, e erros do leitor com ação de Retry
-- **Biblioteca**: menu de 3 pontos visível nos cards, entrada "Capítulos", validação inline de HTTPS no diálogo de capa, e fim da exclusão acidental de personagem por swipe
-- **Notificações**: tocar numa notificação de importação abre a seção de capítulos falhos e rola até ela
-- **Hápticos**: padronizados (só toque longo)
-
-Sem migração de dados necessária.
-
-### v2.5.3 (2026-07-10)
-
-Confiabilidade da importação:
-
-- "Retry all" reenfileira todos os capítulos falhos
-- Retries com backoff e classificação explícita de rate-limit (429), pacing de 5 s e rejeição de conteúdo vazio ou obsoleto
-
-Sem migração de dados necessária.
-
-### v2.5.2 (2026-06-30)
-
-Importação multi-fonte e checagem de atualização por fonte:
-
-- **Importação**: uma novel pode ter várias fontes, e a checagem de atualização itera todas elas
-- **Biblioteca**: ponto azul e badge de contagem quando a novel tem capítulos novos
-- **Parsers**: novo layout do FreeWebNovel, arquivo de capítulos do ReadNovelFull e augmentação de lista por domínio
-- **Cloudflare**: cookies persistidos por domínio e checagem de host do desafio cobrindo qualquer domínio
-- **Correção**: páginas 404 não são mais capturadas como conteúdo de capítulo
-- **Banco**: Room v8 → v9 (`novel_sources`, `hasUpdates`)
-
-O Room migra automaticamente (v8 → v9).
-
-### v2.4.3 (2026-06-26)
-
-Polimento de UI/UX e infraestrutura:
-
-- **Leitor**: lista de capítulos no bottom sheet agora quebra em até 4 linhas (antes 1)
-- **Biblioteca**: estado vazio com ilustração e CTA "Adicione sua primeira novel"
-- **Biblioteca**: badge "Lendo" agora mostra tempo relativo (ex. "Lendo · há 2 h")
-- **Biblioteca** e **Capítulos**: posição de scroll é lembrada entre visitas (por novel na aba de capítulos)
-- **Aba Personagens**: ExtendedFAB com rótulos para Adicionar e Importar
-- **A11y**: auditoria de `contentDescription` em 42 botões só com ícone (0 alterações funcionais)
-- **Hápticos**: feedback háptico leve ao adicionar bookmark, tocar FAB e trocar de aba
-- **i18n**: traduções completas para inglês (todas as chaves pt-BR espelhadas em `values-en`)
-- **Cor dinâmica**: toggle opt-in em Configurações (Android 12+)
-- **Transições de aba**: slide de 220ms entre biblioteca, leitor e configurações
-- **Infraestrutura de teste**: base de testes Compose UI (Robolectric)
-
-Sem migração de dados necessária.
-
----
-
-## Próximos passos
-
-Veja o `git log` para o histórico de melhorias arquiteturais e os arquivos `handoff-*.md` (gitignored) para o estado atual do projeto.
-
----
-
-# Seção técnica
-
-<details>
-<summary>Detalhes para desenvolvedores</summary>
-
-## Stack
-
-| Componente | Versão |
-|---|---|
-| Kotlin | 2.2.10 |
-| AGP | 9.2.1 |
-| Jetpack Compose (BOM) | 2024.12.01 |
-| Material 3 | (via Compose BOM) |
-| Hilt | 2.59.2 |
-| Room | 2.8.4 |
-| KSP | 2.3.9 |
-| Jsoup | 1.23.2 |
-| Coil | 2.7.0 |
-| DataStore | 1.1.3 |
-| WorkManager | 2.10.0 |
-| Min SDK | 26 (Android 8.0) |
-| Target SDK | 34 (Android 14) |
-| Compile SDK | 35 |
-| JVM | 17 |
-
-## Arquitetura
-
-MVVM + UseCase + Hilt DI, com fluxo unidirecional:
-
-```
-Compose -> ViewModel -> UseCase -> DAO
-                        |-> Parser (Set<NovelParser> via multibinding Hilt)
-```
-
-- ViewModels expõem `StateFlow` para a UI e `SharedFlow<String>` para erros
-- `ChapterFetcher` e parsers injetados via multibinding; `GenericFallbackParser` é o catch-all
-- Imports em background via WorkManager (modos SEQUENCIAL e PARALLEL)
-- `DeepLinkBus` conecta notificações de update à navegação
-- Banco Room v8 com 7 entidades, 5 DAOs, FTS4 para busca
-- `ChapterOrderNormalizer` reordena capítulos por número após import
-- `RetryChapterUseCase` e `ScanMissingChaptersUseCase` para recuperação de falhas
-
-## Estrutura do projeto
-
-```
-app/src/main/java/com/novelreader/
-  MainActivity.kt                       Activity única; handle deep links
-  di/                                   Módulos Hilt (Database, Parser, Storage, Work, Dispatchers)
-  data/
-    local/db/                           Room: 7 entidades, 5 DAOs, FTS4, 8 migrations
-    local/preferences/                  DataStore (App, Reader, Import, Library)
-    parser/                             Parsers HTML/MHT (multibinding Hilt)
-    storage/                            CoverStorage (file I/O)
-    remote/                             MvlempyrCharacterImporter
-    worker/                             WorkManager workers
-  domain/usecase/                       Lógica de negócio
-    webimport/                          ChapterCrawler, ChapterFetcher, CoverDownloader, NovelImporter
-    importnovel/                        FileCharsetDetector, NovelGrouper, ChapterSorter, ChapterInserter
-    RetryChapterUseCase, ScanMissingChaptersUseCase, ChapterOrderNormalizer
-  ui/
-    navigation/                         NavGraph + DeepLinkBus
-    library/                            Abas: novels, chapters, characters
-    reader/                             WebView com bookmarks e busca
-    import_novel/                       Tela de import local
-    webimport/                          Tela de import web
-    favorites/                          Todos os bookmarks
-    settings/                           Tema, idioma, modo de fila
-    theme/                              Cores, tipografia
-  util/                                 LocaleHelper
-```
-
-## Build
-
-```bash
-./gradlew :app:assembleDebug            # APK debug
-./gradlew :app:installDebug             # Instala no dispositivo
-./gradlew :app:compileDebugKotlin       # Compila só (rápido)
-```
-
-## Testes
-
-```bash
-./gradlew :app:testDebugUnitTest            # Testes JVM (não precisa de emulador)
-./gradlew :app:connectedDebugAndroidTest    # Testes instrumentados (precisa de emulador)
-./gradlew :app:compileDebugKotlin :app:testDebugUnitTest  # Antes de commit
-```
-
-| Suíte | Tipo | ~Contagem |
-|---|---|---|
-| Leitor (view model, HTML builder, sheet, tema) | Unit | 137 |
-| Parsers | Unit | 78 |
-| Use cases + import web | Unit | 143 |
-| Telas de biblioteca / lista de capítulos / configurações | Unit | 55 |
-| Preferências, storage, tema e customização | Unit | 87 |
-| Workers, navegação, favoritos, diversos | Unit | 96 |
-| **Total (JVM)** | | **695** |
-
-`./gradlew :app:testDebugUnitTest` roda toda a suíte JVM; a suíte de DAOs abaixo precisa de emulador.
-
-Mais detalhes em [`README-TESTES.md`](README-TESTES.md).
-
-## Banco de dados
-
-Room v8. 7 entidades (`Novel`, `Chapter`, `Bookmark`, `Character`, `CharacterPhoto`, `FailedChapter` + `ChapterFts`). 8 migrations manuais. FTS4 sobre `chapters.title` e `chapters.content`.
-
-## i18n
-
-`pt` (padrão) e `en`. Configurável em runtime via `AppPreferences` (DataStore). Mudança de idioma recria a Activity.
-
-## Contributing
-
-Veja [`CONTRIBUTING.md`](CONTRIBUTING.md) para guidelines detalhados.
+Quer ajudar a desenvolver o NovelReader? Leia o [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Licença
 
-MIT — veja [`LICENSE`](LICENSE).
-
-</details>
+[MIT](LICENSE)
