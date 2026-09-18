@@ -3,18 +3,20 @@ package com.novelreader.data.storage
 import android.content.Context
 import android.net.Uri
 import com.novelreader.di.qualifiers.IoDispatcher
+import com.novelreader.domain.usecase.webimport.HttpClient
+import com.novelreader.domain.usecase.webimport.RemoteRequestPolicy
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.withContext
 import java.io.File
-import java.net.URL
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
 class CoverStorage @Inject constructor(
     @ApplicationContext private val context: Context,
-    @IoDispatcher private val io: CoroutineDispatcher
+    @IoDispatcher private val io: CoroutineDispatcher,
+    private val httpClient: HttpClient
 ) {
 
     suspend fun saveFromUri(novelId: Long, uri: Uri): String? = withContext(io) {
@@ -32,22 +34,24 @@ class CoverStorage @Inject constructor(
     }
 
     suspend fun saveFromUrl(novelId: Long, url: String): String? = withContext(io) {
+        val temp = tempCoverFile(novelId)
         try {
-            if (!url.startsWith("https://")) return@withContext null
-            val connection = URL(url).openConnection()
-            connection.connectTimeout = 10_000
-            connection.readTimeout = 10_000
-            val contentLength = connection.contentLength
-            if (contentLength > 10 * 1024 * 1024) return@withContext null
+            val response = httpClient.get(
+                url = url,
+                policy = RemoteRequestPolicy.AnyPublicHttps,
+                maxBodyBytes = MAX_REMOTE_COVER_BYTES,
+                maxDecompressedBytes = MAX_REMOTE_COVER_BYTES
+            )
+            if (response.statusCode !in 200..299) return@withContext null
+            val bytes = response.bodyBytes ?: return@withContext null
+            temp.writeBytes(bytes)
             val dest = coverFile(novelId)
-            connection.getInputStream().use { input ->
-                dest.outputStream().use { output ->
-                    input.copyTo(output)
-                }
-            }
+            if (!temp.renameTo(dest)) return@withContext null
             dest.absolutePath
         } catch (_: Exception) {
             null
+        } finally {
+            temp.delete()
         }
     }
 
@@ -65,9 +69,13 @@ class CoverStorage @Inject constructor(
         if (dir.exists()) dir.deleteRecursively() else false
     }
 
-    private fun coverFile(novelId: Long): File {
-        val dir = File(context.filesDir, "covers")
-        dir.mkdirs()
-        return File(dir, "novel_$novelId.jpg")
+    private fun coverFile(novelId: Long): File = File(coverDir(), "novel_$novelId.jpg")
+
+    private fun tempCoverFile(novelId: Long): File = File(coverDir(), "novel_$novelId.jpg.tmp")
+
+    private fun coverDir(): File = File(context.filesDir, "covers").apply { mkdirs() }
+
+    companion object {
+        internal const val MAX_REMOTE_COVER_BYTES = 10 * 1024 * 1024
     }
 }
