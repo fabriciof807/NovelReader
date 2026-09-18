@@ -4,8 +4,11 @@ import com.novelreader.data.local.db.dao.NovelDao
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.net.URI
 import javax.inject.Inject
 import javax.inject.Singleton
+
+private const val MAX_COVER_BYTES = 10 * 1024 * 1024
 
 @Singleton
 class CoverDownloader @Inject constructor(
@@ -15,7 +18,13 @@ class CoverDownloader @Inject constructor(
     suspend fun downloadCover(novelId: Long, coverUrl: String, filesDir: File) = withContext(Dispatchers.IO) {
         try {
             if (!coverUrl.startsWith("https://")) return@withContext
-            val response = httpClient.get(coverUrl)
+            val host = runCatching { URI(coverUrl).host }.getOrNull() ?: return@withContext
+            val response = httpClient.get(
+                url = coverUrl,
+                policy = RemoteRequestPolicy.SameNovelDomain(host),
+                maxBodyBytes = MAX_COVER_BYTES,
+                maxDecompressedBytes = MAX_COVER_BYTES
+            )
             if (response.statusCode !in 200..299) return@withContext
             val dir = File(filesDir, "covers")
             dir.mkdirs()

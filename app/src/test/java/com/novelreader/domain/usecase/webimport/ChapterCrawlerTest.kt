@@ -15,6 +15,7 @@ import java.util.concurrent.TimeUnit
 class ChapterCrawlerTest {
 
     private lateinit var server: MockWebServer
+    private lateinit var foreign: MockWebServer
     private lateinit var client: HttpClient
     private lateinit var homeUrl: String
 
@@ -22,6 +23,8 @@ class ChapterCrawlerTest {
     fun setUp() {
         server = MockWebServer()
         server.start()
+        foreign = MockWebServer()
+        foreign.start()
         val port = server.url("").port
         homeUrl = "http://readnovelfull.com:$port/sample.html"
         val loopback = InetAddress.getByName("127.0.0.1")
@@ -44,6 +47,29 @@ class ChapterCrawlerTest {
     @After
     fun tearDown() {
         server.shutdown()
+        foreign.shutdown()
+    }
+
+    private fun crawlerForMappedHosts(): ChapterCrawler {
+        val loopback = InetAddress.getByName("127.0.0.1")
+        val dns = object : Dns {
+            override fun lookup(hostname: String): List<InetAddress> =
+                if (hostname in setOf("readnovelfull.com", "www.readnovelfull.com", "evil.example", "www.evil.example")) {
+                    listOf(loopback)
+                } else {
+                    Dns.SYSTEM.lookup(hostname)
+                }
+        }
+        val okClient = OkHttpClient.Builder()
+            .connectTimeout(30, TimeUnit.SECONDS)
+            .readTimeout(30, TimeUnit.SECONDS)
+            .dns(dns)
+            .build()
+        return ChapterCrawler(
+            HttpClient(InMemoryCloudflareCookieStore(), okClient),
+            emptySet(),
+            requireHttps = false
+        )
     }
 
     @Test
@@ -54,8 +80,81 @@ class ChapterCrawlerTest {
             .isEqualTo("https://example.com/ch1")
         assertThat(crawler.makeAbsolute("http://example.com/ch1", "http://example.com/novel"))
             .isEqualTo("http://example.com/ch1")
+    }
+
+    @Test
+    fun makeAbsolute_resolvesRootRelativeAndRelativeLinksAgainstTheBase() {
+        val crawler = ChapterCrawler(client, emptySet(), requireHttps = false)
+
         assertThat(crawler.makeAbsolute("/ch1", "https://example.com/novel"))
-            .isEqualTo("https://example.com/novel/ch1")
+            .isEqualTo("https://example.com/ch1")
+        assertThat(crawler.makeAbsolute("ch2", "https://example.com/novel"))
+            .isEqualTo("https://example.com/ch2")
+    }
+
+    @Test
+    fun resolveSameDomain_resolvesRelativeLinksAndRejectsForeignHosts() {
+        val crawler = ChapterCrawler(client, emptySet(), requireHttps = false)
+
+        assertThat(crawler.resolveSameDomain("ch2", "https://example.com/novel", "example.com"))
+            .isEqualTo("https://example.com/ch2")
+        assertThat(
+            crawler.resolveSameDomain("http://example.com/ch1", "https://example.com/novel", "example.com")
+        ).isEqualTo("https://example.com/ch1")
+        assertThat(
+            crawler.resolveSameDomain("https://evil.example/ch1", "https://example.com/novel", "example.com")
+        ).isNull()
+        assertThat(
+            crawler.resolveSameDomain("https://cdn.example.com/ch1", "https://example.com/novel", "example.com")
+        ).isEqualTo("https://cdn.example.com/ch1")
+    }
+
+    @Test
+    fun crawlChapterList_rejectsCrossDomainNextPageBeforeContact() = runBlocking {
+        server.enqueue(
+            MockResponse().setBody(
+                """<a href="http://evil.example:${foreign.port}/page-2" rel="next">Next</a>"""
+            )
+        )
+
+        val result = crawlerForMappedHosts().crawlChapterList(homeUrl)
+
+        assertThat(result.links).isEmpty()
+        assertThat(foreign.requestCount).isEqualTo(0)
+    }
+
+    @Test
+    fun crawlChapterList_omitsCrossDomainDiscoveredCover() = runBlocking {
+        server.enqueue(
+            MockResponse().setBody(
+                """<meta property="og:image" content="http://evil.example:${foreign.port}/cover.jpg">"""
+            )
+        )
+
+        val result = crawlerForMappedHosts().crawlChapterList(homeUrl)
+
+        assertThat(result.coverUrl).isNull()
+        assertThat(foreign.requestCount).isEqualTo(0)
+    }
+
+    @Test
+    fun crawlChapterList_followsSameDomainRelativeNextPage() = runBlocking {
+        server.enqueue(
+            MockResponse().setBody(
+                """<a href="/sample/chapter-1.html">Chapter 1</a><a href="/sample/page-2.html" rel="next">Next</a>"""
+            )
+        )
+        server.enqueue(
+            MockResponse().setBody(
+                """<a href="/sample/chapter-2.html">Chapter 2</a>"""
+            )
+        )
+
+        val result = crawlerForMappedHosts().crawlChapterList(homeUrl)
+
+        assertThat(server.requestCount).isEqualTo(2)
+        assertThat(result.links.map { it.url })
+            .contains("http://readnovelfull.com:${server.port}/sample/chapter-2.html")
     }
 
     @Test

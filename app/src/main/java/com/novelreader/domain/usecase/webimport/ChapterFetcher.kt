@@ -7,6 +7,7 @@ import kotlinx.coroutines.delay
 import org.jsoup.HttpStatusException
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
+import java.net.URI
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -53,12 +54,17 @@ class ChapterFetcher @Inject constructor(
 
     private suspend fun fetchWithRetry(url: String): Document {
         if (requireHttps && !url.startsWith("https://")) throw SecurityException("Apenas HTTPS permitido")
+        val host = hostOf(url)
         var lastException: Exception? = null
         var lastStatusCode: Int = 0
         for (attempt in 1..maxRetries) {
             try {
                 if (attempt > 1) delay(attempt * 2000L)
-                val response = httpClient.get(url, referrer = url.substringBeforeLast("/"))
+                val response = httpClient.get(
+                    url = url,
+                    referrer = url.substringBeforeLast("/"),
+                    policy = RemoteRequestPolicy.SameNovelDomain(host)
+                )
                 val statusCode = response.statusCode
                 lastStatusCode = statusCode
                 if (statusCode in 200..299) {
@@ -133,4 +139,6 @@ class ChapterFetcher @Inject constructor(
         }
         throw lastException ?: Exception("Request failed after $maxRetries retries")
     }
+
+    private fun hostOf(url: String): String = try { URI(url).host.orEmpty() } catch (_: Exception) { "" }
 }

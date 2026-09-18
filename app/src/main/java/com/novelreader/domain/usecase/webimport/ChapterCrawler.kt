@@ -43,7 +43,9 @@ class ChapterCrawler @Inject constructor(
     private var requireHttps: Boolean = true
 
     suspend fun crawlChapterList(homeUrl: String): CrawlResult {
-        val homeDomain = hostOf(homeUrl)
+        val expectedHost = hostOf(homeUrl)
+        require(expectedHost.isNotBlank()) { "Invalid novel host" }
+        val policy = RemoteRequestPolicy.SameNovelDomain(expectedHost)
         val allLinks = mutableListOf<ChapterLink>()
         val attemptedUrls = mutableListOf<String>()
         var currentUrl: String? = homeUrl
@@ -56,19 +58,19 @@ class ChapterCrawler @Inject constructor(
         var firstPageDoc: Document? = null
 
         while (currentUrl != null && pageCount < MAX_PAGES) {
-            val fetched = fetchPage(currentUrl)
+            val fetched = fetchPage(currentUrl, policy)
             attemptedUrls.add(currentUrl)
             lastFetchedStatus = fetched.statusCode
             lastFetchedBody = fetched.body
             lastFetchedFinalUrl = fetched.finalUrl
             val doc = fetched.document
             if (pageCount == 0) {
-                coverUrl = extractCoverUrl(doc, homeUrl)
+                coverUrl = extractCoverUrl(doc, homeUrl, expectedHost)
                 novelTitle = extractNovelTitle(doc)
                 firstPageDoc = doc
             }
-            allLinks.addAll(extractChapterLinks(doc, currentUrl, homeDomain))
-            currentUrl = findNextPageUrl(doc, currentUrl)
+            allLinks.addAll(extractChapterLinks(doc, currentUrl, expectedHost))
+            currentUrl = findNextPageUrl(doc, currentUrl, expectedHost)
             pageCount++
             if (currentUrl != null) delay(PAGE_DELAY_MS)
         }
@@ -110,9 +112,9 @@ class ChapterCrawler @Inject constructor(
         val finalUrl: String?
     )
 
-    private suspend fun fetchPage(url: String): FetchedPage {
+    private suspend fun fetchPage(url: String, policy: RemoteRequestPolicy): FetchedPage {
         if (requireHttps && !url.startsWith("https://")) throw SecurityException("Apenas HTTPS permitido")
-        val response = httpClient.get(url)
+        val response = httpClient.get(url, policy = policy)
         val statusCode = response.statusCode
         if (statusCode in 200..299) {
             return FetchedPage(
@@ -142,15 +144,15 @@ class ChapterCrawler @Inject constructor(
         throw HttpStatusException("HTTP error fetching URL", statusCode, url)
     }
 
-    private fun findNextPageUrl(doc: Document, currentUrl: String): String? {
+    private fun findNextPageUrl(doc: Document, currentUrl: String, expectedHost: String): String? {
         val nextTexts = listOf("next", "próxima", "proximo", ">", "»", "›")
         val nextSelectors = listOf("a.next", "a[rel=next]", ".pagination a", ".pager a", "a[aria-label*=next]", "a[aria-label*=Next]")
 
         for (selector in nextSelectors) {
             val el = doc.selectFirst(selector) ?: continue
-            val href = el.attr("abs:href").ifEmpty { el.attr("href") }
-            if (href.isNotBlank() && href != currentUrl) {
-                return makeAbsolute(href, currentUrl)
+            val resolved = resolveDiscoveredLink(el.attr("href"), currentUrl, expectedHost) ?: continue
+            if (resolved != currentUrl) {
+                return resolved
             }
         }
 
@@ -158,14 +160,20 @@ class ChapterCrawler @Inject constructor(
             val text = link.text().trim().lowercase()
             val ariaLabel = (link.attr("aria-label") ?: "").lowercase()
             if (nextTexts.any { text == it || ariaLabel.contains(it) }) {
-                val href = link.attr("abs:href").ifEmpty { link.attr("href") }
-                if (href.isNotBlank() && href != currentUrl) {
-                    return makeAbsolute(href, currentUrl)
+                val resolved = resolveDiscoveredLink(link.attr("href"), currentUrl, expectedHost) ?: continue
+                if (resolved != currentUrl) {
+                    return resolved
                 }
             }
         }
 
         return null
+    }
+
+    private fun resolveDiscoveredLink(href: String, baseUrl: String, expectedHost: String): String? {
+        val trimmed = href.trim()
+        if (trimmed.isEmpty() || trimmed.startsWith("#")) return null
+        return resolveSameDomain(trimmed, baseUrl, expectedHost)
     }
 
     private fun extractChapterLinks(doc: Document, homeUrl: String, homeDomain: String): List<ChapterLink> {
@@ -176,11 +184,11 @@ class ChapterCrawler @Inject constructor(
         return StringUtils.fileNameFromUrl(url, "chapter_$chapterNumber")
     }
 
-    private fun extractCoverUrl(doc: Document, homeUrl: String): String? {
+    private fun extractCoverUrl(doc: Document, homeUrl: String, expectedHost: String): String? {
         val ogImage = doc.select("meta[property=og:image]").first()?.attr("content")
-        if (ogImage != null) return makeAbsolute(ogImage, homeUrl)
+        if (ogImage != null) return resolveDiscoveredLink(ogImage, homeUrl, expectedHost)
         val twitterImage = doc.select("meta[name=twitter:image]").first()?.attr("content")
-        if (twitterImage != null) return makeAbsolute(twitterImage, homeUrl)
+        if (twitterImage != null) return resolveDiscoveredLink(twitterImage, homeUrl, expectedHost)
         val firstImage = doc.select("img[src]").firstOrNull {
             val src = it.attr("src")
             src.isNotBlank() && !src.contains("logo", ignoreCase = true)
@@ -188,19 +196,37 @@ class ChapterCrawler @Inject constructor(
                     && !src.contains("avatar", ignoreCase = true)
                     && !src.contains("banner", ignoreCase = true)
         }
-        if (firstImage != null) return makeAbsolute(firstImage.attr("src"), homeUrl)
+        if (firstImage != null) return resolveDiscoveredLink(firstImage.attr("src"), homeUrl, expectedHost)
         return null
     }
 
     @androidx.annotation.VisibleForTesting
-    internal fun makeAbsolute(url: String, base: String): String {
-        if (url.startsWith("https://")) return url
-        if (url.startsWith("http://")) {
-            return if (base.startsWith("https://")) "https://${url.removePrefix("http://")}" else url
-        }
-        val baseUrl = base.trimEnd('/')
-        return if (url.startsWith("/")) "$baseUrl$url" else "$baseUrl/$url"
+    internal fun resolveSameDomain(url: String, baseUrl: String, expectedHost: String): String? {
+        val absolute = upgradeToHttps(resolveAgainstBase(url, baseUrl) ?: return null, baseUrl)
+        val resolved = runCatching { URI(absolute) }.getOrNull() ?: return null
+        val scheme = resolved.scheme?.lowercase()
+        if (scheme !in setOf("http", "https")) return null
+        if (requireHttps && scheme != "https") return null
+        val host = resolved.host ?: return null
+        if (!StringUtils.hostMatchesDomain(host, expectedHost)) return null
+        return absolute
     }
+
+    @androidx.annotation.VisibleForTesting
+    internal fun makeAbsolute(url: String, base: String): String {
+        val absolute = resolveAgainstBase(url, base) ?: return url
+        return upgradeToHttps(absolute, base)
+    }
+
+    private fun resolveAgainstBase(url: String, base: String): String? =
+        runCatching { URI(base).resolve(url).toString() }.getOrNull()
+
+    private fun upgradeToHttps(url: String, base: String): String =
+        if (base.startsWith("https://") && url.startsWith("http://")) {
+            "https://" + url.removePrefix("http://")
+        } else {
+            url
+        }
 
     private fun hostOf(url: String): String = try { URI(url).host.orEmpty() } catch (_: Exception) { "" }
 

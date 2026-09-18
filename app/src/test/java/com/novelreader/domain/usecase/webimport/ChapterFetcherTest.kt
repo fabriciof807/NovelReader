@@ -19,6 +19,7 @@ import java.util.concurrent.TimeUnit
 class ChapterFetcherTest {
 
     private lateinit var server: MockWebServer
+    private lateinit var foreign: MockWebServer
     private lateinit var httpClient: HttpClient
     private lateinit var parserRegistry: ParserRegistry
 
@@ -26,11 +27,13 @@ class ChapterFetcherTest {
     fun setUp() {
         server = MockWebServer()
         server.start()
+        foreign = MockWebServer()
+        foreign.start()
         val port = server.url("").port
         val loopback = InetAddress.getByName("127.0.0.1")
         val dns = object : Dns {
             override fun lookup(hostname: String): List<InetAddress> =
-                if (hostname == "freewebnovel.com" || hostname == "www.freewebnovel.com") {
+                if (hostname in setOf("freewebnovel.com", "www.freewebnovel.com", "evil.example", "www.evil.example")) {
                     listOf(loopback)
                 } else {
                     Dns.SYSTEM.lookup(hostname)
@@ -52,6 +55,7 @@ class ChapterFetcherTest {
     @After
     fun tearDown() {
         server.shutdown()
+        foreign.shutdown()
     }
 
     @Test
@@ -150,5 +154,29 @@ class ChapterFetcherTest {
 
         assertThat(fetched.content).contains("Recovered after 429s")
         assertThat(server.requestCount).isEqualTo(4)
+    }
+
+    @Test
+    fun fetch_rejectsCrossDomainRedirectBeforeContact() = runBlocking {
+        val port = server.url("").port
+        server.enqueue(
+            MockResponse()
+                .setResponseCode(302)
+                .setHeader("Location", "http://evil.example:${foreign.port}/chapter-1")
+        )
+
+        val fetcher = ChapterFetcher(parserRegistry, httpClient, requireHttps = false)
+        fetcher.maxRetries = 1
+
+        val ex = runCatching {
+            fetcher.fetch(
+                "http://www.freewebnovel.com:$port/novel/test/chapter-1",
+                "chapter-1",
+                "Chapter 1"
+            )
+        }.exceptionOrNull()
+
+        assertThat(ex).isInstanceOf(RemoteRequestRejectedException::class.java)
+        assertThat(foreign.requestCount).isEqualTo(0)
     }
 }
