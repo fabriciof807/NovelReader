@@ -56,6 +56,7 @@ import com.novelreader.ui.customization.HomeWallpaperViewModel
 import com.novelreader.ui.customization.NavigationBarVeil
 import com.novelreader.ui.customization.barColorFor
 import com.novelreader.ui.customization.WallpaperBackground
+import com.novelreader.ui.customization.WallpaperVariantTheme
 import com.novelreader.ui.library.components.AddToCollectionDialog
 import com.novelreader.ui.library.components.CollectionNameDialog
 import com.novelreader.ui.library.components.CoverUrlDialog
@@ -103,11 +104,7 @@ fun LibraryScreen(
     val homeWallpaperBlur by wallpaperViewModel.blur.collectAsState()
     val homeWallpaperBehindBars by wallpaperViewModel.behindBars.collectAsState()
     val wallpaperActive = homeWallpaper != PreferenceAllowlists.WALLPAPER_NONE
-    val barColor = barColorFor(
-        surface = MaterialTheme.colorScheme.surface,
-        wallpaperActive = wallpaperActive,
-        behindBars = homeWallpaperBehindBars
-    )
+    val homeWallpaperIsLight by wallpaperViewModel.wallpaperIsLight.collectAsState()
     val showWhatsNew by viewModel.showWhatsNew.collectAsState()
     val whatsNewGroups by viewModel.whatsNewGroups.collectAsState()
     val newChapterCounts by viewModel.newChapterCounts.collectAsState()
@@ -197,274 +194,283 @@ fun LibraryScreen(
         )
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        WallpaperBackground(
-            ref = homeWallpaper,
-            blur = homeWallpaperBlur,
-            modifier = Modifier.fillMaxSize()
-        )
-        if (wallpaperActive) {
-            NavigationBarVeil(
-                color = barColor,
-                modifier = Modifier.align(Alignment.BottomCenter)
+    WallpaperVariantTheme(homeWallpaperIsLight) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            WallpaperBackground(
+                ref = homeWallpaper,
+                blur = homeWallpaperBlur,
+                modifier = Modifier.fillMaxSize()
             )
-        }
-        Scaffold(
-            containerColor = if (wallpaperActive) Color.Transparent
-            else MaterialTheme.colorScheme.background,
-            topBar = {
-            Column {
-                TopAppBar(
-                    title = {
-                        if (browse.isSearchActive && selectedTab == 0) {
-                            OutlinedTextField(
-                                value = browse.searchQuery,
-                                onValueChange = { browse.searchQuery = it },
-                                placeholder = { Text(stringResource(R.string.search_hint)) },
-                                singleLine = true,
-                                modifier = Modifier.fillMaxWidth(),
-                                textStyle = MaterialTheme.typography.bodyMedium
-                            )
-                        } else {
-                            Text(
-                                if (selectedTab == 0) stringResource(R.string.library)
-                                else selectedNovel?.title ?: stringResource(R.string.chapters),
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        }
-                    },
-                    navigationIcon = {
-                        if (selectedTab == 1 || selectedTab == 2) {
-                            IconButton(onClick = { viewModel.deselectNovel() }) {
-                                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
+            // Over a wallpaper the containers follow its tone, so the veil has to be derived from the
+            // surface of the variant in force, not from the app's own one.
+            val barColor = barColorFor(
+                surface = MaterialTheme.colorScheme.surface,
+                wallpaperActive = wallpaperActive,
+                behindBars = homeWallpaperBehindBars
+            )
+            if (wallpaperActive) {
+                NavigationBarVeil(
+                    color = barColor,
+                    modifier = Modifier.align(Alignment.BottomCenter)
+                )
+            }
+            Scaffold(
+                containerColor = if (wallpaperActive) Color.Transparent
+                else MaterialTheme.colorScheme.background,
+                topBar = {
+                Column {
+                    TopAppBar(
+                        title = {
+                            if (browse.isSearchActive && selectedTab == 0) {
+                                OutlinedTextField(
+                                    value = browse.searchQuery,
+                                    onValueChange = { browse.searchQuery = it },
+                                    placeholder = { Text(stringResource(R.string.search_hint)) },
+                                    singleLine = true,
+                                    modifier = Modifier.fillMaxWidth(),
+                                    textStyle = MaterialTheme.typography.bodyMedium
+                                )
+                            } else {
+                                Text(
+                                    if (selectedTab == 0) stringResource(R.string.library)
+                                    else selectedNovel?.title ?: stringResource(R.string.chapters),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
                             }
-                        } else if (browse.isSearchActive) {
-                            IconButton(onClick = { browse.isSearchActive = false; browse.searchQuery = "" }) {
-                                Icon(Icons.Default.Close, contentDescription = stringResource(R.string.close))
-                            }
-                        }
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = barColor,
-                        titleContentColor = MaterialTheme.colorScheme.onSurface
-                    ),
-                    actions = {
-                        if (selectedTab == 0) {
-                            if (browse.isSearchActive) {
+                        },
+                        navigationIcon = {
+                            if (selectedTab == 1 || selectedTab == 2) {
+                                IconButton(onClick = { viewModel.deselectNovel() }) {
+                                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
+                                }
+                            } else if (browse.isSearchActive) {
                                 IconButton(onClick = { browse.isSearchActive = false; browse.searchQuery = "" }) {
                                     Icon(Icons.Default.Close, contentDescription = stringResource(R.string.close))
                                 }
-                            } else {
-                                IconButton(onClick = { browse.isSearchActive = true }) {
-                                    Icon(Icons.Default.Search, contentDescription = stringResource(R.string.search))
+                            }
+                        },
+                        colors = TopAppBarDefaults.topAppBarColors(
+                            containerColor = barColor,
+                            titleContentColor = MaterialTheme.colorScheme.onSurface
+                        ),
+                        actions = {
+                            if (selectedTab == 0) {
+                                if (browse.isSearchActive) {
+                                    IconButton(onClick = { browse.isSearchActive = false; browse.searchQuery = "" }) {
+                                        Icon(Icons.Default.Close, contentDescription = stringResource(R.string.close))
+                                    }
+                                } else {
+                                    IconButton(onClick = { browse.isSearchActive = true }) {
+                                        Icon(Icons.Default.Search, contentDescription = stringResource(R.string.search))
+                                    }
+                                }
+                                Box {
+                                    IconButton(onClick = { showSortMenu = true }) {
+                                        Icon(Icons.AutoMirrored.Filled.Sort, contentDescription = stringResource(R.string.sort))
+                                    }
+                                    DropdownMenu(
+                                        expanded = showSortMenu,
+                                        onDismissRequest = { showSortMenu = false }
+                                    ) {
+                                        DropdownMenuItem(
+                                            text = { Text(stringResource(R.string.sort_title)) },
+                                            onClick = { viewModel.setSortOrder(SortOrder.TITLE); showSortMenu = false },
+                                            leadingIcon = { Icon(Icons.Filled.SortByAlpha, contentDescription = null) }
+                                        )
+                                        DropdownMenuItem(
+                                            text = { Text(stringResource(R.string.sort_date)) },
+                                            onClick = { viewModel.setSortOrder(SortOrder.CREATED_AT); showSortMenu = false },
+                                            leadingIcon = { Icon(Icons.Default.DateRange, contentDescription = null) }
+                                        )
+                                        DropdownMenuItem(
+                                            text = { Text(stringResource(R.string.sort_last_read)) },
+                                            onClick = { viewModel.setSortOrder(SortOrder.LAST_READ); showSortMenu = false },
+                                            leadingIcon = { Icon(Icons.AutoMirrored.Filled.Sort, contentDescription = null) }
+                                        )
+                                    }
                                 }
                             }
-                            Box {
-                                IconButton(onClick = { showSortMenu = true }) {
-                                    Icon(Icons.AutoMirrored.Filled.Sort, contentDescription = stringResource(R.string.sort))
-                                }
-                                DropdownMenu(
-                                    expanded = showSortMenu,
-                                    onDismissRequest = { showSortMenu = false }
-                                ) {
-                                    DropdownMenuItem(
-                                        text = { Text(stringResource(R.string.sort_title)) },
-                                        onClick = { viewModel.setSortOrder(SortOrder.TITLE); showSortMenu = false },
-                                        leadingIcon = { Icon(Icons.Filled.SortByAlpha, contentDescription = null) }
-                                    )
-                                    DropdownMenuItem(
-                                        text = { Text(stringResource(R.string.sort_date)) },
-                                        onClick = { viewModel.setSortOrder(SortOrder.CREATED_AT); showSortMenu = false },
-                                        leadingIcon = { Icon(Icons.Default.DateRange, contentDescription = null) }
-                                    )
-                                    DropdownMenuItem(
-                                        text = { Text(stringResource(R.string.sort_last_read)) },
-                                        onClick = { viewModel.setSortOrder(SortOrder.LAST_READ); showSortMenu = false },
-                                        leadingIcon = { Icon(Icons.AutoMirrored.Filled.Sort, contentDescription = null) }
+                            if (selectedTab == 0) {
+                                IconButton(onClick = {
+                                    viewModel.setViewMode(if (viewMode == ViewMode.GRID) ViewMode.LIST else ViewMode.GRID)
+                                }) {
+                                    Icon(
+                                        if (viewMode == ViewMode.GRID) Icons.AutoMirrored.Filled.ViewList else Icons.Default.GridView,
+                                        contentDescription = if (viewMode == ViewMode.GRID)
+                                            stringResource(R.string.view_mode_list)
+                                        else stringResource(R.string.view_mode_grid)
                                     )
                                 }
                             }
-                        }
-                        if (selectedTab == 0) {
-                            IconButton(onClick = {
-                                viewModel.setViewMode(if (viewMode == ViewMode.GRID) ViewMode.LIST else ViewMode.GRID)
-                            }) {
-                                Icon(
-                                    if (viewMode == ViewMode.GRID) Icons.AutoMirrored.Filled.ViewList else Icons.Default.GridView,
-                                    contentDescription = if (viewMode == ViewMode.GRID)
-                                        stringResource(R.string.view_mode_list)
-                                    else stringResource(R.string.view_mode_grid)
-                                )
+                            IconButton(onClick = onFavoritesClick) {
+                                Icon(Icons.Default.Bookmark, contentDescription = stringResource(R.string.favorites))
+                            }
+                            IconButton(onClick = onSettingsClick) {
+                                Icon(Icons.Default.Settings, contentDescription = stringResource(R.string.settings))
                             }
                         }
-                        IconButton(onClick = onFavoritesClick) {
-                            Icon(Icons.Default.Bookmark, contentDescription = stringResource(R.string.favorites))
-                        }
-                        IconButton(onClick = onSettingsClick) {
-                            Icon(Icons.Default.Settings, contentDescription = stringResource(R.string.settings))
-                        }
-                    }
-                )
-                TabRow(
-                    selectedTabIndex = selectedTab,
-                    containerColor = barColor
-                ) {
-                    Tab(
-                        selected = selectedTab == 0,
-                        onClick = { viewModel.deselectNovel() },
-                        text = { Text(stringResource(R.string.library)) }
                     )
-                    if (selectedNovel != null) {
+                    TabRow(
+                        selectedTabIndex = selectedTab,
+                        containerColor = barColor
+                    ) {
                         Tab(
-                            selected = selectedTab == 1,
-                            onClick = { viewModel.selectTab(1) },
-                            text = { Text(stringResource(R.string.chapters)) }
+                            selected = selectedTab == 0,
+                            onClick = { viewModel.deselectNovel() },
+                            text = { Text(stringResource(R.string.library)) }
                         )
-                        Tab(
-                            selected = selectedTab == 2,
-                            onClick = { viewModel.selectTab(2) },
-                            text = { Text(stringResource(R.string.characters)) }
-                        )
-                    } else {
-                        Tab(
-                            selected = selectedTab == 1,
-                            onClick = { viewModel.selectTab(1) },
-                            text = { Text(stringResource(R.string.collections)) }
-                        )
+                        if (selectedNovel != null) {
+                            Tab(
+                                selected = selectedTab == 1,
+                                onClick = { viewModel.selectTab(1) },
+                                text = { Text(stringResource(R.string.chapters)) }
+                            )
+                            Tab(
+                                selected = selectedTab == 2,
+                                onClick = { viewModel.selectTab(2) },
+                                text = { Text(stringResource(R.string.characters)) }
+                            )
+                        } else {
+                            Tab(
+                                selected = selectedTab == 1,
+                                onClick = { viewModel.selectTab(1) },
+                                text = { Text(stringResource(R.string.collections)) }
+                            )
+                        }
                     }
                 }
-            }
-        },
-        floatingActionButton = {
-            if (selectedTab == 0) {
-                LibraryFab(onClick = onImportClick)
-            } else if (selectedTab == 1 && selectedNovel == null) {
-                LibraryFab(onClick = { showCreateFolderDialog = true })
-            }
-        },
-        bottomBar = {
-            if (selectedTab == 0 && stats.totalNovels > 0) {
-                LibraryStatsBar(stats, wallpaperActive = wallpaperActive)
-            }
-        },
-        snackbarHost = { SnackbarHost(snackbarHostState) },
-    ) { padding ->
-        Column(modifier = Modifier.fillMaxSize().padding(padding)) {
-            when (selectedTab) {
-                0 -> LibraryTab(
-                    novels = novels,
-                    backgroundImportState = backgroundImportState,
-                    viewMode = viewMode,
-                    readProgress = readProgress,
-                    newChapterCounts = newChapterCounts,
-                    searchQuery = browse.searchQuery,
-                    filterChip = browse.filterChip,
-                    wallpaperActive = wallpaperActive,
-                    onFilterChipChange = { browse.filterChip = it },
-                    onNovelClick = { novel ->
-                        if (novel.lastChapterId != null) {
-                            onChapterClick(novel.id, novel.lastChapterId)
-                        } else {
-                            viewModel.selectNovel(novel)
-                        }
-                    },
-                    onLongClick = { viewModel.requestDeleteById(it.id) },
-                    onToggleAutoUpdate = { viewModel.toggleAutoUpdate(it.id) },
-                    onCheckForUpdates = { viewModel.checkForUpdates(it.id) },
-                    onResyncChapters = { viewModel.resyncChapters(it.id) },
-                    onChapters = { viewModel.selectNovel(it) },
-                    onAddToCollection = { addToCollectionTarget = it },
-                    onToggleFavorite = { novel ->
-                        viewModel.toggleNovelFavorite(novel.id, novel.isFavorite)
-                    },
-                    onRequestChangeCover = { viewModel.requestChangeCoverById(it.id) },
-                    onRequestCoverByUrl = { viewModel.requestCoverByUrlById(it.id) },
-                    onContinueReading = { novel ->
-                        novel.lastChapterId?.let { onChapterClick(novel.id, it) }
-                    },
-                    onCancelImport = { viewModel.cancelBackgroundImport() },
-                    onImportLocal = { onImportClick() },
-                    onImportWeb = { onImportClick() }
-                )
-                1 -> if (selectedNovel == null) {
-                    CollectionsTab(
-                        folders = folders,
-                        folderCounts = folderCounts,
-                        novelsInSelectedFolder = novelsInFolder,
-                        allNovels = novels,
-                        selectedFolder = selectedFolder,
-                        onRenameFolder = { id, name -> viewModel.renameFolder(id, name) },
-                        onDeleteFolder = { viewModel.deleteFolder(it) },
-                        onOpenFolder = { viewModel.openFolder(it) },
-                        onCloseFolder = { viewModel.closeFolder() },
-                        onTogglePin = { viewModel.togglePin(it) },
-                        onAddNovelsToFolder = { id, ids -> viewModel.addNovelsToFolder(id, ids) },
-                        onRemoveNovelFromFolder = { novelId ->
-                            selectedFolder?.let { viewModel.removeNovelFromFolder(it.id, novelId) }
-                        },
+            },
+            floatingActionButton = {
+                if (selectedTab == 0) {
+                    LibraryFab(onClick = onImportClick)
+                } else if (selectedTab == 1 && selectedNovel == null) {
+                    LibraryFab(onClick = { showCreateFolderDialog = true })
+                }
+            },
+            bottomBar = {
+                if (selectedTab == 0 && stats.totalNovels > 0) {
+                    LibraryStatsBar(stats, wallpaperActive = wallpaperActive)
+                }
+            },
+            snackbarHost = { SnackbarHost(snackbarHostState) },
+        ) { padding ->
+            Column(modifier = Modifier.fillMaxSize().padding(padding)) {
+                when (selectedTab) {
+                    0 -> LibraryTab(
+                        novels = novels,
+                        backgroundImportState = backgroundImportState,
+                        viewMode = viewMode,
+                        readProgress = readProgress,
+                        newChapterCounts = newChapterCounts,
+                        searchQuery = browse.searchQuery,
+                        filterChip = browse.filterChip,
+                        wallpaperActive = wallpaperActive,
+                        onFilterChipChange = { browse.filterChip = it },
                         onNovelClick = { novel ->
                             if (novel.lastChapterId != null) {
                                 onChapterClick(novel.id, novel.lastChapterId)
                             } else {
                                 viewModel.selectNovel(novel)
                             }
-                        }
+                        },
+                        onLongClick = { viewModel.requestDeleteById(it.id) },
+                        onToggleAutoUpdate = { viewModel.toggleAutoUpdate(it.id) },
+                        onCheckForUpdates = { viewModel.checkForUpdates(it.id) },
+                        onResyncChapters = { viewModel.resyncChapters(it.id) },
+                        onChapters = { viewModel.selectNovel(it) },
+                        onAddToCollection = { addToCollectionTarget = it },
+                        onToggleFavorite = { novel ->
+                            viewModel.toggleNovelFavorite(novel.id, novel.isFavorite)
+                        },
+                        onRequestChangeCover = { viewModel.requestChangeCoverById(it.id) },
+                        onRequestCoverByUrl = { viewModel.requestCoverByUrlById(it.id) },
+                        onContinueReading = { novel ->
+                            novel.lastChapterId?.let { onChapterClick(novel.id, it) }
+                        },
+                        onCancelImport = { viewModel.cancelBackgroundImport() },
+                        onImportLocal = { onImportClick() },
+                        onImportWeb = { onImportClick() }
                     )
-                } else {
-                    ChaptersTab(
-                    novelId = selectedNovel?.id ?: 0L,
-                    novelTitle = selectedNovel?.title,
-                    chapters = chapters,
-                    bookmarkCounts = bookmarkCounts,
-                    sortOrder = chapterSortOrder,
-                    onToggleSort = { viewModel.toggleChapterSortOrder() },
-                    failedChapters = failedChapters,
-                    onRetryFailed = { viewModel.retryFailedChapter(it.id) },
-                    onRetryAllFailed = { viewModel.retryAllFailedChapters(it) },
-                    onRetryFailedManually = { failed, uri ->
-                        viewModel.retryFailedChapterManually(failed.id, uri)
-                    },
-                    onDismissFailed = { viewModel.dismissFailedChapter(it.id) },
-                    onScanWeb = { id -> viewModel.scanMissingChapters(id) },
-                    onScanLocal = { id, from, to ->
-                        viewModel.scanMissingChaptersLocal(id, from, to)
-                    },
-                    sourceUrlAvailable = selectedNovel?.sourceUrl?.isNotBlank() == true,
-                    maxChapterNumber = chapters.maxOfOrNull { it.orderIndex } ?: 0,
-                    totalChapters = selectedNovel?.totalChapters ?: 0,
-                    initialScroll = viewModel.getChaptersScroll(selectedNovel?.id ?: 0L),
-                    onScroll = { idx, off ->
-                        selectedNovel?.id?.let { viewModel.setChaptersScroll(it, idx, off) }
-                    },
-                    onChapterClick = { chapterId ->
-                        selectedNovel?.let { onChapterClick(it.id, chapterId) }
-                    },
-                    pendingScrollToFailedNovelId = scrollToFailedRequest,
-                    onConsumeScrollToFailed = { viewModel.consumeScrollToFailed() }
-                )
+                    1 -> if (selectedNovel == null) {
+                        CollectionsTab(
+                            folders = folders,
+                            folderCounts = folderCounts,
+                            novelsInSelectedFolder = novelsInFolder,
+                            allNovels = novels,
+                            selectedFolder = selectedFolder,
+                            onRenameFolder = { id, name -> viewModel.renameFolder(id, name) },
+                            onDeleteFolder = { viewModel.deleteFolder(it) },
+                            onOpenFolder = { viewModel.openFolder(it) },
+                            onCloseFolder = { viewModel.closeFolder() },
+                            onTogglePin = { viewModel.togglePin(it) },
+                            onAddNovelsToFolder = { id, ids -> viewModel.addNovelsToFolder(id, ids) },
+                            onRemoveNovelFromFolder = { novelId ->
+                                selectedFolder?.let { viewModel.removeNovelFromFolder(it.id, novelId) }
+                            },
+                            onNovelClick = { novel ->
+                                if (novel.lastChapterId != null) {
+                                    onChapterClick(novel.id, novel.lastChapterId)
+                                } else {
+                                    viewModel.selectNovel(novel)
+                                }
+                            }
+                        )
+                    } else {
+                        ChaptersTab(
+                        novelId = selectedNovel?.id ?: 0L,
+                        novelTitle = selectedNovel?.title,
+                        chapters = chapters,
+                        bookmarkCounts = bookmarkCounts,
+                        sortOrder = chapterSortOrder,
+                        onToggleSort = { viewModel.toggleChapterSortOrder() },
+                        failedChapters = failedChapters,
+                        onRetryFailed = { viewModel.retryFailedChapter(it.id) },
+                        onRetryAllFailed = { viewModel.retryAllFailedChapters(it) },
+                        onRetryFailedManually = { failed, uri ->
+                            viewModel.retryFailedChapterManually(failed.id, uri)
+                        },
+                        onDismissFailed = { viewModel.dismissFailedChapter(it.id) },
+                        onScanWeb = { id -> viewModel.scanMissingChapters(id) },
+                        onScanLocal = { id, from, to ->
+                            viewModel.scanMissingChaptersLocal(id, from, to)
+                        },
+                        sourceUrlAvailable = selectedNovel?.sourceUrl?.isNotBlank() == true,
+                        maxChapterNumber = chapters.maxOfOrNull { it.orderIndex } ?: 0,
+                        totalChapters = selectedNovel?.totalChapters ?: 0,
+                        initialScroll = viewModel.getChaptersScroll(selectedNovel?.id ?: 0L),
+                        onScroll = { idx, off ->
+                            selectedNovel?.id?.let { viewModel.setChaptersScroll(it, idx, off) }
+                        },
+                        onChapterClick = { chapterId ->
+                            selectedNovel?.let { onChapterClick(it.id, chapterId) }
+                        },
+                        pendingScrollToFailedNovelId = scrollToFailedRequest,
+                        onConsumeScrollToFailed = { viewModel.consumeScrollToFailed() }
+                    )
+                    }
+                    2 -> PersonagensTab(
+                        characters = characters,
+                        characterPhotos = characterPhotos,
+                        selectedNovel = selectedNovel,
+                        isImporting = isImportingCharacters,
+                        importResult = characterImportResult,
+                        onClearImportResult = { viewModel.clearCharacterImportResult() },
+                        onAddCharacter = { name, photoPath ->
+                            selectedNovel?.let { viewModel.addCharacter(it.id, name, photoPath) }
+                        },
+                        onDeleteCharacter = { id -> viewModel.deleteCharacter(id) },
+                        onAddCharacterPhoto = { charId, path -> viewModel.addCharacterPhoto(charId, path) },
+                        onBatchAddCharacterPhotos = { charId, paths -> viewModel.batchAddCharacterPhotos(charId, paths) },
+                        onDeleteCharacterPhoto = { photoId, charId -> viewModel.deleteCharacterPhoto(photoId, charId) },
+                        onUpdateCharacterName = { charId, name -> viewModel.updateCharacterName(charId, name) },
+                        onUpdateCharacterNotes = { charId, notes -> viewModel.updateCharacterNotes(charId, notes) },
+                        onToggleCharacterFavorite = { charId, fav -> viewModel.toggleCharacterFavorite(charId, fav) },
+                        onImportCharacters = { url -> viewModel.importCharactersFromUrl(url) }
+                    )
                 }
-                2 -> PersonagensTab(
-                    characters = characters,
-                    characterPhotos = characterPhotos,
-                    selectedNovel = selectedNovel,
-                    isImporting = isImportingCharacters,
-                    importResult = characterImportResult,
-                    onClearImportResult = { viewModel.clearCharacterImportResult() },
-                    onAddCharacter = { name, photoPath ->
-                        selectedNovel?.let { viewModel.addCharacter(it.id, name, photoPath) }
-                    },
-                    onDeleteCharacter = { id -> viewModel.deleteCharacter(id) },
-                    onAddCharacterPhoto = { charId, path -> viewModel.addCharacterPhoto(charId, path) },
-                    onBatchAddCharacterPhotos = { charId, paths -> viewModel.batchAddCharacterPhotos(charId, paths) },
-                    onDeleteCharacterPhoto = { photoId, charId -> viewModel.deleteCharacterPhoto(photoId, charId) },
-                    onUpdateCharacterName = { charId, name -> viewModel.updateCharacterName(charId, name) },
-                    onUpdateCharacterNotes = { charId, notes -> viewModel.updateCharacterNotes(charId, notes) },
-                    onToggleCharacterFavorite = { charId, fav -> viewModel.toggleCharacterFavorite(charId, fav) },
-                    onImportCharacters = { url -> viewModel.importCharactersFromUrl(url) }
-                )
             }
-        }
+            }
         }
     }
 

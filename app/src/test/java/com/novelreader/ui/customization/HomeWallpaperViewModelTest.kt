@@ -148,4 +148,99 @@ class HomeWallpaperViewModelTest {
         coVerify { storage.clearSlot(WallpaperStorage.SLOT_HOME) }
         coVerify { appPreferences.updateHomeWallpaper(PreferenceAllowlists.WALLPAPER_NONE) }
     }
+
+    private fun viewModelFor(ref: String): HomeWallpaperViewModel {
+        every { appPreferences.homeWallpaper } returns flowOf(ref)
+        return HomeWallpaperViewModel(appPreferences, storage)
+    }
+
+    @Test
+    fun `a light builtin wallpaper asks for the light containers`() = runTest {
+        assertThat(viewModelFor("builtin:areia").wallpaperIsLight.first()).isTrue()
+
+        coVerify(exactly = 0) { storage.wallpaperLuminance(any()) }
+    }
+
+    @Test
+    fun `a dark builtin wallpaper keeps the palette containers`() = runTest {
+        assertThat(viewModelFor("builtin:noite").wallpaperIsLight.first()).isFalse()
+    }
+
+    @Test
+    fun `no wallpaper leaves the containers to the palette`() = runTest {
+        assertThat(viewModelFor(PreferenceAllowlists.WALLPAPER_NONE).wallpaperIsLight.first())
+            .isNull()
+    }
+
+    @Test
+    fun `an image wallpaper is sampled`() = runTest {
+        coEvery { storage.wallpaperLuminance("file:home_1.png") } returns 0.8f
+        coEvery { storage.wallpaperLuminance("file:home_2.png") } returns 0.1f
+
+        assertThat(viewModelFor("file:home_1.png").wallpaperIsLight.first()).isTrue()
+        assertThat(viewModelFor("file:home_2.png").wallpaperIsLight.first()).isFalse()
+    }
+
+    @Test
+    fun `an image that cannot be sampled keeps the palette containers`() = runTest {
+        coEvery { storage.wallpaperLuminance("file:home_1.png") } returns null
+
+        assertThat(viewModelFor("file:home_1.png").wallpaperIsLight.first()).isNull()
+    }
+
+    @Test
+    fun `a reference that is not a wallpaper is never sampled`() = runTest {
+        assertThat(viewModelFor("builtin:inventado").wallpaperIsLight.first()).isNull()
+        assertThat(viewModelFor("file:../../app_prefs.xml").wallpaperIsLight.first()).isNull()
+        assertThat(viewModelFor("home").wallpaperIsLight.first()).isNull()
+
+        coVerify(exactly = 0) { storage.wallpaperLuminance(any()) }
+    }
+
+    // The crop screen simulates the library frame, so it has to know the tone of the image being
+    // cropped before it is copied into the slot — otherwise the preview shows a contrast the applied
+    // result will not have.
+    @Test
+    fun `picking an image samples its tone for the crop preview`() = runTest {
+        val uri: Uri = mockk()
+        coEvery { storage.uriLuminance(uri) } returns 0.9f
+
+        viewModel.startCrop(uri)
+
+        assertThat(viewModel.cropTone.value).isTrue()
+        assertThat(viewModel.pendingCrop.value).isEqualTo(uri)
+    }
+
+    @Test
+    fun `the crop preview has no tone when the image cannot be sampled`() = runTest {
+        val uri: Uri = mockk()
+        coEvery { storage.uriLuminance(uri) } returns null
+
+        viewModel.startCrop(uri)
+
+        assertThat(viewModel.cropTone.value).isNull()
+    }
+
+    @Test
+    fun `leaving the crop step drops the preview tone`() = runTest {
+        val uri: Uri = mockk()
+        coEvery { storage.uriLuminance(uri) } returns 0.9f
+        coEvery {
+            storage.saveCropped(
+                slot = WallpaperStorage.SLOT_HOME,
+                uri = uri,
+                crop = any(),
+                targetWidth = any(),
+                targetHeight = any()
+            )
+        } returns "file:home_cropped.jpg"
+        viewModel.startCrop(uri)
+
+        viewModel.cancelCrop()
+        assertThat(viewModel.cropTone.value).isNull()
+
+        viewModel.startCrop(uri)
+        viewModel.applyCrop(WallpaperCrop(), 1080, 2400)
+        assertThat(viewModel.cropTone.value).isNull()
+    }
 }

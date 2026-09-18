@@ -35,7 +35,8 @@ app/src/main/java/com/novelreader/
                               CharacterPhotoDao, FailedChapterDao, FolderDao, NovelSourceDao
       FtsSearchService.kt  -- FTS4 search with FTS-syntax escaping
     local/preferences/     -- DataStore (AppPreferences, ReaderPreferences, ImportPreferences, LibraryPreferences)
-    storage/WallpaperStorage.kt -- SAF import into filesDir/wallpapers, path validation, 20 MiB cap
+    storage/WallpaperStorage.kt -- SAF import into filesDir/wallpapers, path validation, 20 MiB cap,
+                              tone sampling for the library containers; pure tone maths in WallpaperTone.kt
     parser/                -- HTML/MHT parsers via Hilt multibinding (FreeWebNovel, ReadNovelFull, Generic, MhtParser)
     storage/               -- CoverStorage (local file I/O)
     remote/                -- MvlempyrCharacterImporter (WordPress API)
@@ -52,7 +53,8 @@ app/src/main/java/com/novelreader/
   ui/
     customization/         -- palettes, accent and wallpaper pickers shared by settings and reader
                               (PalettePicker, AccentColorPicker, WallpaperPicker, WallpaperBackground,
-                              HomeWallpaperViewModel); pure colour work lives in ui/theme/AppPalette.kt
+                              WallpaperVariantTheme, HomeWallpaperViewModel); pure colour work lives in
+                              ui/theme/AppPalette.kt, the wallpaper tone in WallpaperTone.kt
     navigation/NavGraph.kt -- 6 routes; library accepts optional selectedNovelId arg
     navigation/DeepLinkBus.kt -- SharedFlow connecting MainActivity intent handling to NavGraph
     library/               -- Library screen with tabs (novels, chapters, characters)
@@ -305,6 +307,33 @@ translucent stats bar labels at 3.22:1 — both below the 4.5:1 minimum — and 
 wallpaper the user picked, so the containers stay opaque instead (`WallpaperBarsTest`
 asserts the swap, the library only passes `wallpaperActive`).
 
+### Containers follow the wallpaper tone
+
+Over a wallpaper the containers take **the palette variant the wallpaper's tone asks for**, not the
+app's: Grafite (dark palette) over the light "areia" wallpaper renders the library with the light
+Grafite variant — light bars, tabs, chips, cards, FAB and counters with dark text — and the mirrored
+combination renders the dark one. Without it one screen carried two themes (issue #17): the
+containers are opaque and the bars' veil is derived from the same surface, so both kept the palette's
+tone while the background showed the wallpaper's.
+
+`WallpaperVariantTheme(isLightWallpaper)` (`ui/customization`) is the seam. It wraps the library body
+and the crop screen's simulated frame (which has to show the tone the image will really get), swaps
+the scheme through `appColorScheme` and leaves everything below reading `MaterialTheme`.
+`LocalAppVisuals` (`ui/theme`) carries the app's own palette/accent/variant down to it, and the wrapper
+puts the status bar appearance back on dispose because `NovelReaderTheme` does not recompose on
+navigation. `barColorFor` must be called *inside* the wrapper, or the veil keeps the app's tone.
+
+The tone itself: `data/storage/WallpaperTone.kt` holds the pure maths (WCAG `relativeLuminance`,
+`averageLuminance` over the opaque pixels, `sampleSizeFor`, `LIGHT_WALLPAPER_LUMINANCE`). Built-ins are
+classified from their stops (`wallpaperIsLight(ref)` in `ui/customization/WallpaperTone.kt`); an image
+is sampled by `WallpaperStorage.wallpaperLuminance`/`uriLuminance` at 64px through `inSampleSize`,
+never a full decode. A reference that does not resolve to a decodable image has no tone and the app's
+variant stays. WCAG luminance is not linear (`#808080` is 0.22), so the threshold needs a genuinely
+light wallpaper and mid-tones keep the dark containers — "amanhecer" ends on a bright yellow but
+averages 0.42, and a mid-tone background sits closer to the dark surface than to the light one. Don't
+reach for contrast-maximising instead: dark containers always contrast more with a light background,
+which is the mash the issue reported.
+
 ### Saved themes and reset
 
 `VisualThemeUseCase` owns both: `saveCurrent`/`apply`/`delete` for up to five
@@ -332,6 +361,7 @@ Two independent global slots (`WallpaperStorage.SLOT_HOME`, `SLOT_READER`), neve
 - `WallpaperStorage.importFromUri` validates the MIME/extension, caps the copy at 20 MiB, writes `<slot>_<timestamp>.<ext>` and deletes the slot's previous file.
 - `WallpaperBackground` draws nothing when the ref is missing, so a dangling reference after a backup restore degrades to "no wallpaper" instead of crashing. Blur uses `Modifier.blur` on API 31+ and a Coil down-sample request below that (no RenderEffect before 31).
 - The reader draws the image behind the (transparent) WebView with a veil in the reader palette's background colour; `themeVars` returns `bgColor = transparent` whenever a wallpaper is active. The library sets `Scaffold`/`TopAppBar`/`TabRow` to transparent while a wallpaper is active.
+- Every wallpaper carries a tone (light/dark) and the library's text-bearing containers follow it — see "Containers follow the wallpaper tone".
 - The image bytes are **not** part of the backup (v3 settings carry the ref only); a `file:` ref whose file is absent on the importing device is applied as `none`.
 
 ### Theme
@@ -361,7 +391,7 @@ Two independent global slots (`WallpaperStorage.SLOT_HOME`, `SLOT_READER`), neve
 - **Instrumented tests**: Room in-memory DB, Compose Test Rule, Espresso
 - Parser tests use real HTML fixtures
 - ViewModel tests inject mocked DAOs/use cases
-- **Current count: 765 unit tests**
+- **Current count: 799 unit tests**
 - **Always run `./gradlew :app:compileDebugKotlin :app:testDebugUnitTest` before pushing**
 
 ## Recent Sessions

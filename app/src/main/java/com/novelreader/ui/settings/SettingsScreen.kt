@@ -89,6 +89,7 @@ import com.novelreader.ui.customization.OptionLabel
 import com.novelreader.ui.customization.ResetAppearanceRow
 import com.novelreader.ui.customization.SavedThemesSection
 import com.novelreader.ui.customization.WallpaperCropOverlay
+import com.novelreader.ui.customization.WallpaperVariantTheme
 import com.novelreader.ui.customization.barColorFor
 import com.novelreader.ui.customization.paletteLabel
 import com.novelreader.ui.customization.wallpaperSummaryLabel
@@ -125,6 +126,7 @@ fun SettingsScreen(
     val homeWallpaper by wallpaperViewModel.wallpaper.collectAsState()
     val homeWallpaperBlur by wallpaperViewModel.blur.collectAsState()
     val homeWallpaperBehindBars by wallpaperViewModel.behindBars.collectAsState()
+    val cropTone by wallpaperViewModel.cropTone.collectAsState()
     val pendingCrop by wallpaperViewModel.pendingCrop.collectAsState()
     val wallpaperPicker = rememberLauncherForActivityResult(
         ActivityResultContracts.GetContent()
@@ -748,25 +750,29 @@ fun SettingsScreen(
     }
 
     pendingCrop?.let { cropUri ->
-        val barColor = barColorFor(
-            surface = MaterialTheme.colorScheme.surface,
-            wallpaperActive = true,
-            behindBars = homeWallpaperBehindBars
-        )
-        WallpaperCropOverlay(
-            imageModel = cropUri,
-            title = stringResource(R.string.library),
-            topBarColor = barColor,
-            bottomBarColor = barColor,
-            onApply = { crop, width, height ->
-                wallpaperViewModel.applyCrop(crop, width, height)
-            },
-            onSkipCrop = {
-                wallpaperViewModel.importFromUri(cropUri)
-                wallpaperViewModel.cancelCrop()
-            },
-            onCancel = { wallpaperViewModel.cancelCrop() }
-        )
+        // The frame simulates the library over the image being cropped, so it has to show the tone
+        // that image will actually get there — otherwise "dá para ver o contraste real" is a lie.
+        WallpaperVariantTheme(cropTone) {
+            val barColor = barColorFor(
+                surface = MaterialTheme.colorScheme.surface,
+                wallpaperActive = true,
+                behindBars = homeWallpaperBehindBars
+            )
+            WallpaperCropOverlay(
+                imageModel = cropUri,
+                title = stringResource(R.string.library),
+                topBarColor = barColor,
+                bottomBarColor = barColor,
+                onApply = { crop, width, height ->
+                    wallpaperViewModel.applyCrop(crop, width, height)
+                },
+                onSkipCrop = {
+                    wallpaperViewModel.importFromUri(cropUri)
+                    wallpaperViewModel.cancelCrop()
+                },
+                onCancel = { wallpaperViewModel.cancelCrop() }
+            )
+        }
     }
     }
 }

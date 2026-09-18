@@ -115,6 +115,50 @@ class WallpaperStorage @Inject constructor(
         resolveFile(context.filesDir, ref) != null
     }
 
+    /**
+     * Average luminance of the wallpaper, 0..1, or `null` when the reference does not resolve to a
+     * decodable image. The image is decoded at a fraction of its size: the library only needs one
+     * boolean out of it, and a full-size decode of a 4000px photo costs tens of MB.
+     */
+    suspend fun wallpaperLuminance(ref: String): Float? = withContext(io) {
+        val file = resolveFile(context.filesDir, ref) ?: return@withContext null
+        sampledPixels { file.inputStream() }?.let(::averageLuminance)
+    }
+
+    /** Same sample for an image the user just picked, before it is copied into the slot. */
+    suspend fun uriLuminance(uri: Uri): Float? = withContext(io) {
+        sampledPixels { context.contentResolver.openInputStream(uri) }?.let(::averageLuminance)
+    }
+
+    private fun sampledPixels(open: () -> java.io.InputStream?): IntArray? {
+        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        // With inJustDecodeBounds the decode returns null by design: the Options carry the answer, so
+        // the size check below is what reports an unreadable stream or a file that is not an image.
+        try {
+            open()?.use { BitmapFactory.decodeStream(it, null, bounds) }
+        } catch (_: Exception) {
+            return null
+        }
+        if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
+
+        val options = BitmapFactory.Options().apply {
+            inSampleSize = sampleSizeFor(bounds.outWidth, bounds.outHeight, TONE_SAMPLE_EDGE)
+        }
+        val bitmap = try {
+            open()?.use { BitmapFactory.decodeStream(it, null, options) }
+        } catch (_: Exception) {
+            null
+        } ?: return null
+
+        return try {
+            val pixels = IntArray(bitmap.width * bitmap.height)
+            bitmap.getPixels(pixels, 0, bitmap.width, 0, 0, bitmap.width, bitmap.height)
+            pixels
+        } finally {
+            bitmap.recycle()
+        }
+    }
+
     suspend fun delete(ref: String): Boolean = withContext(io) {
         val file = resolveFile(context.filesDir, ref) ?: return@withContext false
         file.delete()
@@ -178,6 +222,7 @@ class WallpaperStorage @Inject constructor(
         val SLOTS = setOf(SLOT_HOME, SLOT_READER)
         const val MAX_BYTES = 20L * 1024 * 1024
         const val MAX_DECODE_EDGE = 4096
+        const val TONE_SAMPLE_EDGE = 64
         private const val CROP_QUALITY = 92
 
         private val FILE_NAME = Regex("^[a-z0-9_]{1,64}\\.(jpg|jpeg|png|webp)$")

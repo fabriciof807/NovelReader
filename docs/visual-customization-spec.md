@@ -288,5 +288,42 @@ o container, inclusive com acento personalizado.
   qualquer byte como imagem, e o teste de recorte não prova nada.
 - `BitmapFactory.decodeStream` com `inJustDecodeBounds` retorna **null de
   propósito** (a resposta está no `Options`). Tratar esse null como erro foi o bug
-  que só apareceu porque o teste do caminho felizdo recorte existia: o crop nunca
+  que só apareceu porque o teste do caminho feliz do recorte existia: o crop nunca
   gravava nada.
+
+## 17. Containers seguem o tom do wallpaper (issue #17)
+
+Escolha do usuário, fechada na sessão: **os containers que carregam texto seguem o
+wallpaper, não a paleta**. Paleta escura (Grafite) sobre wallpaper claro (Areia)
+mostrava a biblioteca com dois temas na mesma tela — barra de cima, tab row, chips,
+card, FAB e barra de contadores escuros sobre um fundo claro. O caminho oposto
+(paleta clara + wallpaper escuro) tinha o mesmo defeito invertido.
+
+Três decisões:
+
+1. **Como descobrir o tom.** Wallpapers embutidos são classificados pelas próprias
+   cores; imagem do usuário é **amostrada** (`WallpaperStorage.wallpaperLuminance`,
+   e `uriLuminance` para a imagem ainda não copiada do recorte), com `inSampleSize`
+   de 64px no maior lado — decodificar uma foto de 4000px inteira para tirar um
+   booleano custaria dezenas de MB. Referência que não resolve (arquivo ausente,
+   arquivo que não é imagem) não dá tom.
+2. **Como seguir o tom.** Troca da **variante** da paleta ativa (Grafite escuro +
+   Areia claro → Grafite claro), não um container tingido com a cor do wallpaper:
+   os pares de contraste já desenhados e testados em `AppPaletteTest` continuam
+   valendo, e o acento do usuário sobrevive via `withAccent`.
+3. **Alcance.** Biblioteca **e** a moldura simulada do recorte, que precisa mostrar
+   o tom que a imagem vai realmente receber — senão a prévia mente sobre o
+   contraste. O leitor fica de fora: lá o tema é escolhido pelo usuário e há véu.
+
+O limiar é `LIGHT_WALLPAPER_LUMINANCE = 0.5f` sobre a luminância WCAG, que **não é
+linear**: `#808080` vale 0.22. Logo só wallpaper genuinamente claro troca os
+containers, e tons médios ficam escuros — "amanhecer" termina num amarelo forte
+mas tem média 0.42, e um fundo de tom médio está mais perto do `surface` escuro do
+que do claro.
+
+O seam é `WallpaperVariantTheme(isLightWallpaper)` (`ui/customization`), com
+`LocalAppVisuals` (`ui/theme/Theme.kt`) carregando paleta/acento/variante do app e
+`appColorScheme` montando o esquema (inclusive `dynamic`). `barColorFor` tem de ser
+chamado **dentro** do wrapper, senão o véu continua saindo do tom da paleta. O
+wrapper também ajusta os ícones da status bar e os restaura no `onDispose`, porque
+`NovelReaderTheme` não recompõe numa navegação.
