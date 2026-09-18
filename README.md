@@ -120,6 +120,13 @@ For novels from sites not listed, the generic parser tries to extract the main c
 
 ## Version history
 
+### v2.11.0 (2026-09-18)
+
+- Fix: with a wallpaper in the library, everything that carries text now follows the wallpaper's tone — the top bar, the tabs, the filter chips, the novel cards, the "+" button and the counters come out light with dark text over a light wallpaper, and dark with light text over a dark one, whatever palette you picked. It used to keep the palette's tone, so a dark palette over a light wallpaper read as two themes on one screen. Your own images are sampled (64 px) to find their tone, and the crop screen previews the tone the image will really get.
+- Fix: chapters appear in the library while an import is still running. They used to be written once per 100-chapter batch, so nothing showed up for up to ~8 minutes.
+- Security: the remote fetch path was hardened after an audit — a single egress point with a host policy per request, response and image size caps counted as the bytes are read, covers and characters pinned to the novel's source host, and bounded budgets for crawls and listings.
+- 799 unit tests passing (was 712).
+
 ### v2.10.0 (2026-09-16)
 
 - Feat: six palettes (Indigo, Paper, Graphite, Forest, Plum, AMOLED) with a light/dark variant each, replacing the plain light/dark/dynamic choice; dynamic color becomes one of the palette options.

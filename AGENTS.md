@@ -2,7 +2,7 @@
 
 ## Overview
 
-NovelReader (v2.10.0) is an offline-first Android novel reader. It imports HTML/MHT files from local storage or fetches chapters from web novel sites. All data stays on the device.
+NovelReader (v2.11.0) is an offline-first Android novel reader. It imports HTML/MHT files from local storage or fetches chapters from web novel sites. All data stays on the device.
 
 The app is end-user focused: 100% offline, no analytics, no account, no cloud.
 
@@ -402,7 +402,15 @@ Design specs and implementation plans from past AI sessions are preserved in git
 
 ## Current Version
 
-v2.10.0 (versionCode 31). See [README.md](README.md) (English) and [README_PT.md](README_PT.md) (Portuguese) for the user-facing documentation. Full release history in `git log`.
+v2.11.0 (versionCode 32). See [README.md](README.md) (English) and [README_PT.md](README_PT.md) (Portuguese) for the user-facing documentation. Full release history in `git log`.
+
+### v2.11.0 highlights
+
+- Fix: the library's chrome and text-bearing containers follow the wallpaper's tone (issue #17) — bars, tabs, chips, cards, FAB and counters take the palette variant the wallpaper asks for, dark text included, and the mirrored combination takes the other one. Built-ins are classified from their colours, an image wallpaper is sampled at 64px, and the crop preview shows the tone the image will really get.
+- Feat: chapters show up in the library while an import is still running — the pending ones flush to the database every 20 fetched chapters instead of once per 100-chapter batch.
+- Security: the four Medium findings of the piolium audit are remediated — one egress point for every programmatic remote read with a per-request host policy, response and image caps counted as read, covers pinned to the source host, and bounded crawl/listing budgets.
+- Chore: the Vue landing page was removed from the repository.
+- 799 unit tests passing (was 712 at v2.10.0).
 
 ### v2.10.0 highlights
 
