@@ -16,7 +16,9 @@ Thumbs.db
 *.aab
 *.keystore
 local.properties
+# Agent tooling state (installed locally per machine, never repo content)
 .opencode
+.agents/
 /.worktrees/
 /scripts/
 
