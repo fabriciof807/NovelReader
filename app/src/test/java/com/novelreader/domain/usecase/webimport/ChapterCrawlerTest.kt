@@ -2,6 +2,7 @@ package com.novelreader.domain.usecase.webimport
 
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.runTest
 import okhttp3.Dns
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
@@ -133,6 +134,43 @@ class ChapterCrawlerTest {
         assertThat(
             crawler.resolveSameDomain("https://cdn.example.com/ch1", "https://example.com/novel", "example.com")
         ).isEqualTo("https://cdn.example.com/ch1")
+    }
+
+    @Test
+    fun requestBudget_neverConsumesPastItsLimit() {
+        val budget = RequestBudget(2)
+
+        assertThat(budget.tryConsume()).isTrue()
+        assertThat(budget.tryConsume()).isTrue()
+        assertThat(budget.tryConsume()).isFalse()
+        assertThat(budget.used).isEqualTo(2)
+        assertThat(budget.remaining).isEqualTo(0)
+    }
+
+    @Test
+    fun crawlChapterList_keepsHomePagesAndAugmenterRequestsInsideOneBudget() = runTest {
+        val homeHtml = """
+            <html><body>
+            <div data-novel-id="4321"></div>
+            <a href="/sample/chapter-1.html">Chapter 1</a>
+            <a href="/sample/page-2.html" rel="next">Next</a>
+            </body></html>
+        """.trimIndent()
+        server.enqueue(MockResponse().setResponseCode(200).setBody(homeHtml))
+        for (page in 2..60) {
+            server.enqueue(
+                MockResponse().setResponseCode(200).setBody(
+                    """<a href="/sample/chapter-$page.html">Chapter $page</a><a href="/sample/page-${page + 1}.html" rel="next">Next</a>"""
+                )
+            )
+        }
+
+        crawlerForMappedHosts(setOf(ReadNovelFullListAugmenter())).crawlChapterList(homeUrl)
+
+        assertThat(server.requestCount).isEqualTo(50)
+        val requestedPaths = (1..50).mapNotNull { server.takeRequest(1, TimeUnit.SECONDS)?.path }
+        assertThat(requestedPaths).hasSize(50)
+        assertThat(requestedPaths.any { it.contains("ajax/chapter-archive") }).isFalse()
     }
 
     @Test

@@ -7,6 +7,7 @@ import okhttp3.OkHttpClient
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import org.jsoup.Jsoup
+import org.jsoup.nodes.Document
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -47,9 +48,18 @@ class FreewebnovelListAugmenterTest {
             .dns(overrideDns)
             .build()
         client = HttpClient(InMemoryCloudflareCookieStore(), okClient)
+        augmenter.delayFn = { }
     }
 
     private fun budget(capacity: Int = 50) = RequestBudget(capacity)
+
+    private fun paginationDocument(totalPage: Int, pageSize: Int, totalChapters: Int): Document =
+        Jsoup.parse(
+            """<div id="indexListPage" data-page-size="$pageSize" data-total-page="$totalPage" data-total-chapters="$totalChapters"></div>"""
+        )
+
+    private fun validPage(page: Int): String =
+        """{"code":200,"html":"<ul><li><a href='/x/c$page.html'>C$page</a></li></ul>","page":$page}"""
 
     @After
     fun tearDown() {
@@ -170,6 +180,54 @@ class FreewebnovelListAugmenterTest {
         val result = augmenter.augment(homeUrl, doc, client, policy, budget())
 
         assertThat(result).isEmpty()
+    }
+
+    @Test
+    fun augment_capsRemoteTotalPageToTheSharedBudget() = runBlocking {
+        val doc = paginationDocument(totalPage = Int.MAX_VALUE, pageSize = 40, totalChapters = Int.MAX_VALUE)
+        repeat(4) {
+            server.enqueue(MockResponse().setResponseCode(200).setBody(validPage(it + 2)))
+        }
+        val budget = RequestBudget(4)
+
+        augmenter.augment(homeUrl, doc, client, policy, budget)
+
+        assertThat(server.requestCount).isEqualTo(4)
+        assertThat(budget.remaining).isEqualTo(0)
+    }
+
+    @Test
+    fun augment_pacesFailuresAndStopsAfterThree() = runBlocking<Unit> {
+        val delays = mutableListOf<Long>()
+        augmenter.delayFn = { delays += it }
+        repeat(10) { server.enqueue(MockResponse().setResponseCode(500)) }
+
+        augmenter.augment(
+            homeUrl,
+            paginationDocument(totalPage = 100, pageSize = 40, totalChapters = 4000),
+            client,
+            policy,
+            RequestBudget(50)
+        )
+
+        assertThat(server.requestCount).isEqualTo(3)
+        assertThat(delays).containsExactly(1_500L, 1_500L, 1_500L)
+    }
+
+    @Test
+    fun augment_rejectsImplausiblePageSize() = runBlocking {
+        server.enqueue(MockResponse().setResponseCode(200).setBody(validPage(2)))
+
+        val result = augmenter.augment(
+            homeUrl,
+            paginationDocument(totalPage = 2, pageSize = 15_000, totalChapters = 30_000),
+            client,
+            policy,
+            RequestBudget(50)
+        )
+
+        assertThat(result).isEmpty()
+        assertThat(server.requestCount).isEqualTo(0)
     }
 
     @Test

@@ -20,7 +20,7 @@ data class CrawlResult(
     val novelTitle: String?
 )
 
-private const val MAX_PAGES = 50
+private const val MAX_REQUESTS = 50
 private const val PAGE_DELAY_MS = 1_500L
 private const val DIAGNOSTIC_TAG = "WebFetchProbe"
 private const val BODY_SNIPPET_MAX = 256
@@ -46,7 +46,7 @@ class ChapterCrawler @Inject constructor(
         val expectedHost = hostOf(homeUrl)
         require(expectedHost.isNotBlank()) { "Invalid novel host" }
         val policy = RemoteRequestPolicy.SameNovelDomain(expectedHost)
-        val budget = RequestBudget(MAX_PAGES)
+        val budget = RequestBudget(MAX_REQUESTS)
         val allLinks = mutableListOf<ChapterLink>()
         val attemptedUrls = mutableListOf<String>()
         var currentUrl: String? = homeUrl
@@ -58,7 +58,7 @@ class ChapterCrawler @Inject constructor(
         var lastFetchedFinalUrl: String? = null
         var firstPageDoc: Document? = null
 
-        while (currentUrl != null && pageCount < MAX_PAGES) {
+        while (currentUrl != null) {
             if (!budget.tryConsume()) break
             val fetched = fetchPage(currentUrl, policy)
             attemptedUrls.add(currentUrl)
