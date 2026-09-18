@@ -1,6 +1,6 @@
 # Security notes — residual risks and dependency audit
 
-Last updated: 2026-09-10 (v2.9.2).
+Last updated: 2026-09-18 (post-remediation, unreleased; source at v2.10.0).
 
 This file records the security posture after the piolium lite audit and the
 follow-up hardening pass. It is a companion to the audit artifacts under
@@ -19,24 +19,106 @@ verified against the source and fixed:
 | F4 (q2-004) | low | Exported `MainActivity` obeyed deep-link extras from any local app | Persisted per-install `DeepLinkToken` required by `DeepLinkIntentParser`; notification intents attach it |
 | F5 (q2-005) | low | Site parsers selected by `domain.contains(...)` (parser confusion, non-deterministic order) | `StringUtils.hostMatchesDomain` (host boundary, port/trailing-dot tolerant) + deterministic parser ordering |
 
+### 1.1 Balanced audit (2026-09-17) — four Medium findings, all remediated
+
+Source at commit `5715f540`. The audit report and its PoCs remain as evidence under
+`piolium/final-audit-report.md` and `piolium/findings/`; the fixes below landed on
+`agent/security-audit-remediation-impl`, final implementation commit `a935a26`.
+
+| ID | Severity | Issue | Fix commits |
+|---|---|---|---|
+| M1-cloudflare-challenge-host-allowlist-tautology | medium | The pre-load gate compared a challenge URL's host with itself, so it degenerated to a scheme check and any page-chosen HTTPS URL loaded into the challenge WebView | `d317f86` |
+| M2-page-controlled-crawler-outbound-destination | medium | Crawl traversal trusted page bytes for the next destination, and `followRedirects(true)` let `Location` leave the origin unvalidated | `8208ea4`, `057322b` |
+| M3-unguarded-raw-url-egress-and-cap-bypass | medium | `CoverStorage` and `MvlempyrCharacterImporter` used raw `java.net.URL` / `Jsoup.connect`, bypassing `PublicOnlyDns` and trusting `Content-Length` for a 10 MiB cap (chunked responses failed open) | `39e7415`, `fb5cdc5`, `a935a26` |
+| M4-remote-controlled-unbounded-pagination-loop | medium | A page-supplied `totalPage` drove an uncapped, unpaced request loop that shared no budget with the crawl path | `31323ae` |
+
+Two commits carry the shared infrastructure the four fixes build on: `c7d96dd`
+(one egress boundary with explicit destination policies and pre-contact redirect
+validation) and `7352ef5` (exact IPv6-literal match in `hostMatchesDomain`, so a
+bracketed literal cannot be satisfied by a suffix match).
+
+Validated at `a935a26` with the focused security regressions (75 tests) and the
+full JVM suite (760 tests, 0 failures) — see section 2 for the controls and
+section 5 for the PoC status.
+
 ## 2. Hardening added after the audit
 
 - **Reader WebView CSP nonce.** `buildReaderHtml` emits a fresh per-load nonce on
   the `<style>` and `<script>` elements and the CSP no longer allows
   `'unsafe-inline'` for `style-src`/`script-src`. Injected markup cannot execute
   even if a future sink escapes sanitization.
-- **Cloudflare challenge pre-load allowlist.** `CloudflareChallengePolicy` only
-  permits `https` URLs whose host matches the expected novel domain (with
-  `www.`/subdomain handling) before the challenge WebView loads them. Previously
-  the host check ran only after the page had loaded.
+- **A single egress boundary with two destination policies.** `HttpClient`
+  (`domain/usecase/webimport/HttpClient.kt`) is the only production remote-read
+  path, and it owns URL validation, redirect traversal, `PublicOnlyDns`, cookies,
+  timeouts, actual-byte limits and decoding. No production `java.net.URL`,
+  `openConnection` or `Jsoup.connect` call remains; the surviving `readText()`
+  calls (`SpecFileStore`, `PendingRestoreStore`, `ImportDataUseCase`) read local
+  app files or a user-picked SAF document, never a network source. Every call
+  selects a policy:
+  - `RemoteRequestPolicy.SameNovelDomain(expectedHost)` — crawler pages, chapter
+    fetches, Cloudflare challenge reloads, covers discovered in fetched HTML, and
+    failed-chapter retries. It accepts only HTTPS on the expected host, its
+    `www` form, or a subdomain accepted by `StringUtils.hostMatchesDomain`.
+  - `RemoteRequestPolicy.AnyPublicHttps` — user-entered cover URLs and the
+    MVLEMPYR page, listing and image reads (user-directed features). It accepts
+    any HTTPS hostname whose resolved addresses pass `PublicOnlyDns`.
+
+  The expected novel host is derived from the URL the user typed
+  (`WebImportViewModel.fetchChapters`) or from `novels.sourceUrl` on retry, before
+  any request is issued — never from a challenge URL, a redirect target or a
+  page-discovered link.
+- **Pre-contact redirect validation.** `HttpClient` sets
+  `followRedirects(false)`/`followSslRedirects(false)` on its OkHttp client and
+  follows at most `MAX_REDIRECTS = 5` hops itself. Each hop resolves `Location`
+  against the current URL, requires the destination to satisfy the request's
+  policy, and only then issues the next request — so a cross-domain or
+  `https` → `http` target is never contacted. `SameNovelDomain` rejects non-HTTPS
+  outright; `AnyPublicHttps` requires HTTPS plus a public DNS answer.
+- **Cloudflare challenge bound to the independently derived source host.**
+  `WebImportViewModel` computes `expectedHost` from the URL the user typed
+  *before* the crawl and carries both values in
+  `CloudflareChallenge(url, expectedHost)`; `ImportScreen` passes them unchanged
+  and never recomputes the expectation from `challenge.url`.
+  `CloudflareChallengeDialog` refuses to construct or load the WebView when
+  `isAllowed(url, expectedHost)` fails, disables content and file access, turns off
+  third-party cookies, blocks any navigation outside the expected host in
+  `shouldOverrideUrlLoading`, and uses the same host for its completion check and
+  cookie persistence.
 - **DNS rebinding guard.** `PublicOnlyDns` (wired into `HttpClient`'s OkHttp
   client) drops loopback, site-local, link-local, CGNAT, unique-local and
   multicast answers. A public hostname that resolves to an internal address is
   rejected with `UnknownHostException`.
-- **Response size and decompression-bomb caps.** `HttpClient` reads at most
-  8 MiB of the raw body and 16 MiB after gzip/brotli/deflate decoding
-  (`DEFAULT_MAX_BODY_BYTES` / `DEFAULT_MAX_DECOMPRESSED_BYTES`). A malicious
-  server can no longer exhaust memory with a huge or highly compressible body.
+- **Response size and decompression-bomb caps, measured on bytes read.**
+  `readBounded` counts bytes as they come off the stream, so a chunked body with
+  no — or a lying — `Content-Length` aborts at the limit instead of failing open.
+  Limits are per request: 8 MiB raw / 16 MiB decompressed by default
+  (`DEFAULT_MAX_BODY_BYTES` / `DEFAULT_MAX_DECOMPRESSED_BYTES`), 10 MiB for remote
+  covers (`CoverStorage.MAX_REMOTE_COVER_BYTES`, `CoverDownloader`) and for
+  MVLEMPYR character images (`MAX_IMAGE_BYTES`), and 1 MiB for one MVLEMPYR
+  listing page (`MAX_API_PAGE_BYTES`).
+- **Cover and character imports use the hardened client.** `CoverStorage.saveFromUrl`
+  no longer opens `java.net.URL` connections and no longer checks only
+  `Content-Length`: it calls `HttpClient` with `AnyPublicHttps` and a 10 MiB cap,
+  writes `novel_<id>.jpg.tmp`, and renames only after a complete successful write
+  (`finally` deletes the temp file), so a blocked, oversized or malformed response
+  leaves no destination file. `MvlempyrCharacterImporter` reads its page, listing
+  and `DesignImage`/`Avatar` URLs through `HttpClient` under the same
+  temp-file-and-rename rule and the same limits, and rethrows
+  `CancellationException` instead of swallowing it.
+- **Shared crawl request budget.** `RequestBudget(50)` is created once per
+  `ChapterCrawler.crawlChapterList` and shared by the main page loop and both list
+  augmenters (`ReadNovelFullListAugmenter`, `FreewebnovelListAugmenter`); every
+  request consumes a slot before it is issued. Exhaustion returns the links
+  collected so far rather than continuing in the background.
+  `FreewebnovelListAugmenter` additionally accepts a declared `pageSize` only in
+  `1..200`, caps accumulated augmented links at 10,000, stops after three
+  consecutive non-200/invalid-JSON responses, and applies the 1.5 s pacing delay
+  after every attempted extra page — failures included.
+- **Bounded MVLEMPYR pagination.** The WordPress listing uses `per_page=100` with
+  at most 50 pages / 5,000 entries, stops on an empty page and after three
+  consecutive HTTP or JSON failures, and caps each listing response at 1 MiB
+  before `JSONArray` parsing, so a remote `totalPages`/`per_page` value cannot
+  size an unbounded read or loop.
 
 ## 3. Dependency CVE audit (2026-09-09)
 
@@ -49,9 +131,10 @@ verified against the source and fixed:
 | Android WebView | system | Not pinned by the app; updated through the Play Store on the device. |
 
 Recommended follow-up: none open for jsoup. The 1.22.1 → 1.23.2 bump (2026-09-14)
-landed together with the parser fixtures passing unchanged; the only
-`Jsoup.connect` call site (`MvlempyrCharacterImporter`) keeps `followRedirects(true)`
-under the specification-correct redirect handling introduced in 1.23.1.
+landed together with the parser fixtures passing unchanged. `Jsoup` is now used for
+parsing only — the former `Jsoup.connect` call site (`MvlempyrCharacterImporter`)
+reads through `HttpClient` (section 2), so no `Jsoup` code path performs network
+I/O any more.
 
 ### 3.1 npm dependency audit (`landing-page/`, 2026-09-10)
 
@@ -143,3 +226,12 @@ The piolium artifacts live in the gitignored `piolium/` directory
 (`attack-surface/`, `findings/`, `audit-state.json`). Re-run the lite audit with
 the piolium CLI from the repository root, then compare new findings against this
 file and the `findings/` directory before opening fixes.
+
+The executed PoCs under `findings/` are **historical exploit harnesses**: they
+embed the pre-fix constructor signatures and source lists (M2/M4 omit
+`RemoteRequestPolicy.kt` and `RequestBudget.kt`; M3 calls the two- and
+four-argument `CoverStorage`/`MvlempyrCharacterImporter` constructors) and they
+assert the vulnerable behaviour. They no longer compile or pass against the fixed
+source, and they must not be rewritten into passing tests; the JVM regressions
+listed in section 2 are the post-fix evidence. Keep them byte-identical as audit
+record.
