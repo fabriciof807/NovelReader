@@ -90,7 +90,7 @@ class WebImportUseCase @Inject constructor(
             if (coverUrl != null && filesDir != null &&
                 (novelDao.getNovelById(novelId)?.coverPath.isNullOrEmpty())
             ) {
-                coverDownloader.downloadCover(novelId, coverUrl, filesDir)
+                coverDownloader.downloadCover(novelId, coverUrl, expectedHost, filesDir)
             }
 
             val sorted = links.sortedBy { it.chapterNumber }

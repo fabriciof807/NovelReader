@@ -38,10 +38,11 @@ class CoverDownloaderTest {
         val filesDir = Files.createTempDirectory("cover-download-test").toFile()
 
         try {
-            CoverDownloader(novelDao, httpClient).downloadCover(42L, coverUrl, filesDir)
+            CoverDownloader(novelDao, httpClient).downloadCover(42L, coverUrl, "covers.example", filesDir)
 
             val destination = File(filesDir, "covers/novel_42.jpg")
             assertThat(destination.readBytes().contentEquals(bytes)).isTrue()
+            assertThat(File(filesDir, "covers/novel_42.jpg.tmp").exists()).isFalse()
             coVerify { novelDao.updateCoverPath(42L, destination.absolutePath) }
         } finally {
             filesDir.deleteRecursively()
@@ -49,7 +50,7 @@ class CoverDownloaderTest {
     }
 
     @Test
-    fun downloadCover_usesSameNovelDomainPolicyAnd10MiBLimits() = runBlocking {
+    fun downloadCover_usesTheExpectedHostPolicyNotTheCoverHostAnd10MiBLimits() = runBlocking {
         val novelDao = mockk<NovelDao>(relaxed = true)
         val httpClient = mockk<HttpClient>()
         val coverUrl = "https://covers.example/cover.jpg"
@@ -75,11 +76,74 @@ class CoverDownloaderTest {
         val filesDir = Files.createTempDirectory("cover-download-test").toFile()
 
         try {
-            CoverDownloader(novelDao, httpClient).downloadCover(42L, coverUrl, filesDir)
+            CoverDownloader(novelDao, httpClient).downloadCover(42L, coverUrl, "novel.example", filesDir)
 
-            assertThat(policySlot.captured).isEqualTo(RemoteRequestPolicy.SameNovelDomain("covers.example"))
+            assertThat(policySlot.captured).isEqualTo(RemoteRequestPolicy.SameNovelDomain("novel.example"))
+            assertThat(policySlot.captured.allows(coverUrl)).isFalse()
             assertThat(maxBodySlot.captured).isEqualTo(10 * 1024 * 1024)
             assertThat(maxDecompressedSlot.captured).isEqualTo(10 * 1024 * 1024)
+        } finally {
+            filesDir.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun downloadCover_rejectedRequestWritesNoFileAndRecordsNoPath() = runBlocking {
+        val novelDao = mockk<NovelDao>(relaxed = true)
+        val httpClient = mockk<HttpClient>()
+        val coverUrl = "https://covers.example/cover.jpg"
+        coEvery {
+            httpClient.get(
+                url = any(),
+                referrer = anyNullable(),
+                extraHeaders = any(),
+                policy = any(),
+                maxBodyBytes = any(),
+                maxDecompressedBytes = any()
+            )
+        } throws RemoteRequestRejectedException("Host not allowed: covers.example")
+        val filesDir = Files.createTempDirectory("cover-download-test").toFile()
+
+        try {
+            CoverDownloader(novelDao, httpClient).downloadCover(42L, coverUrl, "novel.example", filesDir)
+
+            assertThat(File(filesDir, "covers/novel_42.jpg").exists()).isFalse()
+            coVerify(exactly = 0) { novelDao.updateCoverPath(any(), any()) }
+        } finally {
+            filesDir.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun downloadCover_writeFailureLeavesNoDestinationFile() = runBlocking {
+        val novelDao = mockk<NovelDao>(relaxed = true)
+        val httpClient = mockk<HttpClient>()
+        val coverUrl = "https://covers.example/cover.jpg"
+        coEvery {
+            httpClient.get(
+                url = any(),
+                referrer = anyNullable(),
+                extraHeaders = any(),
+                policy = any(),
+                maxBodyBytes = any(),
+                maxDecompressedBytes = any()
+            )
+        } returns HttpResponse(
+            statusCode = 200,
+            body = "",
+            headers = emptyMap(),
+            finalUrl = coverUrl,
+            bodyBytes = byteArrayOf(0x01)
+        )
+        val filesDir = Files.createTempDirectory("cover-download-test").toFile()
+
+        try {
+            File(filesDir, "covers/novel_42.jpg.tmp").mkdirs()
+
+            CoverDownloader(novelDao, httpClient).downloadCover(42L, coverUrl, "covers.example", filesDir)
+
+            assertThat(File(filesDir, "covers/novel_42.jpg").exists()).isFalse()
+            coVerify(exactly = 0) { novelDao.updateCoverPath(any(), any()) }
         } finally {
             filesDir.deleteRecursively()
         }
