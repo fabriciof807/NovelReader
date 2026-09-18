@@ -64,7 +64,6 @@ app/src/main/java/com/novelreader/
     reader/                -- WebView-based reader: bookmarks, FTS search, settings,
                                EmptyChapterState (MHT recovery), always-on top bar + battery/read
                                status bar, tap-to-toggle options bar
-    chapterlist/           -- Full chapter list screen for a novel
     import_novel/          -- Local file import screen
     webimport/             -- Web import ViewModel
     favorites/             -- Bookmarks screen
@@ -463,7 +462,7 @@ v2.11.0 (versionCode 32). See [README.md](README.md) (English) and [README_PT.md
 
 - Feat: novel collections (Coleções) — create/pin collections and add novels (`FolderEntity`, `NovelFolderCrossRef`, `FolderDao`).
 - Feat: complete backup v3 export/import — collections, settings, bookmarks and characters, with pending-restore after download (`PendingRestoreApplier`).
-- New `chapterlist/` screen; `LibraryViewModel` is called directly (no `LibraryIntent` dispatcher).
+- The full chapter list for a novel stays the library's Chapters tab (`ui/library/tabs/ChaptersTab.kt`); there is no separate `chapterlist/` screen. `LibraryViewModel` is called directly (no `LibraryIntent` dispatcher).
 - Room v9→v12 (`novel_sources`, `isNew`, folders).
 
 ### Earlier releases
