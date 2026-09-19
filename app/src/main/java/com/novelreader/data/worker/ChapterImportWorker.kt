@@ -88,10 +88,7 @@ class ChapterImportWorker @AssistedInject constructor(
             notificationHelper.postFailureNotification(spec)
             val errorType = if (errors.any { it.message.contains("timeout", ignoreCase = true) || it.message.contains("network", ignoreCase = true) || it.message.contains("connect", ignoreCase = true) })
                 "network" else "parse"
-            val outputData = workDataOf(
-                KEY_ERROR_TYPE to errorType,
-                KEY_ERROR_MSG to (errors.firstOrNull()?.message ?: "Unknown error")
-            )
+            val outputData = ImportFailureOutput.build(errorType, errors.firstOrNull()?.message)
             Result.failure(outputData)
         }
     }
