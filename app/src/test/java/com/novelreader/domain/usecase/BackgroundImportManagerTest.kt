@@ -4,6 +4,7 @@ import com.google.common.truth.Truth.assertThat
 import com.novelreader.data.local.preferences.ImportPreferences
 import com.novelreader.data.worker.ImportWorkScheduler
 import com.novelreader.data.worker.ObserverCallbacks
+import com.novelreader.data.worker.RunningImportJob
 import com.novelreader.data.worker.WorkCompletionObserver
 import io.mockk.coVerify
 import io.mockk.coEvery
@@ -16,6 +17,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
@@ -38,6 +40,96 @@ class BackgroundImportManagerTest {
         coEvery { completionObserver.withSchedulingLock(any()) } coAnswers {
             firstArg<suspend () -> Unit>().invoke()
         }
+        every { importPrefs.pendingQueue } returns flowOf(emptyList())
+    }
+
+    @Test
+    fun `startImport while work is already running enqueues instead of claiming`() = runTest {
+        // The process restarted mid-import, so the manager holds no state, but WorkManager is
+        // still downloading. The new novel must be queued, not announced as the current one.
+        coEvery { completionObserver.hasActiveWork() } returns true
+
+        manager.startImport("Queued Novel", listOf(ChapterLink("q", "https://q/1", 1)))
+
+        coVerify { scheduler.schedule(match { it.novelTitle == "Queued Novel" }) }
+        assertThat(manager.state.value.novelTitle).isEmpty()
+        assertThat(manager.state.value.running).isFalse()
+    }
+
+    @Test
+    fun `startImport with earlier jobs still queued does not claim the new novel`() = runTest {
+        val earlier = ImportJobSpec(
+            id = UUID.randomUUID(),
+            novelTitle = "Earlier Novel",
+            links = listOf("https://earlier/1"),
+            chapterNumbers = listOf(1),
+            coverUrl = null,
+            enqueuedAt = 1L
+        )
+        every { importPrefs.pendingQueue } returns flowOf(listOf(earlier))
+
+        manager.startImport("Queued Novel", listOf(ChapterLink("q", "https://q/1", 1)))
+
+        coVerify { scheduler.schedule(match { it.novelTitle == "Queued Novel" }) }
+        assertThat(manager.state.value.novelTitle).isEmpty()
+        assertThat(manager.state.value.running).isFalse()
+    }
+
+    @Test
+    fun `a running job the manager never started is adopted`() = runTest {
+        val queued = ImportJobSpec(
+            id = UUID.randomUUID(),
+            novelTitle = "Queued Novel",
+            links = listOf("https://q/1"),
+            chapterNumbers = listOf(1),
+            coverUrl = null,
+            enqueuedAt = 2L
+        )
+        every { importPrefs.pendingQueue } returns flowOf(listOf(queued))
+        val runningId = UUID.randomUUID()
+        val callbacks = slot<ObserverCallbacks>()
+        verify { completionObserver.callbacks = capture(callbacks) }
+
+        callbacks.captured.onJobAdopted(
+            RunningImportJob(
+                id = runningId,
+                novelTitle = "Running Novel",
+                batchLinks = 100,
+                remainingSplits = 2
+            )
+        )
+
+        assertThat(manager.state.value.id).isEqualTo(runningId)
+        assertThat(manager.state.value.novelTitle).isEqualTo("Running Novel")
+        assertThat(manager.state.value.running).isTrue()
+        assertThat(manager.state.value.queuedNovelTitles).containsExactly("Queued Novel")
+
+        // Progress for the adopted job now moves its own counter instead of being discarded.
+        callbacks.captured.onProgress(runningId, processed = 40, total = 100, currentChapter = 40)
+        assertThat(manager.state.value.importedCount).isEqualTo(40)
+
+        // Two splits: the first terminal leaves it running, the second hands the queue over.
+        callbacks.captured.onJobTerminal(runningId, success = true)
+        assertThat(manager.state.value.running).isTrue()
+        callbacks.captured.onJobTerminal(runningId, success = true)
+        assertThat(manager.state.value.id).isEqualTo(queued.id)
+        assertThat(manager.state.value.novelTitle).isEqualTo("Queued Novel")
+        assertThat(manager.state.value.running).isTrue()
+    }
+
+    @Test
+    fun `adoption is ignored when the manager already tracks a job`() = runTest {
+        manager.startImport("Own Novel", listOf(ChapterLink("o", "https://o/1", 1)))
+        val callbacks = slot<ObserverCallbacks>()
+        verify { completionObserver.callbacks = capture(callbacks) }
+        val ownId = manager.state.value.id
+
+        callbacks.captured.onJobAdopted(
+            RunningImportJob(UUID.randomUUID(), "Someone Else", batchLinks = 100, remainingSplits = 1)
+        )
+
+        assertThat(manager.state.value.id).isEqualTo(ownId)
+        assertThat(manager.state.value.novelTitle).isEqualTo("Own Novel")
     }
 
     @Test
@@ -151,11 +243,14 @@ class BackgroundImportManagerTest {
             coverUrl = null,
             enqueuedAt = 2L
         )
-        every { importPrefs.pendingQueue } returns flowOf(listOf(next))
+        val queue = mutableListOf<ImportJobSpec>()
+        every { importPrefs.pendingQueue } returns flow { emit(queue.toList()) }
         manager.startImport("Novel A", listOf(ChapterLink("A1", "https://a/1", 1)))
         val actualCurrentId = manager.state.value.id!!
         val callbacks = slot<ObserverCallbacks>()
         verify { completionObserver.callbacks = capture(callbacks) }
+        // Novel B lands in the queue while Novel A is the one running.
+        queue += next
 
         manager.cancel()
 
@@ -198,8 +293,10 @@ class BackgroundImportManagerTest {
             coverUrl = null,
             enqueuedAt = 2L
         )
-        every { importPrefs.pendingQueue } returns flowOf(listOf(next))
+        val queue = mutableListOf<ImportJobSpec>()
+        every { importPrefs.pendingQueue } returns flow { emit(queue.toList()) }
         manager.startImport("Novel A", listOf(ChapterLink("A1", "https://a/1", 1)))
+        queue += next
 
         val entered = CompletableDeferred<Unit>()
         val release = CompletableDeferred<Unit>()

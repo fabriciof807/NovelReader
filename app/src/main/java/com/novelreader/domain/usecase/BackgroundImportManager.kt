@@ -4,6 +4,7 @@ import android.util.Log
 import com.novelreader.data.local.preferences.ImportPreferences
 import com.novelreader.data.worker.ImportWorkScheduler
 import com.novelreader.data.worker.ObserverCallbacks
+import com.novelreader.data.worker.RunningImportJob
 import com.novelreader.data.worker.WorkCompletionObserver
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -117,6 +118,27 @@ class BackgroundImportManager @Inject constructor(
                     _state.compareAndSet(snapshot, completedState)
                 }
             }
+
+            override suspend fun onJobAdopted(job: RunningImportJob) {
+                // The process restarted (or a worker started this one) while it was downloading:
+                // adopt it, or every callback below is discarded and the banner names the novel
+                // that was queued last instead of the one that is running.
+                if (_state.value.id != null) return
+                Log.w(
+                    "ImportRetry",
+                    "onJobAdopted id=${job.id} title=${job.novelTitle} remainingSplits=${job.remainingSplits}"
+                )
+                handoffPending = false
+                importedCountBase = 0
+                pendingSplitCount = job.remainingSplits
+                _state.value = BackgroundImportState(
+                    id = job.id,
+                    running = true,
+                    novelTitle = job.novelTitle,
+                    totalToImport = job.batchLinks
+                )
+                refreshQueuedTitles()
+            }
         }
         completionObserver.start()
     }
@@ -140,9 +162,19 @@ class BackgroundImportManager @Inject constructor(
                 targetNovelId = targetNovelId,
                 isFavorite = isFavorite
             )
-            Log.w("ImportRetry", "startImport title=$novelTitle links=${links.size} batches=${specs.size} running=${_state.value.running} targetNovelId=$targetNovelId")
+            // Claiming the new novel as the one running is only right when it is about to run.
+            // WorkManager can be busy with a job this manager never started (the process was
+            // restarted while it downloaded), and the queue can still hold earlier jobs — in both
+            // cases the new novel is queued and waits its turn.
+            val queueEmpty = importPrefs.pendingQueue.first().isEmpty()
+            val busy = _state.value.running || !queueEmpty || completionObserver.hasActiveWork()
+            Log.w(
+                "ImportRetry",
+                "startImport title=$novelTitle links=${links.size} batches=${specs.size} " +
+                    "running=${_state.value.running} queueEmpty=$queueEmpty targetNovelId=$targetNovelId"
+            )
 
-            if (_state.value.running) {
+            if (busy) {
                 specs.forEach { scheduler.schedule(it) }
                 refreshQueuedTitles()
                 return@withSchedulingLock

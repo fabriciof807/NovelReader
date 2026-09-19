@@ -15,10 +15,28 @@ import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 
+/**
+ * A job that WorkManager is running but that the manager never started itself — the process was
+ * restarted while it was downloading, or a worker started it. It carries what the manager needs to
+ * rebuild its state from WorkManager instead of from memory, which does not survive a restart.
+ */
+data class RunningImportJob(
+    val id: UUID,
+    val novelTitle: String,
+    val batchLinks: Int,
+    val remainingSplits: Int
+)
+
 interface ObserverCallbacks {
     fun onProgress(id: UUID, processed: Int, total: Int, currentChapter: Int = 0)
     suspend fun onJobTerminal(id: UUID, success: Boolean)
     fun onAllIdle()
+
+    /**
+     * A job is running that this manager is not tracking. Without adopting it the banner names
+     * whichever novel was started last and its counter never moves, while this one downloads.
+     */
+    suspend fun onJobAdopted(job: RunningImportJob) {}
 }
 
 @Singleton
@@ -31,6 +49,9 @@ class WorkCompletionObserver @Inject constructor(
     private val schedulingMutex = Mutex()
     private val processedWorkIds: MutableSet<UUID> = mutableSetOf()
     private val progressCache: MutableMap<UUID, Pair<Int, Int>> = mutableMapOf()
+
+    /** The job already reported to [ObserverCallbacks.onJobAdopted], to announce each one once. */
+    private var announcedJobId: UUID? = null
 
     var callbacks: ObserverCallbacks? = null
 
@@ -56,6 +77,20 @@ class WorkCompletionObserver @Inject constructor(
                                 hasActive = true
                                 val jobId = extractJobId(info)
                                 if (jobId != null) {
+                                    if (jobId != announcedJobId) {
+                                        announcedJobId = jobId
+                                        specFileStore.read(jobId)?.let { spec ->
+                                            callbacks?.onJobAdopted(
+                                                RunningImportJob(
+                                                    id = jobId,
+                                                    novelTitle = spec.novelTitle,
+                                                    batchLinks = spec.links.size,
+                                                    remainingSplits = (spec.splitCount - spec.splitIndex)
+                                                        .coerceAtLeast(1)
+                                                )
+                                            )
+                                        }
+                                    }
                                     val processed = info.progress.getInt(ChapterImportWorker.KEY_PROGRESS, 0)
                                     val total = info.progress.getInt(ChapterImportWorker.KEY_TOTAL, 0)
                                     if (total > 0) {
@@ -68,6 +103,7 @@ class WorkCompletionObserver @Inject constructor(
                                 hasTerminal = true
                                 val jobId = extractJobId(info)
                                 if (jobId != null) {
+                                    if (jobId == announcedJobId) announcedJobId = null
                                     val cached = progressCache.remove(info.id)
                                     val processed = cached?.first
                                         ?: info.progress.getInt(ChapterImportWorker.KEY_PROGRESS, 0)
@@ -105,12 +141,15 @@ class WorkCompletionObserver @Inject constructor(
         scope.launch { scheduleNextIfIdle() }
     }
 
+    /** Whether an import is running or waiting to run right now. */
+    internal suspend fun hasActiveWork(): Boolean = workManager
+        .getWorkInfosByTagFlow(ChapterImportWorker.TAG_IMPORT)
+        .first()
+        .any { it.state == WorkInfo.State.RUNNING || it.state == WorkInfo.State.ENQUEUED }
+
     internal suspend fun scheduleNextIfIdle() {
         schedulingMutex.withLock {
-            val active = workManager
-                .getWorkInfosByTagFlow(ChapterImportWorker.TAG_IMPORT)
-                .first()
-                .any { it.state == WorkInfo.State.RUNNING || it.state == WorkInfo.State.ENQUEUED }
+            val active = hasActiveWork()
             if (active) {
                 Log.w("ImportRetry", "tryScheduleNext activeWork=yes → skip-active")
                 return@withLock
