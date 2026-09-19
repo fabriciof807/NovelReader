@@ -102,28 +102,30 @@ fun ImportScreen(
                 .fillMaxSize()
                 .padding(padding)
         ) {
+            // The TabRow and the content below are two lists of the same tabs: swap them together, or
+            // the labels stop matching what they show.
             TabRow(selectedTabIndex = selectedTab) {
                 Tab(
                     selected = selectedTab == 0,
                     onClick = { selectedTab = 0 },
-                    text = { Text(stringResource(R.string.import_tab_local)) }
+                    text = { Text(stringResource(R.string.import_tab_web)) }
                 )
                 Tab(
                     selected = selectedTab == 1,
                     onClick = { selectedTab = 1 },
-                    text = { Text(stringResource(R.string.import_tab_web)) }
+                    text = { Text(stringResource(R.string.import_tab_local)) }
                 )
             }
 
             when (selectedTab) {
-                0 -> LocalImportTab(
-                    state = localState,
-                    onImportFiles = { uris -> importViewModel.importFiles(uris) }
-                )
-                1 -> WebImportTab(
+                0 -> WebImportTab(
                     state = webState,
                     viewModel = webImportViewModel,
                     onImportComplete = onImportComplete
+                )
+                1 -> LocalImportTab(
+                    state = localState,
+                    onImportFiles = { uris -> importViewModel.importFiles(uris) }
                 )
             }
         }
