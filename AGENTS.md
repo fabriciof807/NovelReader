@@ -311,6 +311,23 @@ translucent stats bar labels at 3.22:1 — both below the 4.5:1 minimum — and 
 wallpaper the user picked, so the containers stay opaque instead (`WallpaperBarsTest`
 asserts the swap, the library only passes `wallpaperActive`).
 
+### Never dim text with alpha
+
+The same reasoning applies to a *dimmed* foreground, and the alpha that expresses it is the bug:
+alpha composites against whatever is behind it, so its ratio is not the palette's and no test can hold
+it. `onSurface.copy(alpha = 0.6f)` — used for the read chapter titles and still used for secondary
+labels — measured 3.08:1 on the light "papel" background and 3.84:1 on the light "grafite" surface:
+5 of the 12 palette/variant combinations sit below `MinContrast`, none of them needing a wallpaper to
+fail. Bumping the constant is not enough either — 0.7 clears four of them and leaves "papel" light at
+3.89:1.
+
+`mutedForeground(foreground, background)` in `ui/theme/AppPalette.kt` is the seam: it walks the line
+from the text colour towards the surface it will sit on and stops at the last point that still clears
+`MinContrast`, so the result is opaque and its ratio is a property of the palette. Pass the surface the
+text is really drawn on — `ChaptersTab` derives it against the `libraryContainerColor` it paints, not
+against the palette's own surface. `AppPaletteTest` holds the pair on every palette and every container
+the wallpaper switch can produce.
+
 ### Containers follow the wallpaper tone
 
 Over a wallpaper the containers take **the palette variant the wallpaper's tone asks for**, not the
