@@ -232,8 +232,12 @@ fun LibraryScreen(
                                 )
                             } else {
                                 Text(
-                                    if (selectedTab == 0) stringResource(R.string.library)
-                                    else selectedNovel?.title ?: stringResource(R.string.chapters),
+                                    libraryTopBarTitle(
+                                        selectedTab = selectedTab,
+                                        novelTitle = selectedNovel?.title,
+                                        library = stringResource(R.string.library),
+                                        collections = stringResource(R.string.collections)
+                                    ),
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
                                 )
@@ -489,4 +493,20 @@ fun LibraryScreen(
             onDismiss = { addToCollectionTarget = null }
         )
     }
+}
+
+/**
+ * What the library's top bar says. Tab 1 means two different things — the chapters of the selected
+ * novel, or the collections when no novel is selected — so the tab index alone does not answer it.
+ * Without a novel it used to answer "Capítulos" over the collections screen.
+ */
+internal fun libraryTopBarTitle(
+    selectedTab: Int,
+    novelTitle: String?,
+    library: String,
+    collections: String
+): String = when {
+    selectedTab == 0 -> library
+    novelTitle != null -> novelTitle
+    else -> collections
 }
