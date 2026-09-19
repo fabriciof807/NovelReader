@@ -193,6 +193,8 @@ created per crawl and shared by `ChapterCrawler` and both list augmenters, and
 
 One import is split into 100-chapter batches (`ImportJobSpec.BATCH_SIZE`), queued as specs and run one batch at a time under the single unique work name `chapter_import_active`. Inside a batch, `importChapters` flushes the pending chapters to the database every `INSERT_FLUSH_EVERY` (20) fetched chapters, plus a final flush, and calls `NovelImporter.finalizeChapterOrder` once at the end. That flush is what makes chapters (and the novel's `totalChapters`) visible while the batch is still downloading — do not go back to a single insert after the loop, or nothing appears until a whole batch finishes. `orderIndex` comes from `orderIndexOffset + index` (position inside the batch), so flushing earlier does not change ordering; `normalize` runs once per batch, in `finalizeChapterOrder`.
 
+The manager's idea of *which job is running* lives in memory only and dies with the process, so `WorkCompletionObserver` announces the job that WorkManager is actually running — title and remaining splits read from the `SpecFileStore` spec it already writes for it — and the manager **adopts** it (`onJobAdopted`). Never discard a callback just because the job id is unknown: that is how the banner came to name whichever novel was queued last while a different one downloaded, with the counter frozen and Cancel acting on the queued novel instead of the running one (issue #19). For the same reason `startImport` claims the new novel as current only when it is about to run — no active work *and* an empty queue — and enqueues it otherwise.
+
 ### Failed Chapter Recovery
 
 `ScanMissingChaptersUseCase` is the primary recovery path:
