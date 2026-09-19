@@ -367,6 +367,31 @@ switching a theme cannot change the user's background. The reset keeps the saved
 themes and deletes the wallpaper files. Both surfaces (Settings and the reader
 sheet) render the same `SavedThemesSection`.
 
+### Reader gestures (tap, swipe, selection)
+
+All of them live in the inline JS at the bottom of `ReaderHtmlBuilder.kt`, which
+calls `Android.onTap()`/`onSwipe(dir, axis)` into `ReaderJsInterface`. A single
+tap toggles the options bar; `touchend` ignores any gesture longer than 500ms, so
+a slow drag scrolls instead of turning the page.
+
+- **Do not bring a long-press back into the reader.** v2.7.0 toggled the controls
+  on a 2s long-press and v2.9.2 replaced it with the tap for exactly that reason:
+  long-press is the gesture WebView needs for text selection, and the two fighting
+  is what the deferred M10 note (issue #14) recorded.
+- Swipe direction is the `vertical` (default) / `horizontal` / `both` / `none`
+  preference. Vertical only navigates at a page boundary (`isAtStart`/`isAtEnd`,
+  20px tolerance) and horizontal navigates anywhere; `chapterTransitionFor` picks
+  the entry animation from the pair.
+- **Text selection is disabled on purpose** (issue #14, closed obsolete):
+  `-webkit-user-select:none`/`user-select:none` + `-webkit-touch-callout:none` on
+  `*`, `selectstart` prevented in the reader JS, and `setOnLongClickListener { true }`
+  on the WebView. v2.7.0 deleted the `selectionchange` listener, the
+  `Android.onTextSelected` bridge and the "character from selection" FAB that was
+  their only consumer, so nothing depends on selection being reachable. If it is
+  ever restored, gate `onSwipe`/`onTap` on `window.getSelection()` being empty
+  first: a drag that extends a selection is otherwise read as a horizontal swipe
+  and turns the page on release.
+
 ### Sliders
 
 Every slider commits **once, on release** (`onValueChangeFinished`) and keeps the
