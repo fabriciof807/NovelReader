@@ -85,6 +85,7 @@ import com.novelreader.ui.customization.AccentColorPicker
 import com.novelreader.ui.customization.BlurSlider
 import com.novelreader.ui.customization.HomeWallpaperViewModel
 import com.novelreader.data.local.preferences.SavedThemeCodec
+import com.novelreader.data.local.preferences.PreferenceAllowlists
 import com.novelreader.ui.customization.OptionLabel
 import com.novelreader.ui.customization.ResetAppearanceRow
 import com.novelreader.ui.customization.SavedThemesSection
@@ -685,10 +686,27 @@ fun SettingsScreen(
 
             SettingsSection(
                 title = stringResource(R.string.language),
-                summary = stringResource(if (locale == "pt") R.string.portuguese else R.string.english),
+                summary = stringResource(
+                    when (locale) {
+                        PreferenceAllowlists.LOCALE_SYSTEM -> R.string.system
+                        "en" -> R.string.english
+                        else -> R.string.portuguese
+                    }
+                ),
                 expanded = langExpanded.value,
                 onToggle = { langExpanded.value = !langExpanded.value }
             ) {
+                LangOption(
+                    label = stringResource(R.string.system),
+                    selected = locale == PreferenceAllowlists.LOCALE_SYSTEM,
+                    onClick = {
+                        if (locale != PreferenceAllowlists.LOCALE_SYSTEM) {
+                            val activity = context as? androidx.activity.ComponentActivity
+                            activity?.let { viewModel.updateLocale(PreferenceAllowlists.LOCALE_SYSTEM, it) }
+                        }
+                    }
+                )
+                Spacer(modifier = Modifier.height(4.dp))
                 LangOption(
                     label = stringResource(R.string.portuguese),
                     selected = locale == "pt",

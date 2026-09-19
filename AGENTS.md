@@ -141,7 +141,7 @@ Users see these in the `ChaptersTab` "Failed chapters" section (below the chapte
 - DataStore for preferences (not SharedPreferences)
 - Jsoup for HTML parsing
 - Coroutines + Flow for async operations
-- PT-BR comments where unavoidable; strings always bilingual (pt + en)
+- PT-BR comments where unavoidable; strings always bilingual (pt + en): `values/` is English and `values-pt/` is Portuguese, so an untranslated device language lands on English. The app follows the device language until the reader picks one in Settings (`PreferenceAllowlists.LOCALE_SYSTEM`, the default); a chosen locale is forced over the device one by `LocaleHelper`
 - ViewModels expose typed methods called directly by Compose (no `*Intent` sealed dispatch)
 
 ## Key Patterns

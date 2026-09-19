@@ -3,7 +3,10 @@ package com.novelreader.data.local.preferences
 object PreferenceAllowlists {
     private val FONT_FAMILIES = setOf("serif", "sans-serif", "monospace", "cursive", "fantasy")
     private val APP_THEMES = setOf("system", "light", "dark")
-    private val LOCALES = setOf("pt", "en")
+    private val LOCALES = setOf(LOCALE_SYSTEM, "pt", "en")
+
+    /** Follow the device language. The app forces a locale only when the reader picked one. */
+    const val LOCALE_SYSTEM = "system"
     private val SORT_ORDERS = setOf("TITLE", "CREATED_AT", "LAST_READ")
     private val CHAPTER_SORT_ORDERS = setOf("ASCENDING", "DESCENDING")
     private val VIEW_MODES = setOf("GRID", "LIST")
@@ -86,7 +89,7 @@ object PreferenceAllowlists {
     fun sanitizeVeil(value: Int?): Int = value?.coerceIn(0, MAX_VEIL) ?: DEFAULT_VEIL
 
     fun sanitizeLocale(value: String?): String =
-        value?.trim()?.lowercase()?.takeIf { it in LOCALES } ?: "pt"
+        value?.trim()?.lowercase()?.takeIf { it in LOCALES } ?: LOCALE_SYSTEM
 
     fun sanitizeSortOrder(value: String?): String =
         value?.trim()?.takeIf { it in SORT_ORDERS } ?: "LAST_READ"

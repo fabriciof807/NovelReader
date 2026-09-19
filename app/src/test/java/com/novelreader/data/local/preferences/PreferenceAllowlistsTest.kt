@@ -181,7 +181,9 @@ class PreferenceAllowlistsTest {
         assertThat(PreferenceAllowlists.sanitizeAppTheme("dark")).isEqualTo("dark")
         assertThat(PreferenceAllowlists.sanitizeAppTheme("garbage")).isEqualTo("system")
         assertThat(PreferenceAllowlists.sanitizeLocale("en")).isEqualTo("en")
-        assertThat(PreferenceAllowlists.sanitizeLocale("xx")).isEqualTo("pt")
+        assertThat(PreferenceAllowlists.sanitizeLocale("system")).isEqualTo(PreferenceAllowlists.LOCALE_SYSTEM)
+        assertThat(PreferenceAllowlists.sanitizeLocale("xx")).isEqualTo(PreferenceAllowlists.LOCALE_SYSTEM)
+        assertThat(PreferenceAllowlists.sanitizeLocale(null)).isEqualTo(PreferenceAllowlists.LOCALE_SYSTEM)
     }
 
     @Test

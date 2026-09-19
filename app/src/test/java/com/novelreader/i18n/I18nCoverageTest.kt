@@ -28,10 +28,22 @@ class I18nCoverageTest {
     }
 
     @Test
-    fun `every pt-BR string has an en counterpart`() {
-        val enKeys = parseStringKeys("src/main/res/values-en/strings.xml")
-        val missing = allStringNames - enKeys
+    fun `every string has a Portuguese counterpart`() {
+        val portugueseKeys = parseStringKeys("src/main/res/values-pt/strings.xml")
+        val missing = allStringNames - portugueseKeys
         assertThat(missing).isEmpty()
+    }
+
+    @Test
+    fun `the Portuguese file declares nothing the default does not`() {
+        val portugueseKeys = parseStringKeys("src/main/res/values-pt/strings.xml")
+        assertThat(portugueseKeys - allStringNames).isEmpty()
+    }
+
+    @Test
+    fun `the default resources are English, the fallback for every other language`() {
+        val defaultKeys = parseStringKeys("src/main/res/values/strings.xml")
+        assertThat(defaultKeys).containsExactlyElementsIn(allStringNames)
     }
 
     private fun parseStringKeys(relativePath: String): Set<String> {

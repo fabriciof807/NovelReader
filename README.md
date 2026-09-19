@@ -60,12 +60,13 @@ The **Characters** tab is available inside each novel. Your bookmarks are collec
 
 ## Languages
 
-Portuguese (default) and English. Change the language in **Settings**.
+The app follows your device language. Portuguese and English are translated; any other language
+falls back to English. Change it in **Settings**.
 
 ## Screenshots
 
-The app's interface is in Portuguese, its default language. These are placeholders taken on an
-emulator and will be replaced.
+The screenshots are placeholders taken on an emulator, and the interface in them is Portuguese.
+They will be replaced.
 
 ### Library
 

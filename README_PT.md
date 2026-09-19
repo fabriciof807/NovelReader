@@ -60,12 +60,13 @@ A aba **Personagens** fica disponível dentro de cada novel. Seus bookmarks fica
 
 ## Idiomas
 
-Português (padrão) e inglês. Troque o idioma em **Configurações**.
+O app segue o idioma do seu dispositivo. Português e inglês são traduzidos; qualquer outro idioma
+cai no inglês. Troque em **Configurações**.
 
 ## Screenshots
 
-A interface do app é em português, o idioma padrão. Estas imagens são provisórias, tiradas num
-emulador, e serão trocadas.
+As imagens são provisórias, tiradas num emulador, e a interface nelas está em português. Serão
+trocadas.
 
 ### Biblioteca
 
