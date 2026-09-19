@@ -53,6 +53,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -150,11 +151,23 @@ class LibraryViewModel @Inject constructor(
     private val _selectedTab = MutableStateFlow(0)
     val selectedTab: StateFlow<Int> = _selectedTab
 
-    private val _chapters = MutableStateFlow<List<ChapterEntity>>(emptyList())
-    val chapters: StateFlow<List<ChapterEntity>> = _chapters
-
     private val _chapterSortOrder = MutableStateFlow(ChapterSortOrder.ASCENDING)
     val chapterSortOrder: StateFlow<ChapterSortOrder> = _chapterSortOrder
+
+    // Observed rather than read once: the reader marks a chapter read through the DAO while this
+    // ViewModel is alive, and a one-shot read left the list drawing it as unread until the tab was
+    // re-entered. The sort rides along so toggling it re-sorts without a re-query.
+    val chapters: StateFlow<List<ChapterEntity>> = _selectedNovel
+        .flatMapLatest { novel ->
+            if (novel == null) flowOf(emptyList()) else chapterDao.observeChaptersByNovel(novel.id)
+        }
+        .combine(_chapterSortOrder) { chapters, order ->
+            when (order) {
+                ChapterSortOrder.ASCENDING -> chapters.sortedBy { it.orderIndex }
+                ChapterSortOrder.DESCENDING -> chapters.sortedByDescending { it.orderIndex }
+            }
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     private val _bookmarkCounts = MutableStateFlow<Map<Long, Int>>(emptyMap())
     val bookmarkCounts: StateFlow<Map<Long, Int>> = _bookmarkCounts
@@ -356,7 +369,7 @@ class LibraryViewModel @Inject constructor(
         viewModelScope.launch {
             novelDao.setHasUpdates(novel.id, false)
         }
-        loadChapters(novel.id)
+        loadNovelDetail(novel.id)
     }
 
     fun deselectNovel() {
@@ -427,13 +440,8 @@ class LibraryViewModel @Inject constructor(
         }
     }
 
-    fun loadChapters(novelId: Long) {
+    fun loadNovelDetail(novelId: Long) {
         viewModelScope.launch {
-            val raw = chapterDao.getChaptersByNovelSync(novelId)
-            _chapters.value = when (_chapterSortOrder.value) {
-                ChapterSortOrder.ASCENDING -> raw.sortedBy { it.orderIndex }
-                ChapterSortOrder.DESCENDING -> raw.sortedByDescending { it.orderIndex }
-            }
             _failedChapters.value = failedChapterDao.getByNovel(novelId)
             refreshCharacters(novelId)
         }
@@ -456,7 +464,6 @@ class LibraryViewModel @Inject constructor(
         }
         _chapterSortOrder.value = newOrder
         viewModelScope.launch { libraryPreferences.updateChapterSortOrder(newOrder.name) }
-        _selectedNovel.value?.let { loadChapters(it.id) }
     }
 
     fun setSortOrder(order: SortOrder) {

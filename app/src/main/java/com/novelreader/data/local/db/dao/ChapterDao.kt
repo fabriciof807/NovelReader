@@ -15,6 +15,9 @@ interface ChapterDao {
     @Query("SELECT * FROM chapters WHERE novelId = :novelId ORDER BY orderIndex ASC")
     suspend fun getChaptersByNovelSync(novelId: Long): List<ChapterEntity>
 
+    @Query("SELECT * FROM chapters WHERE novelId = :novelId ORDER BY orderIndex ASC")
+    fun observeChaptersByNovel(novelId: Long): Flow<List<ChapterEntity>>
+
     @Query("SELECT COUNT(*) FROM chapters WHERE novelId = :novelId")
     suspend fun countByNovel(novelId: Long): Int
 

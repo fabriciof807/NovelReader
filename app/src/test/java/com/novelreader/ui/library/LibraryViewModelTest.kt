@@ -39,6 +39,7 @@ import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
@@ -174,8 +175,10 @@ class LibraryViewModelTest {
     @Test
     fun `selectNovel switches to chapters tab and loads chapters`() = runTest {
         val novel = NovelEntity(id = 5, title = "Selected")
-        coEvery { chapterDao.getChaptersByNovelSync(5) } returns listOf(
-            ChapterEntity(id = 1, novelId = 5, title = "Ch1", fileName = "ch1.html", orderIndex = 0, content = "")
+        every { chapterDao.observeChaptersByNovel(5) } returns flowOf(
+            listOf(
+                ChapterEntity(id = 1, novelId = 5, title = "Ch1", fileName = "ch1.html", orderIndex = 0, content = "")
+            )
         )
         coEvery { charManagement.getCharacters(5) } returns emptyList()
         coEvery { charPhotoDao.getByCharacterIds(any()) } returns emptyList()
@@ -184,13 +187,47 @@ class LibraryViewModelTest {
 
         assertThat(viewModel.selectedNovel.value).isEqualTo(novel)
         assertThat(viewModel.selectedTab.value).isEqualTo(1)
-        assertThat(viewModel.chapters.value).hasSize(1)
+        assertThat(viewModel.chapters.first { it.isNotEmpty() }).hasSize(1)
+    }
+
+    // The reader marks a chapter read through the DAO, and the list has to follow on its own — without
+    // the tab being re-entered. `chapters` was a one-shot read behind a `MutableStateFlow`, so it kept
+    // drawing the chapter as unread: seen on the emulator with `isRead = 1` already in the database,
+    // the row still bold, and only dimming after leaving the tab and coming back.
+    @Test
+    fun `a chapter marked as read in the database reaches the exposed chapters`() = runTest {
+        val novel = NovelEntity(id = 9, title = "Live")
+        val stored = MutableStateFlow(
+            listOf(
+                ChapterEntity(
+                    id = 1,
+                    novelId = 9,
+                    title = "Ch1",
+                    fileName = "ch1.html",
+                    orderIndex = 0,
+                    content = "",
+                    isRead = false
+                )
+            )
+        )
+        every { chapterDao.observeChaptersByNovel(9) } returns stored
+        coEvery { charManagement.getCharacters(9) } returns emptyList()
+        coEvery { charPhotoDao.getByCharacterIds(any()) } returns emptyList()
+
+        viewModel.selectNovel(novel)
+
+        assertThat(viewModel.chapters.first { it.isNotEmpty() }.single().isRead).isFalse()
+
+        stored.value = stored.value.map { it.copy(isRead = true) }
+
+        assertThat(viewModel.chapters.first { it.any { chapter -> chapter.isRead } }.single().isRead).isTrue()
     }
 
     @Test
     fun `DeselectNovel intent clears selectedNovel and resets tab`() = runTest {
         val novel = NovelEntity(id = 5, title = "Selected")
         coEvery { chapterDao.getChaptersByNovelSync(5) } returns emptyList()
+        every { chapterDao.observeChaptersByNovel(5) } returns flowOf(emptyList())
         coEvery { charManagement.getCharacters(5) } returns emptyList()
         coEvery { charPhotoDao.getByCharacterIds(any()) } returns emptyList()
 
