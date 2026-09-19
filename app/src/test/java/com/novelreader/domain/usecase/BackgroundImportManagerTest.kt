@@ -209,7 +209,8 @@ class BackgroundImportManagerTest {
         val callbacks = slot<ObserverCallbacks>()
         verify { completionObserver.callbacks = capture(callbacks) }
 
-        manager.clearCompleted()
+        // The first import finishes, so nothing is tracked when the next one starts.
+        callbacks.captured.onJobTerminal(manager.state.value.id!!, success = true)
         manager.startImport("New", listOf(ChapterLink("new", "new", 1)))
 
         callbacks.captured.onAllIdle()
@@ -347,27 +348,6 @@ class BackgroundImportManagerTest {
     fun `cancel with no active title does nothing`() = runTest {
         every { importPrefs.pendingQueue } returns flowOf(emptyList())
         manager.cancel()
-        coVerify(exactly = 0) { scheduler.cancelAll() }
         coVerify(exactly = 0) { scheduler.cancel(any()) }
-    }
-
-    @Test
-    fun `cancelAll delegates to scheduler and resets state`() = runTest {
-        manager.startImport("N", listOf(ChapterLink("c", "u", 1)))
-        manager.cancelAll()
-
-        coVerify { scheduler.cancelAll() }
-        assertThat(manager.state.value.running).isFalse()
-        assertThat(manager.state.value.completed).isFalse()
-    }
-
-    @Test
-    fun `clearCompleted resets state to empty`() = runTest {
-        manager.startImport("N", listOf(ChapterLink("c", "u", 1)))
-        manager.clearCompleted()
-        val state = manager.state.value
-        assertThat(state.running).isFalse()
-        assertThat(state.completed).isFalse()
-        assertThat(state.novelTitle).isEmpty()
     }
 }

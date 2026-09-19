@@ -923,11 +923,6 @@ class LibraryViewModel @Inject constructor(
         )
     }
 
-    override fun onCleared() {
-        super.onCleared()
-        viewModelScope.launch { backgroundImportManager.cancel() }
-    }
-
     companion object {
         const val ARG_SELECTED_NOVEL_ID = "selectedNovelId"
         const val ARG_SHOW_FAILED = "showFailed"

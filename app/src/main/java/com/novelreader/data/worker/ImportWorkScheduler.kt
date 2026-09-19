@@ -27,12 +27,6 @@ class ImportWorkScheduler @Inject constructor(
         specFileStore.delete(id)
         workManager.cancelAllWorkByTag("job:$id")
     }
-
-    suspend fun cancelAll() {
-        importPrefs.clearQueue()
-        specFileStore.deleteAll()
-        workManager.cancelAllWorkByTag(ChapterImportWorker.TAG_IMPORT)
-    }
 }
 
 object ImportWorkRequestFactory {

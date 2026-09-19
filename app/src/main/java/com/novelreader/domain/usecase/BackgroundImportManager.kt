@@ -230,17 +230,4 @@ class BackgroundImportManager @Inject constructor(
             completionObserver.tryScheduleNext()
         }
     }
-
-    suspend fun cancelAll() {
-        completionObserver.withSchedulingLock {
-            scheduler.cancelAll()
-            handoffPending = false
-            _state.value = BackgroundImportState()
-        }
-    }
-
-    fun clearCompleted() {
-        handoffPending = false
-        _state.value = BackgroundImportState()
-    }
 }
