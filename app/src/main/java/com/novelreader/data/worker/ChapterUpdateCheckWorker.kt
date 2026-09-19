@@ -9,8 +9,8 @@ import com.novelreader.data.local.db.dao.ChapterDao
 import com.novelreader.data.local.db.dao.NovelDao
 import com.novelreader.data.local.db.dao.NovelSourceDao
 import com.novelreader.data.parser.ChapterNumberExtractor
+import com.novelreader.domain.usecase.BackgroundImportManager
 import com.novelreader.domain.usecase.ChapterLink
-import com.novelreader.domain.usecase.ImportJobSpec
 import com.novelreader.domain.usecase.WebImportUseCase
 import com.novelreader.domain.usecase.webimport.CloudflareChallengeRequiredException
 import com.novelreader.util.StringUtils
@@ -29,7 +29,7 @@ class ChapterUpdateCheckWorker @AssistedInject constructor(
     private val novelSourceDao: NovelSourceDao,
     private val webImportUseCase: WebImportUseCase,
     private val notificationHelper: UpdateNotificationHelper,
-    private val importWorkScheduler: ImportWorkScheduler,
+    private val backgroundImportManager: BackgroundImportManager,
     @IoDispatcher private val io: CoroutineDispatcher
 ) : CoroutineWorker(appContext, params) {
 
@@ -65,7 +65,10 @@ class ChapterUpdateCheckWorker @AssistedInject constructor(
                                 newChapterCount = newChapters.size
                             )
 
-                            val specs = ImportJobSpec.create(
+                            // Through the manager, not the scheduler: the manager owns the import
+                            // state the library banner reads, so scheduling past it left the banner
+                            // naming the novel the user started by hand while this job downloaded.
+                            backgroundImportManager.startImport(
                                 novelTitle = fetchResult.novelTitle ?: novel.title,
                                 links = newChapters,
                                 coverUrl = null,
@@ -73,9 +76,6 @@ class ChapterUpdateCheckWorker @AssistedInject constructor(
                                 domain = source.domain,
                                 targetNovelId = novel.id
                             )
-                            for (spec in specs) {
-                                importWorkScheduler.schedule(spec)
-                            }
                         }
 
                         novelSourceDao.updateLastChecked(source.id, System.currentTimeMillis())
