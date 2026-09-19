@@ -62,6 +62,35 @@ The **Characters** tab is available inside each novel. Your bookmarks are collec
 
 Portuguese (default) and English. Change the language in **Settings**.
 
+## Screenshots
+
+The app's interface is in Portuguese, its default language. These are placeholders taken on an
+emulator and will be replaced.
+
+### Library
+
+| Library | With a wallpaper | Graphite (dark) | AMOLED |
+|---|---|---|---|
+| ![Library](screenshots/10-biblioteca-papel-claro.png) | ![Library over a wallpaper](screenshots/00-biblioteca-areia-completa.png) | ![Library in Graphite dark](screenshots/20-biblioteca-grafite-escuro.png) | ![Library in AMOLED](screenshots/40-biblioteca-amoled.png) |
+
+### Reading
+
+| Reading | Reading in AMOLED |
+|---|---|
+| ![Reader](screenshots/11-leitura-papel-claro.png) | ![Reader in AMOLED](screenshots/41-leitura-amoled.png) |
+
+### Characters and collections
+
+| Characters | Collections | Novel menu |
+|---|---|---|
+| ![Character sheets](screenshots/13-personagens-papel-claro.png) | ![Collections](screenshots/15-colecoes-corrigido.png) | ![Novel menu](screenshots/04-menu-da-novel.png) |
+
+### Appearance
+
+| Settings | Colors and theme | Wallpaper | Theme, dark palette |
+|---|---|---|---|
+| ![Settings](screenshots/01-configuracoes-grafite-claro.png) | ![Colors and theme](screenshots/02-configuracoes-cores-expandido.png) | ![Wallpaper](screenshots/03-configuracoes-papel-de-parede.png) | ![Colors and theme, dark](screenshots/05-configuracoes-ameixa-escuro.png) |
+
 ## Supported web sources
 
 - [FreeWebNovel](https://freewebnovel.com/)

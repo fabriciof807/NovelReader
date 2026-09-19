@@ -62,6 +62,35 @@ A aba **Personagens** fica disponível dentro de cada novel. Seus bookmarks fica
 
 Português (padrão) e inglês. Troque o idioma em **Configurações**.
 
+## Screenshots
+
+A interface do app é em português, o idioma padrão. Estas imagens são provisórias, tiradas num
+emulador, e serão trocadas.
+
+### Biblioteca
+
+| Biblioteca | Com papel de parede | Grafite (escuro) | AMOLED |
+|---|---|---|---|
+| ![Biblioteca](screenshots/10-biblioteca-papel-claro.png) | ![Biblioteca com papel de parede](screenshots/00-biblioteca-areia-completa.png) | ![Biblioteca em Grafite escuro](screenshots/20-biblioteca-grafite-escuro.png) | ![Biblioteca em AMOLED](screenshots/40-biblioteca-amoled.png) |
+
+### Leitura
+
+| Leitura | Leitura em AMOLED |
+|---|---|
+| ![Leitor](screenshots/11-leitura-papel-claro.png) | ![Leitor em AMOLED](screenshots/41-leitura-amoled.png) |
+
+### Personagens e coleções
+
+| Personagens | Coleções | Menu da novel |
+|---|---|---|
+| ![Fichas de personagens](screenshots/13-personagens-papel-claro.png) | ![Coleções](screenshots/15-colecoes-corrigido.png) | ![Menu da novel](screenshots/04-menu-da-novel.png) |
+
+### Aparência
+
+| Configurações | Cores e tema | Papel de parede | Tema, paleta escura |
+|---|---|---|---|
+| ![Configurações](screenshots/01-configuracoes-grafite-claro.png) | ![Cores e tema](screenshots/02-configuracoes-cores-expandido.png) | ![Papel de parede](screenshots/03-configuracoes-papel-de-parede.png) | ![Cores e tema, escuro](screenshots/05-configuracoes-ameixa-escuro.png) |
+
 ## Sites suportados para importação da web
 
 - [FreeWebNovel](https://freewebnovel.com/)
