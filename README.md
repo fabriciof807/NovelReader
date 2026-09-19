@@ -65,32 +65,15 @@ falls back to English. Change it in **Settings**.
 
 ## Screenshots
 
-The screenshots are placeholders taken on an emulator, and the interface in them is Portuguese.
-They will be replaced.
+Taken on an emulator, with a populated test library.
 
-### Library
-
-| Library | With a wallpaper | Graphite (dark) | AMOLED |
+| Library | Over a wallpaper | AMOLED | Reading |
 |---|---|---|---|
-| ![Library](screenshots/10-biblioteca-papel-claro.png) | ![Library over a wallpaper](screenshots/00-biblioteca-areia-completa.png) | ![Library in Graphite dark](screenshots/20-biblioteca-grafite-escuro.png) | ![Library in AMOLED](screenshots/40-biblioteca-amoled.png) |
+| ![Library](screenshots/library-paper.png) | ![Library over a wallpaper](screenshots/library-wallpaper.png) | ![Library in AMOLED](screenshots/library-amoled.png) | ![Reader](screenshots/reader-paper.png) |
 
-### Reading
-
-| Reading | Reading in AMOLED |
-|---|---|
-| ![Reader](screenshots/11-leitura-papel-claro.png) | ![Reader in AMOLED](screenshots/41-leitura-amoled.png) |
-
-### Characters and collections
-
-| Characters | Collections | Novel menu |
-|---|---|---|
-| ![Character sheets](screenshots/13-personagens-papel-claro.png) | ![Collections](screenshots/15-colecoes-corrigido.png) | ![Novel menu](screenshots/04-menu-da-novel.png) |
-
-### Appearance
-
-| Settings | Colors and theme | Wallpaper | Theme, dark palette |
+| Characters | Collections | Novel menu | Colours and theme |
 |---|---|---|---|
-| ![Settings](screenshots/01-configuracoes-grafite-claro.png) | ![Colors and theme](screenshots/02-configuracoes-cores-expandido.png) | ![Wallpaper](screenshots/03-configuracoes-papel-de-parede.png) | ![Colors and theme, dark](screenshots/05-configuracoes-ameixa-escuro.png) |
+| ![Character sheets](screenshots/characters.png) | ![Collections](screenshots/collections.png) | ![Novel menu](screenshots/novel-menu.png) | ![Colours and theme](screenshots/settings-colours.png) |
 
 ## Supported web sources
 
