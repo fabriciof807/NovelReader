@@ -261,6 +261,7 @@ fun ReaderScreen(
             onResetAppearance = { viewModel.resetAppearance() },
             onFontSizeChange = { viewModel.updateFontSize(it) },
             onLineHeightChange = { viewModel.updateLineHeight(it) },
+            onFontFamilyChange = { viewModel.updateFontFamily(it) },
             onAutoScrollSpeedChange = { viewModel.updateAutoScrollSpeed(it) },
             onKeepScreenOnChange = { viewModel.updateKeepScreenOn(it) },
             onSwipeDirectionChange = { viewModel.updateSwipeDirection(it) },

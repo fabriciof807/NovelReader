@@ -409,6 +409,10 @@ class ReaderViewModel @Inject constructor(
         viewModelScope.launch { readerPreferences.updateLineHeight(height) }
     }
 
+    fun updateFontFamily(family: String) {
+        viewModelScope.launch { readerPreferences.updateFontFamily(family) }
+    }
+
     fun updateAutoScrollSpeed(speed: Float) {
         viewModelScope.launch { readerPreferences.updateAutoScrollSpeed(speed) }
     }

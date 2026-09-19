@@ -176,6 +176,11 @@
     <string name="reader_swipe_both">Ambos</string>
     <string name="reader_swipe_none">Desligado</string>
     <string name="reader_keep_screen_on">Manter tela ligada</string>
+    <string name="reader_font_family">Fonte</string>
+    <string name="reader_font_serif">Serifada</string>
+    <string name="reader_font_sans">Sem serifa</string>
+    <string name="reader_font_mono">Monoespaçada</string>
+    <string name="reader_font_cursive">Cursiva</string>
     <string name="reader_battery_label">Bateria: %1$d%%</string>
     <string name="reader_battery_charging_label">Bateria: %1$d%% (carregando)</string>
     <string name="reader_chapter_read_label">Lido: %1$d%%</string>

@@ -34,7 +34,8 @@ class ReaderSettingsSheetTest {
         onThemeChange: (String) -> Unit = {},
         onAccentChange: (String?) -> Unit = {},
         onWallpaperChange: (String) -> Unit = {},
-        onVeilChange: (Int) -> Unit = {}
+        onVeilChange: (Int) -> Unit = {},
+        onFontFamilyChange: (String) -> Unit = {}
     ) {
         composeTestRule.setContent {
             NovelReaderTheme {
@@ -50,6 +51,7 @@ class ReaderSettingsSheetTest {
                     onAutoScrollSpeedChange = {},
                     onKeepScreenOnChange = {},
                     onSwipeDirectionChange = {},
+                    onFontFamilyChange = onFontFamilyChange,
                     onDismiss = {}
                 )
             }
@@ -213,5 +215,55 @@ class ReaderSettingsSheetTest {
 
         composeTestRule.onNodeWithContentDescription("#2e7d32").assertIsSelected()
         composeTestRule.onNodeWithContentDescription("Padrão da paleta").assertIsNotSelected()
+    }
+
+    @Test
+    fun `shows the font family section with the four available families`() {
+        setSheet()
+
+        composeTestRule.onNodeWithText("Fonte").assertExists()
+        composeTestRule.onNodeWithText("Serifada").performScrollTo().assertExists()
+        composeTestRule.onNodeWithText("Sem serifa").performScrollTo().assertExists()
+        composeTestRule.onNodeWithText("Monoespaçada").performScrollTo().assertExists()
+        composeTestRule.onNodeWithText("Cursiva").performScrollTo().assertExists()
+    }
+
+    @Test
+    fun `reflects the stored font family on its chip`() {
+        setSheet(config = ReaderConfig(theme = "indigo", fontFamily = "monospace"))
+
+        composeTestRule.onNodeWithText("Monoespaçada").performScrollTo().assertIsSelected()
+        composeTestRule.onNodeWithText("Serifada").performScrollTo().assertIsNotSelected()
+    }
+
+    @Test
+    fun `reports the tapped font family`() {
+        var selected: String? = null
+        setSheet(onFontFamilyChange = { selected = it })
+
+        composeTestRule.onNodeWithText("Cursiva")
+            .performScrollTo()
+            .performSemanticsAction(SemanticsActions.OnClick)
+
+        assert(selected == "cursive") { "expected cursive but got $selected" }
+    }
+
+    @Test
+    fun `offers no fantasy chip because Android aliases it onto serif`() {
+        setSheet()
+
+        composeTestRule.onNodeWithText("Fantasy").assertDoesNotExist()
+    }
+
+    @Test
+    fun `exposes the font family chips as a radio group`() {
+        setSheet()
+
+        composeTestRule.onNodeWithText("Serifada").performScrollTo().assert(
+            SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.RadioButton)
+        )
+        composeTestRule.onNodeWithText("Cursiva").performScrollTo().assert(
+            SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.RadioButton)
+        )
     }
 }

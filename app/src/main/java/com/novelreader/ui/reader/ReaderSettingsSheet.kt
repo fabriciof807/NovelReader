@@ -48,6 +48,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.novelreader.R
@@ -90,6 +91,7 @@ fun SettingsSheet(
     onResetAppearance: () -> Unit = {},
     onFontSizeChange: (Int) -> Unit,
     onLineHeightChange: (Float) -> Unit,
+    onFontFamilyChange: (String) -> Unit = {},
     onAutoScrollSpeedChange: (Float) -> Unit,
     onKeepScreenOnChange: (Boolean) -> Unit,
     onSwipeDirectionChange: (String) -> Unit = {},
@@ -226,6 +228,59 @@ fun SettingsSheet(
                 steps = 12,
                 modifier = Modifier.fillMaxWidth()
             )
+
+            Spacer(modifier = Modifier.height(16.dp))
+            HorizontalDivider()
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Text(
+                stringResource(R.string.reader_font_family),
+                style = MaterialTheme.typography.titleSmall
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    FontFamilyOption(
+                        label = stringResource(R.string.reader_font_serif),
+                        fontFamily = FontFamily.Serif,
+                        selected = config.fontFamily == FONT_SERIF,
+                        onClick = { onFontFamilyChange(FONT_SERIF) },
+                        modifier = Modifier.weight(1f)
+                    )
+                    FontFamilyOption(
+                        label = stringResource(R.string.reader_font_sans),
+                        fontFamily = FontFamily.SansSerif,
+                        selected = config.fontFamily == FONT_SANS,
+                        onClick = { onFontFamilyChange(FONT_SANS) },
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    FontFamilyOption(
+                        label = stringResource(R.string.reader_font_mono),
+                        fontFamily = FontFamily.Monospace,
+                        selected = config.fontFamily == FONT_MONO,
+                        onClick = { onFontFamilyChange(FONT_MONO) },
+                        modifier = Modifier.weight(1f)
+                    )
+                    FontFamilyOption(
+                        label = stringResource(R.string.reader_font_cursive),
+                        fontFamily = FontFamily.Cursive,
+                        selected = config.fontFamily == FONT_CURSIVE,
+                        onClick = { onFontFamilyChange(FONT_CURSIVE) },
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
 
             Spacer(modifier = Modifier.height(16.dp))
             HorizontalDivider()
@@ -471,3 +526,48 @@ private fun SwipeOption(
         )
     }
 }
+
+@Composable
+private fun FontFamilyOption(
+    label: String,
+    fontFamily: FontFamily,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val bgColor = if (selected)
+        MaterialTheme.colorScheme.primaryContainer
+    else
+        MaterialTheme.colorScheme.surfaceVariant
+
+    val borderColor = if (selected)
+        MaterialTheme.colorScheme.primary
+    else
+        Color.Transparent
+
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(12.dp))
+            .background(bgColor)
+            .border(2.dp, borderColor, RoundedCornerShape(12.dp))
+            .selectable(selected = selected, role = Role.RadioButton, onClick = onClick)
+            .padding(vertical = 14.dp, horizontal = 4.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = label,
+            fontFamily = fontFamily,
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+            color = if (selected) MaterialTheme.colorScheme.primary
+            else MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+            softWrap = false
+        )
+    }
+}
+
+private const val FONT_SERIF = "serif"
+private const val FONT_SANS = "sans-serif"
+private const val FONT_MONO = "monospace"
+private const val FONT_CURSIVE = "cursive"

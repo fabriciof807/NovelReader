@@ -176,6 +176,11 @@
     <string name="reader_swipe_both">Both</string>
     <string name="reader_swipe_none">Off</string>
     <string name="reader_keep_screen_on">Keep screen on</string>
+    <string name="reader_font_family">Font</string>
+    <string name="reader_font_serif">Serif</string>
+    <string name="reader_font_sans">Sans-serif</string>
+    <string name="reader_font_mono">Monospace</string>
+    <string name="reader_font_cursive">Cursive</string>
     <string name="reader_battery_label">Battery: %1$d%%</string>
     <string name="reader_battery_charging_label">Battery: %1$d%% (charging)</string>
     <string name="reader_chapter_read_label">Read: %1$d%%</string>
