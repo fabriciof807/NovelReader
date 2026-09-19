@@ -39,6 +39,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -47,12 +48,16 @@ import com.novelreader.R
 import com.novelreader.data.local.db.entity.ChapterEntity
 import com.novelreader.data.local.db.entity.FailedChapterEntity
 import com.novelreader.data.local.db.entity.FailedChapterErrorType
+import com.novelreader.ui.customization.libraryContainerColor
 import com.novelreader.ui.library.ChapterSortOrder
 import com.novelreader.ui.library.LibraryViewModel
 import com.novelreader.ui.library.components.ScanRangeDialog
+import com.novelreader.ui.theme.mutedForeground
 import android.net.Uri
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.debounce
+
+const val CHAPTERS_LIST_TAG = "chaptersList"
 
 @OptIn(FlowPreview::class)
 @Composable
@@ -78,10 +83,20 @@ fun ChaptersTab(
     onScroll: (Int, Int) -> Unit = { _, _ -> },
     pendingScrollToFailedNovelId: Long? = null,
     onConsumeScrollToFailed: () -> Unit = {},
+    wallpaperActive: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     var pendingFilePickForFailed by remember { mutableStateOf<Long?>(null) }
     var showScanDialog by remember { mutableStateOf(false) }
+    // The variant comes from the wallpaper's average tone, so the colour cannot be guaranteed against
+    // the pixels really behind it; the list seats itself on an opaque container, as the cards and the
+    // counters bar already do, and the dimmed "read" colour is derived against that container.
+    val listBackground = libraryContainerColor(
+        default = MaterialTheme.colorScheme.background,
+        surface = MaterialTheme.colorScheme.surface,
+        wallpaperActive = wallpaperActive
+    )
+    val readForeground = mutedForeground(MaterialTheme.colorScheme.onSurface, listBackground)
     val listState = remember(novelId) {
         LazyListState(
             firstVisibleItemIndex = initialScroll?.firstVisibleItemIndex ?: 0,
@@ -115,7 +130,7 @@ fun ChaptersTab(
 
     if (chapters.isEmpty() && failedChapters.isEmpty()) {
         Box(
-            modifier = modifier.fillMaxSize(),
+            modifier = modifier.fillMaxSize().background(listBackground),
             contentAlignment = Alignment.Center
         ) {
             Text(
@@ -141,7 +156,7 @@ fun ChaptersTab(
 
     LazyColumn(
         state = listState,
-        modifier = modifier.fillMaxSize()
+        modifier = modifier.fillMaxSize().background(listBackground).testTag(CHAPTERS_LIST_TAG)
     ) {
         if (chapters.isNotEmpty()) {
             item {
@@ -185,10 +200,7 @@ fun ChaptersTab(
                         fontWeight = if (chapter.isRead) FontWeight.Normal else FontWeight.SemiBold,
                         maxLines = 4,
                         overflow = TextOverflow.Ellipsis,
-                        color = if (chapter.isRead)
-                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                        else
-                            MaterialTheme.colorScheme.onSurface,
+                        color = if (chapter.isRead) readForeground else MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.weight(1f)
                     )
                     val count = bookmarkCounts[chapter.id] ?: 0

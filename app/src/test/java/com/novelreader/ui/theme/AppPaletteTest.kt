@@ -3,6 +3,7 @@ package com.novelreader.ui.theme
 import androidx.compose.ui.graphics.Color
 import com.google.common.truth.Truth.assertThat
 import com.novelreader.data.local.preferences.PreferenceAllowlists
+import com.novelreader.ui.customization.libraryContainerColor
 import org.junit.Test
 
 class AppPaletteTest {
@@ -186,6 +187,77 @@ class AppPaletteTest {
                         val accent = requireNotNull(parseAccentHex(hex))
                         assertThat(contrastRatio(accent, scheme.background)).isAtLeast(4.5f)
                     }
+                }
+            }
+        }
+    }
+
+    // A dimmed foreground drawn with alpha composites against whatever is behind it, so it cannot hold
+    // a ratio: `onSurface.copy(alpha = 0.6f)` measured 3.08:1 on the light "papel" background and 3.84:1
+    // on the light "grafite" surface — both below MinContrast, with no wallpaper involved. The muted
+    // foreground is opaque and derived against the surface it will actually sit on.
+    @Test
+    fun `the muted foreground holds the minimum contrast on every palette surface`() {
+        AppPalette.entries.forEach { palette ->
+            listOf(palette.light, palette.dark).forEach { scheme ->
+                listOf(scheme.surface, scheme.background).forEach { background ->
+                    val muted = mutedForeground(scheme.onSurface, background)
+                    assertThat(contrastRatio(muted, background)).isAtLeast(MinContrast)
+                    assertThat(muted.alpha).isEqualTo(1f)
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `the muted foreground is dimmer than the full strength text`() {
+        AppPalette.entries.forEach { palette ->
+            listOf(palette.light, palette.dark).forEach { scheme ->
+                val muted = mutedForeground(scheme.onSurface, scheme.surface)
+                assertThat(contrastRatio(muted, scheme.surface))
+                    .isLessThan(contrastRatio(scheme.onSurface, scheme.surface))
+            }
+        }
+    }
+
+    @Test
+    fun `the muted foreground stays on the line between text and surface`() {
+        val foreground = Color(0xFF2B2B2B)
+        val background = Color(0xFFF7F7F7)
+        val muted = mutedForeground(foreground, background)
+
+        assertThat(muted.red).isAtLeast(foreground.red)
+        assertThat(muted.red).isAtMost(background.red)
+        assertThat(muted.green).isAtLeast(foreground.green)
+        assertThat(muted.green).isAtMost(background.green)
+        assertThat(muted.blue).isAtLeast(foreground.blue)
+        assertThat(muted.blue).isAtMost(background.blue)
+    }
+
+    @Test
+    fun `the muted foreground never returns a colour worse than its input`() {
+        val background = Color(0xFFF7F7F7)
+
+        assertThat(mutedForeground(background, background)).isEqualTo(background)
+        assertThat(mutedForeground(Color(0xFFF0F0F0), background))
+            .isEqualTo(Color(0xFFF0F0F0))
+    }
+
+    // The chapter list derives the muted colour against the container it is drawn on, not against the
+    // palette's own surface or against the wallpaper, so the pair has to hold for whichever container
+    // the wallpaper switch produces.
+    @Test
+    fun `the muted foreground clears the minimum contrast on the library container`() {
+        AppPalette.entries.forEach { palette ->
+            listOf(palette.light, palette.dark).forEach { scheme ->
+                listOf(true, false).forEach { wallpaperActive ->
+                    val container = libraryContainerColor(
+                        default = scheme.background,
+                        surface = scheme.surface,
+                        wallpaperActive = wallpaperActive
+                    )
+                    assertThat(contrastRatio(mutedForeground(scheme.onSurface, container), container))
+                        .isAtLeast(MinContrast)
                 }
             }
         }

@@ -450,7 +450,8 @@ fun LibraryScreen(
                             selectedNovel?.let { onChapterClick(it.id, chapterId) }
                         },
                         pendingScrollToFailedNovelId = scrollToFailedRequest,
-                        onConsumeScrollToFailed = { viewModel.consumeScrollToFailed() }
+                        onConsumeScrollToFailed = { viewModel.consumeScrollToFailed() },
+                        wallpaperActive = wallpaperActive
                     )
                     }
                     2 -> PersonagensTab(

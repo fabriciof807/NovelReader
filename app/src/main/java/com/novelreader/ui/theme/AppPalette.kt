@@ -98,6 +98,26 @@ fun accentHexFor(hue: Float, saturationPercent: Int, background: Color): String 
 private fun containerContent(container: Color, preferred: Color): Color =
     if (contrastRatio(container, preferred) >= MinContrast) preferred else contrastOn(container)
 
+// A dimmed foreground drawn with alpha composites against whatever is behind it, so its ratio is not
+// the palette's: `onSurface.copy(alpha = 0.6f)` measured 3.08:1 on the light "papel" background and
+// 3.84:1 on the light "grafite" surface. This walks the same line from the text colour towards the
+// surface and stops at the last point that still clears MinContrast, so the result is opaque and its
+// ratio is a property of the palette rather than of the pixels behind it.
+fun mutedForeground(foreground: Color, background: Color): Color {
+    if (contrastRatio(foreground, background) < MinContrast) return foreground
+    var passing = 0f
+    var failing = 1f
+    repeat(16) {
+        val mid = (passing + failing) / 2f
+        if (contrastRatio(lerp(foreground, background, mid), background) >= MinContrast) {
+            passing = mid
+        } else {
+            failing = mid
+        }
+    }
+    return lerp(foreground, background, passing)
+}
+
 fun ColorScheme.withAccent(accentHex: String?): ColorScheme {
     val accent = parseAccentHex(accentHex) ?: return this
     val container = lerp(background, accent, ContainerTint)

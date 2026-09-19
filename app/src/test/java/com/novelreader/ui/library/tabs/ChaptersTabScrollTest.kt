@@ -1,6 +1,9 @@
 package com.novelreader.ui.library.tabs
 
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onRoot
+import com.google.common.truth.Truth.assertThat
 import com.novelreader.data.local.db.entity.ChapterEntity
 import com.novelreader.ui.library.ChapterSortOrder
 import com.novelreader.ui.library.LibraryViewModel
@@ -172,5 +175,43 @@ class ChaptersTabScrollTest {
             }
         }
         composeTestRule.waitForIdle()
+    }
+
+    // Over a wallpaper the rows sit on an opaque container, so the list has to cover the content area
+    // it seats: the wallpaper may only show outside it. The painted colour itself is verified on a
+    // device (Robolectric cannot redraw a window for captureToImage without pixelCopyRenderMode), the
+    // same limitation LibraryStatsBarTest records.
+    @Test
+    fun `the chapter list seats itself on the container when a wallpaper is active`() {
+        composeTestRule.setContent {
+            NovelReaderTheme(appTheme = "dark", palette = "grafite") {
+                ChaptersTab(
+                    novelId = 7L,
+                    chapters = (0L..4L).map {
+                        ChapterEntity(
+                            id = it,
+                            novelId = 7L,
+                            title = "Ch $it",
+                            fileName = "ch_$it.html",
+                            orderIndex = it.toInt(),
+                            content = "<p>x</p>"
+                        )
+                    },
+                    bookmarkCounts = emptyMap(),
+                    sortOrder = ChapterSortOrder.ASCENDING,
+                    onChapterClick = { },
+                    wallpaperActive = true
+                )
+            }
+        }
+        composeTestRule.waitForIdle()
+
+        val root = composeTestRule.onRoot().fetchSemanticsNode().boundsInRoot
+        val list = composeTestRule.onNodeWithTag(CHAPTERS_LIST_TAG).fetchSemanticsNode().boundsInRoot
+
+        assertThat(list.left).isWithin(1f).of(root.left)
+        assertThat(list.top).isWithin(1f).of(root.top)
+        assertThat(list.right).isWithin(1f).of(root.right)
+        assertThat(list.bottom).isWithin(1f).of(root.bottom)
     }
 }
