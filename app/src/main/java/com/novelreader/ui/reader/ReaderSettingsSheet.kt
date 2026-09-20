@@ -68,6 +68,7 @@ import com.novelreader.ui.customization.READER_AUTO
 import com.novelreader.ui.customization.OptionLabel
 import com.novelreader.ui.customization.ResetAppearanceRow
 import com.novelreader.ui.customization.SavedThemesSection
+import com.novelreader.ui.customization.ToggleRow
 import com.novelreader.ui.customization.readerPaletteChoices
 import com.novelreader.ui.theme.parseAccentHex
 
@@ -101,6 +102,7 @@ fun SettingsSheet(
     onBrightnessPreview: (Int) -> Unit = {},
     sleepTimerMinutes: Int? = null,
     onSleepTimerChange: (Int?) -> Unit = {},
+    onTapZonesChange: (Boolean) -> Unit = {},
     onSwipeDirectionChange: (String) -> Unit = {},
     onDismiss: () -> Unit
 ) {
@@ -391,6 +393,14 @@ fun SettingsSheet(
                     modifier = Modifier.weight(1f)
                 )
             }
+
+            Spacer(modifier = Modifier.height(8.dp))
+            ToggleRow(
+                title = stringResource(R.string.reader_tap_zones),
+                description = stringResource(R.string.reader_tap_zones_desc),
+                checked = config.tapZones,
+                onCheckedChange = onTapZonesChange
+            )
 
             Spacer(modifier = Modifier.height(16.dp))
             HorizontalDivider()

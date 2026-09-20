@@ -113,7 +113,7 @@ class ExportDataUseCaseTest {
                 accentColor = "#8d6e63", wallpaper = "file:reader_1.jpg",
                 wallpaperBlur = 24, veil = 70,
                 autoScrollSpeed = 1.5f, keepScreenOn = false, swipeDirection = "horizontal",
-                brightness = 35
+                brightness = 35, tapZones = true
             )
         )
         every { libraryPreferences.sortOrder } returns flowOf("TITLE")
@@ -193,6 +193,7 @@ class ExportDataUseCaseTest {
             assertThat(reader.getInt("wallpaperBlur")).isEqualTo(24)
             assertThat(reader.getInt("veil")).isEqualTo(70)
             assertThat(reader.getInt("brightness")).isEqualTo(35)
+            assertThat(reader.getBoolean("tapZones")).isTrue()
         }
         assertThat(settings.getJSONObject("library").getString("sortOrder")).isEqualTo("TITLE")
     }

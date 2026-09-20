@@ -624,6 +624,29 @@ class ReaderViewModelTest {
     }
 
     @Test
+    fun `updateTapZones forwards value to readerPreferences`() = runTest {
+        viewModel = createViewModel()
+        viewModel.updateTapZones(true)
+        coVerify { readerPrefs.updateTapZones(true) }
+    }
+
+    @Test
+    fun `a tap follows the stored tap zones setting`() = runTest {
+        every { readerPrefs.config } returns flowOf(com.novelreader.data.local.preferences.ReaderConfig(tapZones = false))
+        viewModel = createViewModel()
+
+        assertThat(viewModel.tapActionAt(x = 900, width = 1080)).isEqualTo(TapAction.TOGGLE_CONTROLS)
+        assertThat(viewModel.tapActionAt(x = 100, width = 1080)).isEqualTo(TapAction.TOGGLE_CONTROLS)
+
+        every { readerPrefs.config } returns flowOf(com.novelreader.data.local.preferences.ReaderConfig(tapZones = true))
+        viewModel = createViewModel()
+
+        assertThat(viewModel.tapActionAt(x = 900, width = 1080)).isEqualTo(TapAction.NEXT_CHAPTER)
+        assertThat(viewModel.tapActionAt(x = 100, width = 1080)).isEqualTo(TapAction.PREV_CHAPTER)
+        assertThat(viewModel.tapActionAt(x = 540, width = 1080)).isEqualTo(TapAction.TOGGLE_CONTROLS)
+    }
+
+    @Test
     fun `starting the sleep timer counts the remaining seconds down`() = runTest {
         viewModel = createViewModel()
 

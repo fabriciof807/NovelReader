@@ -55,28 +55,11 @@ fun WallpaperBehindBarsRow(
     onCheckedChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Row(
+    ToggleRow(
+        title = stringResource(R.string.wallpaper_behind_bars),
+        description = stringResource(R.string.wallpaper_behind_bars_desc),
+        checked = checked,
+        onCheckedChange = onCheckedChange,
         modifier = modifier
-            .fillMaxWidth()
-            .toggleable(
-                value = checked,
-                role = Role.Switch,
-                onValueChange = onCheckedChange
-            )
-            .padding(vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = stringResource(R.string.wallpaper_behind_bars),
-                style = MaterialTheme.typography.titleSmall
-            )
-            Text(
-                text = stringResource(R.string.wallpaper_behind_bars_desc),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-        Switch(checked = checked, onCheckedChange = null)
-    }
+    )
 }

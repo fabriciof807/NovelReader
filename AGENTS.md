@@ -422,6 +422,25 @@ is `adb shell dumpsys window windows | grep sbrt=` on the app's `BASE_APPLICATIO
 means the window asked for an override, absent means it follows the device. The ModalBottomSheet
 has a window of its own and must stay out of it.
 
+### Reader JS bridge
+
+The reader talks to Kotlin through `ReaderJsInterface`, and two traps in it have already cost real bugs:
+
+- **`@JavascriptInterface` runs on a background thread**, so anything a callback reaches has to hop
+  back with `post { }` (the view provides it). `evaluateJavascript` called off-thread does not invoke
+  its callback *at all* — no error, no log — which silently killed every navigation that goes through
+  `saveScroll`. c9ab199 moved the horizontal swipe's `goToNextChapter` *into* that callback (it used
+  to navigate after a fire-and-forget save), so the page only stopped turning in v2.10.0, while the
+  vertical swipe kept working because it never touches the WebView. Every callback in `ReaderWebView`
+  now wraps with `post { }`; keep it that way.
+- **The `AndroidView` factory runs once.** A lambda captured there is bound to the composition that
+  built it, so reading `state.config.x` inside it reads a value frozen at first composition — the same
+  trap as `pointerInput` (see the crop note), one layer down. Read the ViewModel instead, which is why
+  `ReaderViewModel.tapActionAt` owns the tap policy.
+- Coordinates: `clientX` and `window.innerWidth` are both CSS px (measured `x=342.86` on a
+  `innerWidth=411` viewport, `dpr=2.625` nowhere in it), so a zone is `x / innerWidth` and needs no
+  density conversion.
+
 ### Sleep timer
 
 `SleepTimerState(minutes, remainingSeconds)` lives in `ReaderViewModel` — one flow, `null` while off —

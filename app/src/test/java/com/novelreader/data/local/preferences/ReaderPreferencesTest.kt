@@ -96,4 +96,21 @@ class ReaderPreferencesTest {
         assertThat(prefs.config.first().brightness)
             .isEqualTo(PreferenceAllowlists.BRIGHTNESS_SYSTEM)
     }
+
+    @Test
+    fun `tap zones default to off so a tap keeps toggling the controls`() = runTest {
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        val prefs = ReaderPreferences(context)
+        assertThat(prefs.config.first().tapZones).isFalse()
+    }
+
+    @Test
+    fun `updateTapZones persists the choice`() = runTest {
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        val prefs = ReaderPreferences(context)
+        prefs.updateTapZones(true)
+        assertThat(prefs.config.first().tapZones).isTrue()
+        prefs.updateTapZones(false)
+        assertThat(prefs.config.first().tapZones).isFalse()
+    }
 }

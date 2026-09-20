@@ -444,6 +444,18 @@ class ReaderViewModel @Inject constructor(
         viewModelScope.launch { readerPreferences.updateBrightness(value) }
     }
 
+    fun updateTapZones(value: Boolean) {
+        viewModelScope.launch { readerPreferences.updateTapZones(value) }
+    }
+
+    /**
+     * What a tap should do. Lives here, not in the screen, because the JS bridge is built inside an
+     * `AndroidView` factory that runs once: a lambda there captures the composition it was built with
+     * and would keep reading a stale [ReaderConfig.tapZones] forever.
+     */
+    fun tapActionAt(x: Int, width: Int): TapAction =
+        tapActionFor(tapZoneFor(x, width), _state.value.config.tapZones)
+
     fun startSleepTimer(minutes: Int) {
         sleepTimerJob?.cancel()
         val total = minutes * 60

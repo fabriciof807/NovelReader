@@ -178,6 +178,7 @@ class ExportDataUseCase @Inject constructor(
                 put("keepScreenOn", config.keepScreenOn)
                 put("swipeDirection", config.swipeDirection)
                 put("brightness", config.brightness)
+                put("tapZones", config.tapZones)
             })
             put("library", JSONObject().apply {
                 put("sortOrder", libraryPreferences.sortOrder.first())

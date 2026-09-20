@@ -412,10 +412,12 @@ class ReaderHtmlBuilderTest {
     }
 
     @Test
-    fun `buildReaderHtml fires onTap on tap release without a long-press timer`() {
+    fun `buildReaderHtml fires onTap on tap release with the coordinates and no long-press timer`() {
         val html = buildReaderHtml(content = "<p>x</p>", config = ReaderConfig())
         assertThat(html).doesNotContain("_lpTimer")
-        assertThat(html).contains("Android.onTap()")
+        assertThat(html).contains("Android.onTap(")
+        assertThat(html).contains("clientX")
+        assertThat(html).contains("window.innerWidth")
     }
 
     @Test

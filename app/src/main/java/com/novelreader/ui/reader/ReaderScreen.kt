@@ -312,6 +312,7 @@ fun ReaderScreen(
                 if (minutes == null) viewModel.clearSleepTimer() else viewModel.startSleepTimer(minutes)
             },
             onSwipeDirectionChange = { viewModel.updateSwipeDirection(it) },
+            onTapZonesChange = { viewModel.updateTapZones(it) },
             onDismiss = { viewModel.hideSettings() }
         )
     }
@@ -594,7 +595,19 @@ fun ReaderScreen(
                         onScrollRestoreComplete = { token ->
                             if (token == pendingRestoreToken) isPageLoaded = true
                         },
-                        onTap = { isOptionsVisible = !isOptionsVisible },
+                        onTap = { x, width ->
+                            when (viewModel.tapActionAt(x, width)) {
+                                TapAction.TOGGLE_CONTROLS -> isOptionsVisible = !isOptionsVisible
+                                TapAction.PREV_CHAPTER -> {
+                                    pendingSwipeTransition = chapterTransitionFor("prev", "h")
+                                    saveScroll { viewModel.goToPrevChapter() }
+                                }
+                                TapAction.NEXT_CHAPTER -> {
+                                    pendingSwipeTransition = chapterTransitionFor("next", "h")
+                                    saveScroll { viewModel.goToNextChapter() }
+                                }
+                            }
+                        },
                         onSwipe = { direction, axis ->
                             pendingSwipeTransition = chapterTransitionFor(direction, axis)
                             val navigate: () -> Unit = {

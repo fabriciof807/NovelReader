@@ -7,6 +7,8 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsNotSelected
+import androidx.compose.ui.test.assertIsOff
+import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assertRangeInfoEquals
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -43,7 +45,8 @@ class ReaderSettingsSheetTest {
         onBrightnessChange: (Int) -> Unit = {},
         onBrightnessPreview: (Int) -> Unit = {},
         sleepTimerMinutes: Int? = null,
-        onSleepTimerChange: (Int?) -> Unit = {}
+        onSleepTimerChange: (Int?) -> Unit = {},
+        onTapZonesChange: (Boolean) -> Unit = {}
     ) {
         composeTestRule.setContent {
             NovelReaderTheme {
@@ -65,6 +68,7 @@ class ReaderSettingsSheetTest {
                     onBrightnessPreview = onBrightnessPreview,
                     sleepTimerMinutes = sleepTimerMinutes,
                     onSleepTimerChange = onSleepTimerChange,
+                    onTapZonesChange = onTapZonesChange,
                     onDismiss = {}
                 )
             }
@@ -376,5 +380,32 @@ class ReaderSettingsSheetTest {
             .performSemanticsAction(SemanticsActions.OnClick)
 
         assertThat(chosen).isNull()
+    }
+
+    @Test
+    fun `shows the tap zones off by default with the explanation`() {
+        setSheet()
+
+        composeTestRule.onNodeWithText("Zonas de toque").performScrollTo().assertIsOff()
+        composeTestRule.onNodeWithText("Toque nas laterais para trocar de capítulo").assertExists()
+    }
+
+    @Test
+    fun `marks the tap zones on once the reader enabled them`() {
+        setSheet(config = ReaderConfig(theme = "indigo", tapZones = true))
+
+        composeTestRule.onNodeWithText("Zonas de toque").performScrollTo().assertIsOn()
+    }
+
+    @Test
+    fun `reports the tap zones being switched on`() {
+        var enabled: Boolean? = null
+        setSheet(onTapZonesChange = { enabled = it })
+
+        composeTestRule.onNodeWithText("Zonas de toque")
+            .performScrollTo()
+            .performSemanticsAction(SemanticsActions.OnClick)
+
+        assertThat(enabled).isTrue()
     }
 }

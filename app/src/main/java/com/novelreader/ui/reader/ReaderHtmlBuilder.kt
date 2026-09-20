@@ -254,7 +254,7 @@ fun buildReaderHtml(
                     if (dir !== null) {
                         try { Android.onSwipe(dir, Math.abs(dx) > Math.abs(dy) ? 'h' : 'v'); } catch(e) {}
                     } else if (Math.abs(dx) < 24 && Math.abs(dy) < 24) {
-                        try { Android.onTap(); } catch(e) {}
+                        try { Android.onTap(e.changedTouches[0].clientX, window.innerWidth); } catch(e) {}
                     }
                 });
             })();

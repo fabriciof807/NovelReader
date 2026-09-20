@@ -322,6 +322,7 @@ class ImportDataUseCase @Inject constructor(
             if (r.has("keepScreenOn")) readerPreferences.updateKeepScreenOn(r.getBoolean("keepScreenOn"))
             r.optString("swipeDirection").takeIf { it.isNotBlank() }?.let { readerPreferences.updateSwipeDirection(it) }
             if (r.has("brightness")) readerPreferences.updateBrightness(r.optInt("brightness"))
+            if (r.has("tapZones")) readerPreferences.updateTapZones(r.optBoolean("tapZones"))
             if (r.has("accentColor")) readerPreferences.updateAccentColor(r.optString("accentColor"))
             r.optString("wallpaper").takeIf { it.isNotBlank() }?.let { ref ->
                 readerPreferences.updateWallpaper(restorableWallpaperRef(ref))

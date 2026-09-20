@@ -14,14 +14,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.viewinterop.AndroidView
 
 internal class ReaderJsInterface(
-    private val onTapCallback: () -> Unit,
+    private val onTapCallback: (Int, Int) -> Unit,
     private val onSwipeCallback: (String, String) -> Unit,
     private val onAutoScrollReachedEndCallback: () -> Unit,
     private val onScrollRestoreCompleteCallback: (Int) -> Unit
 ) {
     @JavascriptInterface
-    fun onTap() {
-        onTapCallback()
+    fun onTap(x: Int, width: Int) {
+        onTapCallback(x, width)
     }
 
     @JavascriptInterface
@@ -47,7 +47,7 @@ fun ReaderWebView(
     onPageFinished: (WebView, String?) -> Unit,
     onWebViewReady: (WebView) -> Unit,
     onScrollRestoreComplete: (Int) -> Unit = {},
-    onTap: () -> Unit = {},
+    onTap: (Int, Int) -> Unit = { _, _ -> },
     onSwipe: (String, String) -> Unit = { _, _ -> },
     onAutoScrollReachedEnd: () -> Unit = {},
     modifier: Modifier = Modifier
@@ -137,9 +137,11 @@ fun ReaderWebView(
                 }
                 addJavascriptInterface(
                     ReaderJsInterface(
-                        onTap,
-                        onSwipe,
-                        onAutoScrollReachedEnd,
+                        // The bridge calls land on a background thread, and everything these reach
+                        // touches the WebView, which only answers on the thread that made it.
+                        { x, width -> post { onTap(x, width) } },
+                        { direction, axis -> post { onSwipe(direction, axis) } },
+                        { post { onAutoScrollReachedEnd() } },
                         { token -> post { onScrollRestoreComplete(token) } }
                     ),
                     "Android"

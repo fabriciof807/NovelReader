@@ -441,6 +441,22 @@ class ImportDataUseCaseTest {
     }
 
     @Test
+    fun `settings section applies the tap zones choice`() = runTest {
+        val readerPrefs = ReaderPreferences(appContext)
+
+        execute(
+            """
+            {
+              "novels": [],
+              "settings": {"reader": {"tapZones": true}}
+            }
+            """.trimIndent()
+        )
+
+        assertThat(readerPrefs.config.first().tapZones).isTrue()
+    }
+
+    @Test
     fun `backup without settings section reports settings not applied`() = runTest {
         val result = execute("""{"novels":[],"bookmarks":[],"characters":[]}""")
 
