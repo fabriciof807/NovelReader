@@ -32,7 +32,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -48,8 +47,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -69,6 +66,7 @@ import com.novelreader.ui.customization.OptionLabel
 import com.novelreader.ui.customization.ResetAppearanceRow
 import com.novelreader.ui.customization.SavedThemesSection
 import com.novelreader.ui.customization.ToggleRow
+import com.novelreader.ui.customization.ValueSlider
 import com.novelreader.ui.customization.readerPaletteChoices
 import com.novelreader.ui.theme.parseAccentHex
 
@@ -210,7 +208,7 @@ fun SettingsSheet(
                 style = MaterialTheme.typography.titleSmall
             )
             Spacer(modifier = Modifier.height(4.dp))
-            Slider(
+            ValueSlider(
                 value = fontSize,
                 onValueChange = { fontSize = it },
                 onValueChangeFinished = { onFontSizeChange(fontSize.toInt()) },
@@ -229,7 +227,7 @@ fun SettingsSheet(
                 style = MaterialTheme.typography.titleSmall
             )
             Spacer(modifier = Modifier.height(4.dp))
-            Slider(
+            ValueSlider(
                 value = lineHeight,
                 onValueChange = { lineHeight = it },
                 onValueChangeFinished = { onLineHeightChange(lineHeight) },
@@ -337,7 +335,7 @@ fun SettingsSheet(
                     (if (followingSystem) deviceBrightness else config.brightness).toFloat()
                 )
             }
-            Slider(
+            ValueSlider(
                 value = brightness,
                 onValueChange = {
                     brightness = it
@@ -346,9 +344,8 @@ fun SettingsSheet(
                 onValueChangeFinished = { onBrightnessChange(brightness.toInt()) },
                 valueRange = PreferenceAllowlists.BRIGHTNESS_MIN.toFloat()..
                     PreferenceAllowlists.MAX_BRIGHTNESS.toFloat(),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .semantics { contentDescription = brightnessLabel }
+                contentDescription = brightnessLabel,
+                modifier = Modifier.fillMaxWidth()
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -475,7 +472,7 @@ fun SettingsSheet(
             var autoScrollSpeed by remember(config.autoScrollSpeed) {
                 mutableFloatStateOf(config.autoScrollSpeed)
             }
-            Slider(
+            ValueSlider(
                 value = autoScrollSpeed,
                 onValueChange = { autoScrollSpeed = it },
                 onValueChangeFinished = { onAutoScrollSpeedChange(autoScrollSpeed) },

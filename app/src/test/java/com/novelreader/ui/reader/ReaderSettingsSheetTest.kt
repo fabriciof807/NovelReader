@@ -1,5 +1,6 @@
 package com.novelreader.ui.reader
 
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsActions
@@ -14,9 +15,11 @@ import androidx.compose.ui.test.assertRangeInfoEquals
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.getBoundsInRoot
 import androidx.compose.ui.test.performClick
-import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performSemanticsAction
+import androidx.compose.ui.test.performTouchInput
 import com.google.common.truth.Truth.assertThat
 import com.novelreader.data.local.preferences.ReaderConfig
 import com.novelreader.ui.theme.NovelReaderTheme
@@ -321,6 +324,55 @@ class ReaderSettingsSheetTest {
 
         assertThat(previewed).isEqualTo(60)
         assertThat(committed).isEqualTo(60)
+    }
+
+    @Test
+    fun `a diagonal drag that starts on a slider scrolls the sheet instead of changing the setting`() {
+        var previewed: Int? = null
+        setSheet(
+            config = ReaderConfig(theme = "indigo", brightness = 25),
+            onBrightnessPreview = { previewed = it }
+        )
+
+        val markerBefore = composeTestRule.onNodeWithContentDescription("Brilho")
+            .performScrollTo()
+            .getBoundsInRoot().top
+        composeTestRule.onNodeWithContentDescription("Brilho")
+            .performTouchInput {
+                down(center)
+                // O dedo sobe enviesado: os dois eixos cruzam o slop no mesmo evento e, pelo
+                // material3, o slider ganha a corrida so' por ser o no' interno.
+                moveBy(Offset(30f, -80f))
+                moveBy(Offset(10f, -120f))
+                moveBy(Offset(4f, -120f))
+                up()
+            }
+        composeTestRule.waitForIdle()
+
+        assertThat(previewed).isNull()
+        assertThat(composeTestRule.onNodeWithContentDescription("Brilho").getBoundsInRoot().top)
+            .isLessThan(markerBefore)
+    }
+
+    @Test
+    fun `a sideways drag on the slider still changes the setting`() {
+        var previewed: Int? = null
+        setSheet(
+            config = ReaderConfig(theme = "indigo", brightness = 25),
+            onBrightnessPreview = { previewed = it }
+        )
+
+        composeTestRule.onNodeWithContentDescription("Brilho")
+            .performScrollTo()
+            .performTouchInput {
+                down(center)
+                moveBy(Offset(-90f, 2f))
+                moveBy(Offset(-90f, 2f))
+                up()
+            }
+        composeTestRule.waitForIdle()
+
+        assertThat(previewed).isNotNull()
     }
 
     @Test

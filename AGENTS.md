@@ -468,6 +468,27 @@ WebView JS evaluation per frame — the slider sticks and jumps. Where a live
 preview is cheap (wallpaper blur and veil) the screen keeps a transient state
 that is *not* persisted, and the renderer reads that.
 
+**Sliders in a scrolling screen are `ValueSlider`** (`ui/customization/ValueSlider.kt`), not
+Material's, and that is load-bearing (issue #21). Material's slider watches a press — which jumps
+the value *to wherever the finger landed* — plus a horizontal drag whose detector claims any drag
+whose **sideways** travel crosses the touch slop, however small. Inside a scrolling column the
+slider is the inner node, so its detector runs first: a diagonal finger drag (both axes crossing
+the slop in the same event) made the slider win, so the setting changed under the reader's finger
+and the column never scrolled. A straight drag does not reproduce it — the sideways travel is what
+decides, so an injected vertical swipe looks innocent while Robolectric's diagonal
+`performTouchInput { moveBy(...) }` fails immediately.
+
+`ValueSlider` settles the axis once, at the first slop crossing: sideways drags change the value
+(nothing else competes for them), mostly-upright ones are left **unconsumed** so the column keeps
+its native scroll, fling and drag-to-dismiss, and a press that never crossed the slop is still a tap
+that jumps to that point. A tie goes to the scroll. It renders Material's own
+`SliderDefaults.Track`/`Thumb`, so a value looks the same as on the sliders that kept the stock
+component (the crop screen's, which does not scroll). The position → fraction → value mapping,
+including the step snapping, is pure and lives in `SliderMath.kt` (`SliderMathTest`); the gesture
+contract is pinned by `ValueSliderTest` and by the reader sheet's diagonal-drag test. Never put a
+Material `Slider` back into a scrolling screen: the shared `BlurSlider`/`VeilSlider`, the reader
+settings sheet and the app settings screen all rely on this one.
+
 ### Wallpapers
 
 Two independent global slots (`WallpaperStorage.SLOT_HOME`, `SLOT_READER`), never per novel. A reference is one string: `none`, `builtin:<id>` (one of 8 gradients in `WallpaperBackground.BUILTIN_WALLPAPERS`) or `file:<name.ext>` — the name must match `^[a-z0-9_]{1,64}\.(jpg|jpeg|png|webp)$` and the resolved canonical path must stay inside `filesDir/wallpapers/`.

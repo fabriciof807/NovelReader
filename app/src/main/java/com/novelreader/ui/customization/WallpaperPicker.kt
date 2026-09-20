@@ -18,7 +18,6 @@ import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -191,7 +190,7 @@ fun BlurSlider(
             text = stringResource(R.string.wallpaper_blur, value.toInt()),
             style = MaterialTheme.typography.titleSmall
         )
-        Slider(
+        ValueSlider(
             value = value,
             onValueChange = {
                 value = it
@@ -217,7 +216,7 @@ fun VeilSlider(
             text = stringResource(R.string.wallpaper_veil, value.toInt()),
             style = MaterialTheme.typography.titleSmall
         )
-        Slider(
+        ValueSlider(
             value = value,
             onValueChange = {
                 value = it
