@@ -24,7 +24,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -619,6 +621,58 @@ class ReaderViewModelTest {
         viewModel = createViewModel()
         viewModel.updateBrightness(35)
         coVerify { readerPrefs.updateBrightness(35) }
+    }
+
+    @Test
+    fun `starting the sleep timer counts the remaining seconds down`() = runTest {
+        viewModel = createViewModel()
+
+        viewModel.startSleepTimer(5)
+
+        assertThat(viewModel.sleepTimer.value).isEqualTo(SleepTimerState(minutes = 5, remainingSeconds = 300))
+
+        advanceTimeBy(60_001)
+
+        assertThat(viewModel.sleepTimer.value).isEqualTo(SleepTimerState(minutes = 5, remainingSeconds = 240))
+    }
+
+    @Test
+    fun `the sleep timer emits once at zero and clears itself`() = runTest {
+        viewModel = createViewModel()
+        val elapsed = mutableListOf<Unit>()
+        val collector = launch { viewModel.sleepElapsed.collect { elapsed += it } }
+
+        viewModel.startSleepTimer(1)
+        advanceTimeBy(60_001)
+
+        assertThat(elapsed).hasSize(1)
+        assertThat(viewModel.sleepTimer.value).isNull()
+        collector.cancel()
+    }
+
+    @Test
+    fun `clearing the sleep timer stops the countdown`() = runTest {
+        viewModel = createViewModel()
+
+        viewModel.startSleepTimer(5)
+        viewModel.clearSleepTimer()
+        advanceTimeBy(120_000)
+
+        assertThat(viewModel.sleepTimer.value).isNull()
+    }
+
+    @Test
+    fun `starting a new duration replaces the running timer`() = runTest {
+        viewModel = createViewModel()
+
+        viewModel.startSleepTimer(5)
+        advanceTimeBy(60_000)
+        viewModel.startSleepTimer(15)
+        advanceTimeBy(300_001)
+
+        // The five minute timer would have fired here; the fifteen minute one is still going.
+        assertThat(viewModel.sleepTimer.value)
+            .isEqualTo(SleepTimerState(minutes = 15, remainingSeconds = 600))
     }
 
 @Test

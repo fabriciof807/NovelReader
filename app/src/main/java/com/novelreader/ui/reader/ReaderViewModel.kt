@@ -39,6 +39,9 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+/** The armed sleep timer: the duration the reader picked and how much of it is left. */
+data class SleepTimerState(val minutes: Int, val remainingSeconds: Int)
+
 data class ReaderState(
     val novel: NovelEntity? = null,
     val chapter: ChapterEntity? = null,
@@ -85,6 +88,18 @@ class ReaderViewModel @Inject constructor(
         onBufferOverflow = BufferOverflow.DROP_OLDEST
     )
     val errorEvents: SharedFlow<String> = _errorEvents.asSharedFlow()
+
+    private val _sleepTimer = MutableStateFlow<SleepTimerState?>(null)
+    val sleepTimer: StateFlow<SleepTimerState?> = _sleepTimer
+
+    private val _sleepElapsed = MutableSharedFlow<Unit>(
+        replay = 0,
+        extraBufferCapacity = 1,
+        onBufferOverflow = BufferOverflow.DROP_OLDEST
+    )
+    val sleepElapsed: SharedFlow<Unit> = _sleepElapsed.asSharedFlow()
+
+    private var sleepTimerJob: Job? = null
 
     private var currentChapter: ChapterEntity? = null
     private var allChapters: List<ChapterEntity> = emptyList()
@@ -427,6 +442,28 @@ class ReaderViewModel @Inject constructor(
 
     fun updateBrightness(value: Int) {
         viewModelScope.launch { readerPreferences.updateBrightness(value) }
+    }
+
+    fun startSleepTimer(minutes: Int) {
+        sleepTimerJob?.cancel()
+        val total = minutes * 60
+        _sleepTimer.value = SleepTimerState(minutes = minutes, remainingSeconds = total)
+        sleepTimerJob = viewModelScope.launch {
+            var left = total
+            while (left > 0) {
+                delay(1_000)
+                left--
+                _sleepTimer.value = _sleepTimer.value?.copy(remainingSeconds = left)
+            }
+            _sleepTimer.value = null
+            _sleepElapsed.emit(Unit)
+        }
+    }
+
+    fun clearSleepTimer() {
+        sleepTimerJob?.cancel()
+        sleepTimerJob = null
+        _sleepTimer.value = null
     }
 
     private var searchJob: Job? = null

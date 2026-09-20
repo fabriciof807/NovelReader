@@ -99,6 +99,8 @@ fun SettingsSheet(
     deviceBrightness: Int = PreferenceAllowlists.MAX_BRIGHTNESS,
     onBrightnessChange: (Int) -> Unit = {},
     onBrightnessPreview: (Int) -> Unit = {},
+    sleepTimerMinutes: Int? = null,
+    onSleepTimerChange: (Int?) -> Unit = {},
     onSwipeDirectionChange: (String) -> Unit = {},
     onDismiss: () -> Unit
 ) {
@@ -478,9 +480,45 @@ fun SettingsSheet(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
+
+            Spacer(modifier = Modifier.height(16.dp))
+            HorizontalDivider()
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    stringResource(R.string.reader_sleep_timer),
+                    style = MaterialTheme.typography.titleSmall,
+                    modifier = Modifier.weight(1f)
+                )
+                SelectablePill(
+                    label = stringResource(R.string.reader_sleep_timer_none),
+                    selected = sleepTimerMinutes == null,
+                    onClick = { onSleepTimerChange(null) }
+                )
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                SLEEP_TIMER_MINUTES.forEach { minutes ->
+                    SelectablePill(
+                        label = stringResource(R.string.reader_sleep_timer_minutes, minutes),
+                        selected = sleepTimerMinutes == minutes,
+                        onClick = { onSleepTimerChange(minutes) },
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
         }
     }
 }
+
+private val SLEEP_TIMER_MINUTES = listOf(5, 15, 30, 60)
 
 @Composable
 private fun ThemeOption(

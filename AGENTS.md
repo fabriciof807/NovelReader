@@ -413,6 +413,23 @@ is `adb shell dumpsys window windows | grep sbrt=` on the app's `BASE_APPLICATIO
 means the window asked for an override, absent means it follows the device. The ModalBottomSheet
 has a window of its own and must stay out of it.
 
+### Sleep timer
+
+`SleepTimerState(minutes, remainingSeconds)` lives in `ReaderViewModel` — one flow, `null` while off —
+and is deliberately **not persisted**: nothing in `reader_prefs` and nothing in the backup, because a
+stored sleep timer would fire in the next session. The `viewModelScope` dying with the reader is
+what makes it session-only for free.
+
+It is a **foreground countdown, not an alarm**. Expiry emits once on `sleepElapsed` and the screen
+leaves through `saveScroll { onBack() }`, the same call the top bar uses — exit on `onBack()` alone
+and the reader loses its place. With the screen off the process is frozen and the timer simply does
+not fire; that is accepted, not a bug to fix with `AlarmManager` (which would drag in
+exact-alarm permission).
+
+The status-bar pill speaks minutes **rounded up** ("1 min" while a second is left) so it never reads
+"0 min". The chips are 5/15/30/60 with the off state as a header pill: five pills in one row do not
+fit "Nenhum"/"None" at 360dp.
+
 ### Sliders
 
 Every slider commits **once, on release** (`onValueChangeFinished`) and keeps the

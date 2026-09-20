@@ -183,6 +183,9 @@
     <string name="reader_font_cursive">Cursiva</string>
     <string name="reader_brightness">Brilho</string>
     <string name="reader_brightness_system">Sistema</string>
+    <string name="reader_sleep_timer">Temporizador de sono</string>
+    <string name="reader_sleep_timer_none">Nenhum</string>
+    <string name="reader_sleep_timer_minutes">%1$d min</string>
     <string name="reader_battery_label">Bateria: %1$d%%</string>
     <string name="reader_battery_charging_label">Bateria: %1$d%% (carregando)</string>
     <string name="reader_chapter_read_label">Lido: %1$d%%</string>

@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.BatteryChargingFull
 import androidx.compose.material.icons.outlined.BatteryFull
+import androidx.compose.material.icons.outlined.Timer
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -25,6 +26,7 @@ import com.novelreader.R
 fun ReaderStatusBar(
     battery: BatteryState,
     modifier: Modifier = Modifier,
+    sleepRemainingSeconds: Int? = null,
     containerColor: Color = MaterialTheme.colorScheme.surface
 ) {
     val tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
@@ -56,5 +58,26 @@ fun ReaderStatusBar(
             style = MaterialTheme.typography.labelSmall,
             color = tint
         )
+        if (sleepRemainingSeconds != null) {
+            Spacer(Modifier.width(12.dp))
+            Icon(
+                imageVector = Icons.Outlined.Timer,
+                contentDescription = stringResource(R.string.reader_sleep_timer),
+                tint = tint,
+                modifier = Modifier.size(16.dp)
+            )
+            Spacer(Modifier.width(4.dp))
+            Text(
+                text = stringResource(
+                    R.string.reader_sleep_timer_minutes,
+                    sleepRemainingMinutes(sleepRemainingSeconds)
+                ),
+                style = MaterialTheme.typography.labelSmall,
+                color = tint
+            )
+        }
     }
 }
+
+/** Rounded up, so a timer with a second left reads "1 min" instead of "0 min". */
+internal fun sleepRemainingMinutes(seconds: Int): Int = (seconds + 59) / 60

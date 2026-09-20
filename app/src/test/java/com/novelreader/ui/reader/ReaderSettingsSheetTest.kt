@@ -41,7 +41,9 @@ class ReaderSettingsSheetTest {
         onVeilChange: (Int) -> Unit = {},
         onFontFamilyChange: (String) -> Unit = {},
         onBrightnessChange: (Int) -> Unit = {},
-        onBrightnessPreview: (Int) -> Unit = {}
+        onBrightnessPreview: (Int) -> Unit = {},
+        sleepTimerMinutes: Int? = null,
+        onSleepTimerChange: (Int?) -> Unit = {}
     ) {
         composeTestRule.setContent {
             NovelReaderTheme {
@@ -61,6 +63,8 @@ class ReaderSettingsSheetTest {
                     deviceBrightness = deviceBrightness,
                     onBrightnessChange = onBrightnessChange,
                     onBrightnessPreview = onBrightnessPreview,
+                    sleepTimerMinutes = sleepTimerMinutes,
+                    onSleepTimerChange = onSleepTimerChange,
                     onDismiss = {}
                 )
             }
@@ -337,5 +341,40 @@ class ReaderSettingsSheetTest {
         composeTestRule.onNodeWithText("Sistema").performScrollTo().assert(
             SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.RadioButton)
         )
+    }
+
+    @Test
+    fun `shows the sleep timer off by default`() {
+        setSheet()
+
+        composeTestRule.onNodeWithText("Temporizador de sono").assertExists()
+        composeTestRule.onNodeWithText("Nenhum").performScrollTo().assertIsSelected()
+        composeTestRule.onNodeWithText("30 min").performScrollTo().assertIsNotSelected()
+    }
+
+    @Test
+    fun `marks the armed duration and reports the tapped one`() {
+        var chosen: Int? = null
+        setSheet(sleepTimerMinutes = 30, onSleepTimerChange = { chosen = it })
+
+        composeTestRule.onNodeWithText("30 min").performScrollTo().assertIsSelected()
+        composeTestRule.onNodeWithText("Nenhum").performScrollTo().assertIsNotSelected()
+        composeTestRule.onNodeWithText("5 min")
+            .performScrollTo()
+            .performSemanticsAction(SemanticsActions.OnClick)
+
+        assertThat(chosen).isEqualTo(5)
+    }
+
+    @Test
+    fun `reports none when the sleep timer is turned off`() {
+        var chosen: Int? = 30
+        setSheet(sleepTimerMinutes = 30, onSleepTimerChange = { chosen = it })
+
+        composeTestRule.onNodeWithText("Nenhum")
+            .performScrollTo()
+            .performSemanticsAction(SemanticsActions.OnClick)
+
+        assertThat(chosen).isNull()
     }
 }

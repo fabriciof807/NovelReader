@@ -150,6 +150,7 @@ fun ReaderScreen(
     }
 
     val savedThemes by viewModel.savedThemes.collectAsState()
+    val sleepTimer by viewModel.sleepTimer.collectAsState()
     val wallpaperBehindBars by viewModel.wallpaperBehindBars.collectAsState()
     var liveVeil by remember { mutableIntStateOf(state.config.veil) }
     var liveBlur by remember { mutableIntStateOf(state.config.wallpaperBlur) }
@@ -233,6 +234,10 @@ fun ReaderScreen(
         }
     }
 
+    LaunchedEffect(Unit) {
+        viewModel.sleepElapsed.collect { saveScroll { onBack() } }
+    }
+
     LaunchedEffect(state.bookmarks, webView) {
         webView?.evaluateJavascript(applyBookmarksJs(state.bookmarks), null)
     }
@@ -302,6 +307,10 @@ fun ReaderScreen(
             deviceBrightness = deviceBrightness,
             onBrightnessChange = { viewModel.updateBrightness(it) },
             onBrightnessPreview = { liveBrightness = it },
+            sleepTimerMinutes = sleepTimer?.minutes,
+            onSleepTimerChange = { minutes ->
+                if (minutes == null) viewModel.clearSleepTimer() else viewModel.startSleepTimer(minutes)
+            },
             onSwipeDirectionChange = { viewModel.updateSwipeDirection(it) },
             onDismiss = { viewModel.hideSettings() }
         )
@@ -510,6 +519,7 @@ fun ReaderScreen(
                     }
                     ReaderStatusBar(
                         battery = rememberBatteryState(),
+                        sleepRemainingSeconds = sleepTimer?.remainingSeconds,
                         containerColor = readerBarColor
                     )
                 }
