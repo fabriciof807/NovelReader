@@ -1,6 +1,6 @@
 # Security notes — residual risks and dependency audit
 
-Last updated: 2026-09-18 (post-remediation, unreleased; source at v2.11.0).
+Last updated: 2026-09-19 (post-remediation, shipped in v2.11.0; source at v2.12.0).
 
 This file records the security posture after the piolium lite audit and the
 follow-up hardening pass. It is a companion to the audit artifacts under

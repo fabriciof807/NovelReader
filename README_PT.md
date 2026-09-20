@@ -83,11 +83,11 @@ Tiradas num emulador, com uma biblioteca de teste. A interface nelas está em in
 
 ## Última versão
 
-### v2.11.0
+### v2.12.0
 
-- Os controles da biblioteca acompanham automaticamente um papel de parede claro ou escuro, para um texto legível e consistente.
-- Os capítulos aparecem na biblioteca enquanto uma importação da web ainda está rodando.
-- Importações da web mais seguras e confiáveis.
+- Quatro novos ajustes do leitor: tipografia (incluindo monoespaçada e cursiva), brilho, temporizador de sono e zonas de toque opcionais para trocar de capítulo pelas laterais da tela.
+- O swipe horizontal volta a virar página. Ele estava quebrado em silêncio desde a v2.10.0, enquanto o swipe vertical continuava funcionando.
+- Texto legível na barra de baixo do leitor, qualquer que seja o papel de parede, e o brilho do leitor volta para o seu aparelho quando você sai dele.
 
 Veja [Releases](https://github.com/fabriciof807/NovelReader/releases) para o changelog completo.
 

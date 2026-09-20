@@ -2,7 +2,7 @@
 
 ## Overview
 
-NovelReader (v2.11.0) is an offline-first Android novel reader. It imports HTML/MHT files from local storage or fetches chapters from web novel sites. All data stays on the device.
+NovelReader (v2.12.0) is an offline-first Android novel reader. It imports HTML/MHT files from local storage or fetches chapters from web novel sites. All data stays on the device.
 
 The app is end-user focused: 100% offline, no analytics, no account, no cloud.
 
@@ -517,7 +517,15 @@ Design specs and implementation plans from past AI sessions are preserved in git
 
 ## Current Version
 
-v2.11.0 (versionCode 32). See [README.md](README.md) (English) and [README_PT.md](README_PT.md) (Portuguese) for the user-facing documentation. Full release history in `git log`.
+v2.12.0 (versionCode 33). See [README.md](README.md) (English) and [README_PT.md](README_PT.md) (Portuguese) for the user-facing documentation. Full release history in `git log`.
+
+### v2.12.0 highlights
+
+- Feat: four reader settings. A **font picker** (Serif, Sans-serif, Monospace, Cursive — each chip drawn in the family it selects, so the chip is its own preview), a **brightness** slider that dims the reader's own window and hands the device back its brightness on exit, a **sleep timer** (5/15/30/60 min, countdown beside the battery, leaves for the library with the position saved), and **tap zones** (the side thirds change chapter, the centre toggles the controls, off by default).
+- Fix: **the horizontal swipe turns the page again.** c9ab199 moved the navigation into a `saveScroll` callback that never ran — `@JavascriptInterface` lands on a background thread and `evaluateJavascript` off the WebView's own thread never invokes its callback — so the gesture had been dead since v2.10.0. Every bridge callback now posts to the view's thread.
+- Fix: the reader's status bar derives its text tone from the palette instead of a fixed 0.6 alpha (3.08:1 on the light palettes before) and keeps full strength on a translucent bar, where the veiled wallpaper puts the muted tone at 4.07:1.
+- Docs: the reader's gestures, and the fact that it disables text selection on purpose, are recorded in `AGENTS.md` (issue #14 closed as obsolete — v2.7.0 removed selection along with its only consumer).
+- 887 unit tests passing (was 840 at v2.11.0).
 
 ### v2.11.0 highlights
 

@@ -83,11 +83,11 @@ Taken on an emulator, with a populated test library.
 
 ## Latest release
 
-### v2.11.0
+### v2.12.0
 
-- Library controls automatically match a light or dark wallpaper for consistent, readable text.
-- Chapters become visible in the library while a web import is still running.
-- Safer and more reliable web imports.
+- Four new reader settings: typeface (including monospaced and cursive), brightness, a sleep timer, and optional tap zones for changing chapter from the sides of the screen.
+- The horizontal swipe turns the page again. It had been silently broken since v2.10.0, while vertical swipes kept working.
+- Readable text in the reader's bottom bar whatever the wallpaper, and the reader's brightness goes back to your device when you leave it.
 
 See [Releases](https://github.com/fabriciof807/NovelReader/releases) for the complete changelog.
 
