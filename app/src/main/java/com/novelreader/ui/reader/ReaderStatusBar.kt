@@ -21,6 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.novelreader.R
+import com.novelreader.ui.theme.mutedForeground
 
 @Composable
 fun ReaderStatusBar(
@@ -29,7 +30,14 @@ fun ReaderStatusBar(
     sleepRemainingSeconds: Int? = null,
     containerColor: Color = MaterialTheme.colorScheme.surface
 ) {
-    val tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+    // A translucent bar has a wallpaper behind it, and that backdrop is not something this composable
+    // can derive a contrast against, so its text keeps full strength. An opaque bar gets the palette's
+    // muted tone, walked towards the surface it actually sits on.
+    val tint = if (containerColor.alpha < 1f) {
+        MaterialTheme.colorScheme.onSurface
+    } else {
+        mutedForeground(MaterialTheme.colorScheme.onSurface, containerColor)
+    }
     val batteryDescription = if (battery.charging) {
         stringResource(R.string.reader_battery_charging_label, battery.percent)
     } else {

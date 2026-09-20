@@ -1,8 +1,11 @@
 package com.novelreader.ui.theme
 
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
 import com.google.common.truth.Truth.assertThat
 import com.novelreader.data.local.preferences.PreferenceAllowlists
+import com.novelreader.ui.customization.BAR_VEIL_ALPHA
+import com.novelreader.ui.customization.BUILTIN_WALLPAPERS
 import com.novelreader.ui.customization.libraryContainerColor
 import org.junit.Test
 
@@ -241,6 +244,43 @@ class AppPaletteTest {
         assertThat(mutedForeground(background, background)).isEqualTo(background)
         assertThat(mutedForeground(Color(0xFFF0F0F0), background))
             .isEqualTo(Color(0xFFF0F0F0))
+    }
+
+    // The reader status bar carries text (the battery percentage and the sleep timer) on
+    // The reader status bar carries text (the battery percentage and the sleep timer) on barColorFor,
+    // which is the palette surface — at BAR_VEIL_ALPHA over the veiled wallpaper when the reader asks
+    // for bars the background shows through. The muted tone holds on the opaque bar; on the
+    // translucent one it measured 4.07:1 over the worst built-in wallpaper, short of the minimum, so
+    // that case keeps the text at full strength (8.45:1 measured). This is what the two halves pin.
+    @Test
+    fun `the reader bar keeps its text readable on the veiled bar`() {
+        AppPalette.entries.forEach { palette ->
+            listOf(palette.light, palette.dark).forEach { scheme ->
+                val muted = mutedForeground(scheme.onSurface, scheme.surface)
+                assertThat(muted.alpha).isEqualTo(1f)
+                assertThat(contrastRatio(muted, scheme.surface)).isAtLeast(MinContrast)
+
+                BUILTIN_WALLPAPERS.values.forEach { stops ->
+                    stops.forEach { stop ->
+                        val veiled = scheme.background
+                            .copy(alpha = PreferenceAllowlists.DEFAULT_VEIL / 100f)
+                            .compositeOver(stop)
+                        val bar = scheme.surface
+                            .copy(alpha = BAR_VEIL_ALPHA)
+                            .compositeOver(veiled)
+                        assertThat(contrastRatio(scheme.onSurface, bar))
+                            .isAtLeast(MinContrast)
+                    }
+                }
+
+                // A picked photo can only be as extreme as pure white or pure black, with the veil at
+                // zero, which is the least the veil can mediate.
+                listOf(Color.White, Color.Black).forEach { extreme ->
+                    val bar = scheme.surface.copy(alpha = BAR_VEIL_ALPHA).compositeOver(extreme)
+                    assertThat(contrastRatio(scheme.onSurface, bar)).isAtLeast(MinContrast)
+                }
+            }
+        }
     }
 
     // The chapter list derives the muted colour against the container it is drawn on, not against the

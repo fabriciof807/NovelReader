@@ -330,6 +330,15 @@ text is really drawn on — `ChaptersTab` derives it against the `libraryContain
 against the palette's own surface. `AppPaletteTest` holds the pair on every palette and every container
 the wallpaper switch can produce.
 
+**A translucent container has no such pair to hold.** The reader's bars are `barColorFor(...)` — the
+palette surface, or that surface at `BAR_VEIL_ALPHA` over the veiled wallpaper when the reader asked
+for bars the background shows through — and the wallpaper's contribution is not knowable at the call
+site. The muted tone measures 4.07:1 over the worst built-in wallpaper there, below the 4.5 minimum,
+so `ReaderStatusBar` dims its text only on an opaque bar and keeps full strength on a translucent one
+(8.45:1 measured, and the extremes a picked photo can reach — pure white or pure black with the veil
+at zero — stay clear too). Keep that branch: adding a dim to the translucent case reintroduces the
+failure `AppPaletteTest` pins.
+
 ### Containers follow the wallpaper tone
 
 Over a wallpaper the containers take **the palette variant the wallpaper's tone asks for**, not the
