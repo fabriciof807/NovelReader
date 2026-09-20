@@ -28,7 +28,8 @@ data class ReaderConfig(
     val veil: Int = PreferenceAllowlists.DEFAULT_VEIL,
     val autoScrollSpeed: Float = 0f,
     val keepScreenOn: Boolean = true,
-    val swipeDirection: String = "vertical"
+    val swipeDirection: String = "vertical",
+    val brightness: Int = PreferenceAllowlists.BRIGHTNESS_SYSTEM
 )
 
 @Singleton
@@ -47,6 +48,7 @@ class ReaderPreferences @Inject constructor(
         val AUTO_SCROLL_SPEED = stringPreferencesKey("auto_scroll_speed")
         val KEEP_SCREEN_ON = booleanPreferencesKey("keep_screen_on")
         val SWIPE_DIRECTION = stringPreferencesKey("swipe_direction")
+        val BRIGHTNESS = intPreferencesKey("reader_brightness")
     }
 
     val config: Flow<ReaderConfig> = context.dataStore.data.map { prefs ->
@@ -61,7 +63,8 @@ class ReaderPreferences @Inject constructor(
             veil = PreferenceAllowlists.sanitizeVeil(prefs[Keys.VEIL]),
             autoScrollSpeed = prefs[Keys.AUTO_SCROLL_SPEED]?.toFloatOrNull() ?: 0f,
             keepScreenOn = prefs[Keys.KEEP_SCREEN_ON] ?: true,
-            swipeDirection = PreferenceAllowlists.sanitizeSwipeDirection(prefs[Keys.SWIPE_DIRECTION])
+            swipeDirection = PreferenceAllowlists.sanitizeSwipeDirection(prefs[Keys.SWIPE_DIRECTION]),
+            brightness = PreferenceAllowlists.sanitizeBrightness(prefs[Keys.BRIGHTNESS])
         )
     }
 
@@ -117,6 +120,12 @@ class ReaderPreferences @Inject constructor(
     suspend fun updateSwipeDirection(direction: String) {
         context.dataStore.edit {
             it[Keys.SWIPE_DIRECTION] = PreferenceAllowlists.sanitizeSwipeDirection(direction)
+        }
+    }
+
+    suspend fun updateBrightness(value: Int) {
+        context.dataStore.edit {
+            it[Keys.BRIGHTNESS] = PreferenceAllowlists.sanitizeBrightness(value)
         }
     }
 }

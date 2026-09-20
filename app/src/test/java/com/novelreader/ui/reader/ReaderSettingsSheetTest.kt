@@ -1,5 +1,6 @@
 package com.novelreader.ui.reader
 
+import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
@@ -7,12 +8,14 @@ import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.assertRangeInfoEquals
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performScrollTo
+import com.google.common.truth.Truth.assertThat
 import com.novelreader.data.local.preferences.ReaderConfig
 import com.novelreader.ui.theme.NovelReaderTheme
 import org.junit.Rule
@@ -30,12 +33,15 @@ class ReaderSettingsSheetTest {
 
     private fun setSheet(
         config: ReaderConfig = ReaderConfig(theme = "indigo"),
+        deviceBrightness: Int = 100,
         themeSelection: String = "indigo",
         onThemeChange: (String) -> Unit = {},
         onAccentChange: (String?) -> Unit = {},
         onWallpaperChange: (String) -> Unit = {},
         onVeilChange: (Int) -> Unit = {},
-        onFontFamilyChange: (String) -> Unit = {}
+        onFontFamilyChange: (String) -> Unit = {},
+        onBrightnessChange: (Int) -> Unit = {},
+        onBrightnessPreview: (Int) -> Unit = {}
     ) {
         composeTestRule.setContent {
             NovelReaderTheme {
@@ -52,6 +58,9 @@ class ReaderSettingsSheetTest {
                     onKeepScreenOnChange = {},
                     onSwipeDirectionChange = {},
                     onFontFamilyChange = onFontFamilyChange,
+                    deviceBrightness = deviceBrightness,
+                    onBrightnessChange = onBrightnessChange,
+                    onBrightnessPreview = onBrightnessPreview,
                     onDismiss = {}
                 )
             }
@@ -263,6 +272,69 @@ class ReaderSettingsSheetTest {
             SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.RadioButton)
         )
         composeTestRule.onNodeWithText("Cursiva").performScrollTo().assert(
+            SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.RadioButton)
+        )
+    }
+
+    @Test
+    fun `shows the brightness slider at the device level while following the system`() {
+        setSheet(config = ReaderConfig(theme = "indigo", brightness = -1), deviceBrightness = 40)
+
+        composeTestRule.onNodeWithText("Brilho").assertExists()
+        composeTestRule.onNodeWithText("Sistema").performScrollTo().assertIsSelected()
+        composeTestRule.onNodeWithContentDescription("Brilho")
+            .performScrollTo()
+            .assertRangeInfoEquals(ProgressBarRangeInfo(40f, 5f..100f, 0))
+    }
+
+    @Test
+    fun `shows the fixed level on the slider when brightness is set`() {
+        setSheet(config = ReaderConfig(theme = "indigo", brightness = 25))
+
+        composeTestRule.onNodeWithText("Sistema").performScrollTo().assertIsNotSelected()
+        composeTestRule.onNodeWithContentDescription("Brilho")
+            .performScrollTo()
+            .assertRangeInfoEquals(ProgressBarRangeInfo(25f, 5f..100f, 0))
+    }
+
+    @Test
+    fun `previews the brightness while dragging and commits it on release`() {
+        var committed: Int? = null
+        var previewed: Int? = null
+        setSheet(
+            config = ReaderConfig(theme = "indigo", brightness = 25),
+            onBrightnessChange = { committed = it },
+            onBrightnessPreview = { previewed = it }
+        )
+
+        composeTestRule.onNodeWithContentDescription("Brilho")
+            .performScrollTo()
+            .performSemanticsAction(SemanticsActions.SetProgress) { it(60f) }
+
+        assertThat(previewed).isEqualTo(60)
+        assertThat(committed).isEqualTo(60)
+    }
+
+    @Test
+    fun `reports the system sentinel when the follow-the-device chip is tapped`() {
+        var committed: Int? = null
+        setSheet(
+            config = ReaderConfig(theme = "indigo", brightness = 25),
+            onBrightnessChange = { committed = it }
+        )
+
+        composeTestRule.onNodeWithText("Sistema")
+            .performScrollTo()
+            .performSemanticsAction(SemanticsActions.OnClick)
+
+        assertThat(committed).isEqualTo(-1)
+    }
+
+    @Test
+    fun `exposes the follow-the-device chip as a radio button`() {
+        setSheet()
+
+        composeTestRule.onNodeWithText("Sistema").performScrollTo().assert(
             SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.RadioButton)
         )
     }

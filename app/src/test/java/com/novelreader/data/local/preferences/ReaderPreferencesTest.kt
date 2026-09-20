@@ -68,4 +68,32 @@ class ReaderPreferencesTest {
         prefs.updateFontFamily("serif;} </style><script>alert(1)</script><style>a{")
         assertThat(prefs.config.first().fontFamily).isEqualTo("serif")
     }
+
+    @Test
+    fun `brightness defaults to following the device`() = runTest {
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        val prefs = ReaderPreferences(context)
+        assertThat(prefs.config.first().brightness)
+            .isEqualTo(PreferenceAllowlists.BRIGHTNESS_SYSTEM)
+    }
+
+    @Test
+    fun `updateBrightness persists a fixed level and can return to the system`() = runTest {
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        val prefs = ReaderPreferences(context)
+        prefs.updateBrightness(35)
+        assertThat(prefs.config.first().brightness).isEqualTo(35)
+        prefs.updateBrightness(PreferenceAllowlists.BRIGHTNESS_SYSTEM)
+        assertThat(prefs.config.first().brightness)
+            .isEqualTo(PreferenceAllowlists.BRIGHTNESS_SYSTEM)
+    }
+
+    @Test
+    fun `updateBrightness refuses an unusable level rather than forcing an override`() = runTest {
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        val prefs = ReaderPreferences(context)
+        prefs.updateBrightness(0)
+        assertThat(prefs.config.first().brightness)
+            .isEqualTo(PreferenceAllowlists.BRIGHTNESS_SYSTEM)
+    }
 }

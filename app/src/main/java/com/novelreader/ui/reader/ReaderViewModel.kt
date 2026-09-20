@@ -425,6 +425,10 @@ class ReaderViewModel @Inject constructor(
         viewModelScope.launch { readerPreferences.updateSwipeDirection(direction) }
     }
 
+    fun updateBrightness(value: Int) {
+        viewModelScope.launch { readerPreferences.updateBrightness(value) }
+    }
+
     private var searchJob: Job? = null
 
     fun activateSearch() {

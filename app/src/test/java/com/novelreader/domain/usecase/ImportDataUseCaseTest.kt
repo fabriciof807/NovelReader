@@ -408,6 +408,39 @@ class ImportDataUseCaseTest {
     }
 
     @Test
+    fun `settings section applies a fixed reader brightness`() = runTest {
+        val readerPrefs = ReaderPreferences(appContext)
+
+        execute(
+            """
+            {
+              "novels": [],
+              "settings": {"reader": {"brightness": 35}}
+            }
+            """.trimIndent()
+        )
+
+        assertThat(readerPrefs.config.first().brightness).isEqualTo(35)
+    }
+
+    @Test
+    fun `settings section rejects a brightness no display can show`() = runTest {
+        val readerPrefs = ReaderPreferences(appContext)
+
+        execute(
+            """
+            {
+              "novels": [],
+              "settings": {"reader": {"brightness": 0}}
+            }
+            """.trimIndent()
+        )
+
+        assertThat(readerPrefs.config.first().brightness)
+            .isEqualTo(PreferenceAllowlists.BRIGHTNESS_SYSTEM)
+    }
+
+    @Test
     fun `backup without settings section reports settings not applied`() = runTest {
         val result = execute("""{"novels":[],"bookmarks":[],"characters":[]}""")
 

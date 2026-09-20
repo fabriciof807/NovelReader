@@ -609,6 +609,18 @@ class ReaderViewModelTest {
         coVerify { readerPrefs.updateFontFamily("monospace") }
     }
 
+    @Test
+    fun `updateBrightness forwards value to readerPreferences`() = runTest {
+        coEvery { chapterDao.getChapterById(10) } returns ChapterEntity(
+            id = 10, novelId = 1L, title = "Ch1", fileName = "ch1.html",
+            orderIndex = 1, content = "<p>x</p>"
+        )
+        coEvery { chapterDao.getChaptersByNovelSync(1L) } returns emptyList()
+        viewModel = createViewModel()
+        viewModel.updateBrightness(35)
+        coVerify { readerPrefs.updateBrightness(35) }
+    }
+
 @Test
 fun `loadChapter with blank content sets isEmpty in state`() = runTest {
     val chapter = ChapterEntity(

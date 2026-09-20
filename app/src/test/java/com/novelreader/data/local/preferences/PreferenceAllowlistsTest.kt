@@ -195,4 +195,22 @@ class PreferenceAllowlistsTest {
         assertThat(PreferenceAllowlists.sanitizeViewMode("LIST")).isEqualTo("LIST")
         assertThat(PreferenceAllowlists.sanitizeViewMode("nope")).isEqualTo("GRID")
     }
+
+    @Test
+    fun `sanitizeBrightness keeps the system sentinel and the usable range`() {
+        assertThat(PreferenceAllowlists.sanitizeBrightness(PreferenceAllowlists.BRIGHTNESS_SYSTEM))
+            .isEqualTo(PreferenceAllowlists.BRIGHTNESS_SYSTEM)
+        assertThat(PreferenceAllowlists.sanitizeBrightness(PreferenceAllowlists.BRIGHTNESS_MIN)).isEqualTo(5)
+        assertThat(PreferenceAllowlists.sanitizeBrightness(35)).isEqualTo(35)
+        assertThat(PreferenceAllowlists.sanitizeBrightness(PreferenceAllowlists.MAX_BRIGHTNESS)).isEqualTo(100)
+    }
+
+    @Test
+    fun `sanitizeBrightness falls back to the system instead of forcing an override`() {
+        assertThat(PreferenceAllowlists.sanitizeBrightness(null)).isEqualTo(PreferenceAllowlists.BRIGHTNESS_SYSTEM)
+        assertThat(PreferenceAllowlists.sanitizeBrightness(0)).isEqualTo(PreferenceAllowlists.BRIGHTNESS_SYSTEM)
+        assertThat(PreferenceAllowlists.sanitizeBrightness(4)).isEqualTo(PreferenceAllowlists.BRIGHTNESS_SYSTEM)
+        assertThat(PreferenceAllowlists.sanitizeBrightness(101)).isEqualTo(PreferenceAllowlists.BRIGHTNESS_SYSTEM)
+        assertThat(PreferenceAllowlists.sanitizeBrightness(-2)).isEqualTo(PreferenceAllowlists.BRIGHTNESS_SYSTEM)
+    }
 }

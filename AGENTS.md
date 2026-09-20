@@ -392,6 +392,27 @@ a slow drag scrolls instead of turning the page.
   first: a drag that extends a selection is otherwise read as a horizontal swipe
   and turns the page on release.
 
+### Reader brightness
+
+`reader_brightness` stores an Int: `PreferenceAllowlists.BRIGHTNESS_SYSTEM` (-1, the default) or
+5..100 as a percent of the display maximum. Unlike `sanitizeBlur`/`sanitizeVeil`,
+`sanitizeBrightness` **falls back to the system** instead of coercing: a coerced level is an
+override the reader never asked for, and "no override" is the only neutral answer.
+
+It is applied as `WindowManager.LayoutParams.screenBrightness` on the **Activity window**, which
+the library shares — so `ReaderScreen` restores `BRIGHTNESS_OVERRIDE_NONE` in a `DisposableEffect`
+when the reader goes away. Drop that and the whole app stays dimmed after coming back. While the
+System chip is selected the sheet's slider starts at the device's own level
+(`Settings.System.SCREEN_BRIGHTNESS`, 0..255 through `systemBrightnessPercent`), so the first drag
+does not jump away from a level that does not match the screen; `windowBrightnessFor` is the pure
+seam (`null` = no override).
+
+**Verification gotcha:** `screencap` captures the framebuffer *before* the display pipeline, so a
+screenshot cannot show brightness — it comes out identical at 5% and at 100%. The objective check
+is `adb shell dumpsys window windows | grep sbrt=` on the app's `BASE_APPLICATION` window: present
+means the window asked for an override, absent means it follows the device. The ModalBottomSheet
+has a window of its own and must stay out of it.
+
 ### Sliders
 
 Every slider commits **once, on release** (`onValueChangeFinished`) and keeps the

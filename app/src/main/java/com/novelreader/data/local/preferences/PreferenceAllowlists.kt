@@ -38,6 +38,11 @@ object PreferenceAllowlists {
     const val MAX_VEIL = 100
     const val DEFAULT_VEIL = 80
 
+    /** The reader leaves the display alone and the device keeps its own brightness. */
+    const val BRIGHTNESS_SYSTEM = -1
+    const val BRIGHTNESS_MIN = 5
+    const val MAX_BRIGHTNESS = 100
+
     fun sanitizeFontFamily(value: String?): String =
         value?.trim()?.lowercase()?.takeIf { it in FONT_FAMILIES } ?: "serif"
 
@@ -87,6 +92,16 @@ object PreferenceAllowlists {
     fun sanitizeBlur(value: Int?): Int = value?.coerceIn(0, MAX_BLUR) ?: 0
 
     fun sanitizeVeil(value: Int?): Int = value?.coerceIn(0, MAX_VEIL) ?: DEFAULT_VEIL
+
+    /**
+     * Unlike blur and veil, an unusable value falls back to the system rather than being coerced:
+     * a coerced level is an override the reader never asked for, and "no override" is the only
+     * neutral answer. Below [BRIGHTNESS_MIN] the text is unreadable and the platform clamps the
+     * window to the display minimum anyway.
+     */
+    fun sanitizeBrightness(value: Int?): Int =
+        value?.takeIf { it == BRIGHTNESS_SYSTEM || it in BRIGHTNESS_MIN..MAX_BRIGHTNESS }
+            ?: BRIGHTNESS_SYSTEM
 
     fun sanitizeLocale(value: String?): String =
         value?.trim()?.lowercase()?.takeIf { it in LOCALES } ?: LOCALE_SYSTEM

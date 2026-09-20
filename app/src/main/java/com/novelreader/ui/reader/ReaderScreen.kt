@@ -1,5 +1,8 @@
 package com.novelreader.ui.reader
 
+import android.app.Activity
+import android.provider.Settings
+import android.view.WindowManager
 import android.webkit.ValueCallback
 import android.webkit.WebView
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -111,6 +114,29 @@ fun ReaderScreen(
         view.keepScreenOn = state.config.keepScreenOn
     }
 
+    val readerWindow = (view.context as? Activity)?.window
+    var liveBrightness by remember { mutableIntStateOf(state.config.brightness) }
+
+    LaunchedEffect(state.config.brightness) { liveBrightness = state.config.brightness }
+
+    LaunchedEffect(liveBrightness, readerWindow) {
+        val window = readerWindow ?: return@LaunchedEffect
+        window.attributes = window.attributes.apply {
+            screenBrightness = windowBrightnessFor(liveBrightness)
+                ?: WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE
+        }
+    }
+
+    // The library shares this Activity window, so the override has to leave with the reader.
+    DisposableEffect(readerWindow) {
+        onDispose {
+            val window = readerWindow ?: return@onDispose
+            window.attributes = window.attributes.apply {
+                screenBrightness = WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE
+            }
+        }
+    }
+
     LaunchedEffect(isOptionsVisible) {
         if (isOptionsVisible) {
             delay(4000L)
@@ -127,6 +153,15 @@ fun ReaderScreen(
     val wallpaperBehindBars by viewModel.wallpaperBehindBars.collectAsState()
     var liveVeil by remember { mutableIntStateOf(state.config.veil) }
     var liveBlur by remember { mutableIntStateOf(state.config.wallpaperBlur) }
+
+    // Read once: while the reader follows the device, this is where its slider has to start, or the
+    // first drag would jump away from a level that does not match the screen.
+    val deviceBrightness = remember(view.context) {
+        runCatching {
+            Settings.System.getInt(view.context.contentResolver, Settings.System.SCREEN_BRIGHTNESS)
+        }.getOrNull()?.let { systemBrightnessPercent(it) }
+            ?: PreferenceAllowlists.MAX_BRIGHTNESS
+    }
 
     LaunchedEffect(state.config.veil) { liveVeil = state.config.veil }
     LaunchedEffect(state.config.wallpaperBlur) { liveBlur = state.config.wallpaperBlur }
@@ -264,6 +299,9 @@ fun ReaderScreen(
             onFontFamilyChange = { viewModel.updateFontFamily(it) },
             onAutoScrollSpeedChange = { viewModel.updateAutoScrollSpeed(it) },
             onKeepScreenOnChange = { viewModel.updateKeepScreenOn(it) },
+            deviceBrightness = deviceBrightness,
+            onBrightnessChange = { viewModel.updateBrightness(it) },
+            onBrightnessPreview = { liveBrightness = it },
             onSwipeDirectionChange = { viewModel.updateSwipeDirection(it) },
             onDismiss = { viewModel.hideSettings() }
         )

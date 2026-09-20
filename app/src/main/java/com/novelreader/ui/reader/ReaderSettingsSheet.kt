@@ -48,6 +48,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -94,6 +96,9 @@ fun SettingsSheet(
     onFontFamilyChange: (String) -> Unit = {},
     onAutoScrollSpeedChange: (Float) -> Unit,
     onKeepScreenOnChange: (Boolean) -> Unit,
+    deviceBrightness: Int = PreferenceAllowlists.MAX_BRIGHTNESS,
+    onBrightnessChange: (Int) -> Unit = {},
+    onBrightnessPreview: (Int) -> Unit = {},
     onSwipeDirectionChange: (String) -> Unit = {},
     onDismiss: () -> Unit
 ) {
@@ -246,14 +251,14 @@ fun SettingsSheet(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    FontFamilyOption(
+                    SelectablePill(
                         label = stringResource(R.string.reader_font_serif),
                         fontFamily = FontFamily.Serif,
                         selected = config.fontFamily == FONT_SERIF,
                         onClick = { onFontFamilyChange(FONT_SERIF) },
                         modifier = Modifier.weight(1f)
                     )
-                    FontFamilyOption(
+                    SelectablePill(
                         label = stringResource(R.string.reader_font_sans),
                         fontFamily = FontFamily.SansSerif,
                         selected = config.fontFamily == FONT_SANS,
@@ -265,14 +270,14 @@ fun SettingsSheet(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    FontFamilyOption(
+                    SelectablePill(
                         label = stringResource(R.string.reader_font_mono),
                         fontFamily = FontFamily.Monospace,
                         selected = config.fontFamily == FONT_MONO,
                         onClick = { onFontFamilyChange(FONT_MONO) },
                         modifier = Modifier.weight(1f)
                     )
-                    FontFamilyOption(
+                    SelectablePill(
                         label = stringResource(R.string.reader_font_cursive),
                         fontFamily = FontFamily.Cursive,
                         selected = config.fontFamily == FONT_CURSIVE,
@@ -300,6 +305,47 @@ fun SettingsSheet(
                     onCheckedChange = onKeepScreenOnChange
                 )
             }
+
+            Spacer(modifier = Modifier.height(16.dp))
+            HorizontalDivider()
+            Spacer(modifier = Modifier.height(16.dp))
+
+            val followingSystem = config.brightness == PreferenceAllowlists.BRIGHTNESS_SYSTEM
+            val brightnessLabel = stringResource(R.string.reader_brightness)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    brightnessLabel,
+                    style = MaterialTheme.typography.titleSmall,
+                    modifier = Modifier.weight(1f)
+                )
+                SelectablePill(
+                    label = stringResource(R.string.reader_brightness_system),
+                    selected = followingSystem,
+                    onClick = { onBrightnessChange(PreferenceAllowlists.BRIGHTNESS_SYSTEM) }
+                )
+            }
+            Spacer(modifier = Modifier.height(4.dp))
+            var brightness by remember(config.brightness, deviceBrightness) {
+                mutableFloatStateOf(
+                    (if (followingSystem) deviceBrightness else config.brightness).toFloat()
+                )
+            }
+            Slider(
+                value = brightness,
+                onValueChange = {
+                    brightness = it
+                    onBrightnessPreview(it.toInt())
+                },
+                onValueChangeFinished = { onBrightnessChange(brightness.toInt()) },
+                valueRange = PreferenceAllowlists.BRIGHTNESS_MIN.toFloat()..
+                    PreferenceAllowlists.MAX_BRIGHTNESS.toFloat(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .semantics { contentDescription = brightnessLabel }
+            )
 
             Spacer(modifier = Modifier.height(16.dp))
             HorizontalDivider()
@@ -528,12 +574,12 @@ private fun SwipeOption(
 }
 
 @Composable
-private fun FontFamilyOption(
+private fun SelectablePill(
     label: String,
-    fontFamily: FontFamily,
     selected: Boolean,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    fontFamily: FontFamily = FontFamily.Default
 ) {
     val bgColor = if (selected)
         MaterialTheme.colorScheme.primaryContainer

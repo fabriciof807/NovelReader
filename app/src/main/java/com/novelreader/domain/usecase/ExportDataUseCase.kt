@@ -177,6 +177,7 @@ class ExportDataUseCase @Inject constructor(
                 put("autoScrollSpeed", config.autoScrollSpeed.toDouble())
                 put("keepScreenOn", config.keepScreenOn)
                 put("swipeDirection", config.swipeDirection)
+                put("brightness", config.brightness)
             })
             put("library", JSONObject().apply {
                 put("sortOrder", libraryPreferences.sortOrder.first())
