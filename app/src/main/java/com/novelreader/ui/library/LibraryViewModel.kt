@@ -40,6 +40,7 @@ import com.novelreader.domain.usecase.RetryChapterUseCase
 import com.novelreader.domain.usecase.WebImportUseCase
 import kotlinx.coroutines.CoroutineDispatcher
 import com.novelreader.ui.library.mvi.LibraryState
+import com.novelreader.ui.notifications.NotificationPermissionCoordinator
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.channels.BufferOverflow
@@ -95,6 +96,7 @@ class LibraryViewModel @Inject constructor(
     private val characterPhotoDao: CharacterPhotoDao,
     private val mvlempyrCharacterImporter: MvlempyrCharacterImporter,
     private val updateCheckScheduler: UpdateCheckScheduler,
+    private val notificationPermissionCoordinator: NotificationPermissionCoordinator,
     private val webImportUseCase: WebImportUseCase,
     private val failedChapterDao: FailedChapterDao,
     private val folderDao: FolderDao,
@@ -719,6 +721,7 @@ class LibraryViewModel @Inject constructor(
                         } else {
                             val newCount = newChapters.size
                             val emptyCount = emptyChapters.size
+                            notificationPermissionCoordinator.onUserInitiatedBackgroundImport()
                             backgroundImportManager.startImport(
                                 novelTitle = fetchResult.novelTitle ?: novel.title,
                                 links = allMissing,
@@ -772,6 +775,7 @@ class LibraryViewModel @Inject constructor(
                         chapterDao.deleteByNovelId(novelId)
                         failedChapterDao.deleteByNovelId(novelId)
                         refreshFailedChapters(novelId)
+                        notificationPermissionCoordinator.onUserInitiatedBackgroundImport()
                         backgroundImportManager.startImport(
                             novelTitle = fetchResult.novelTitle ?: novel.title,
                             links = fetchResult.chapters,
@@ -886,6 +890,7 @@ class LibraryViewModel @Inject constructor(
                 )
             }
             if (links.isEmpty()) return@launch
+            notificationPermissionCoordinator.onUserInitiatedBackgroundImport()
             backgroundImportManager.startImport(
                 novelTitle = novel.title,
                 links = links,

@@ -10,6 +10,7 @@ import com.novelreader.domain.usecase.WebImportUseCase
 import com.novelreader.domain.usecase.BackgroundImportManager
 import com.novelreader.domain.usecase.webimport.CloudflareChallengeRequiredException
 import com.novelreader.domain.usecase.webimport.CloudflareCookieStore
+import com.novelreader.ui.notifications.NotificationPermissionCoordinator
 import com.novelreader.domain.usecase.webimport.StoredCookie
 import com.novelreader.R
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -53,7 +54,8 @@ class WebImportViewModel @Inject constructor(
     private val webImportUseCase: WebImportUseCase,
     private val backgroundImportManager: BackgroundImportManager,
     private val cookieStore: CloudflareCookieStore,
-    private val novelDao: com.novelreader.data.local.db.dao.NovelDao
+    private val novelDao: com.novelreader.data.local.db.dao.NovelDao,
+    private val notificationPermissionCoordinator: NotificationPermissionCoordinator
 ) : AndroidViewModel(application) {
 
     private val _state = MutableStateFlow(WebImportState())
@@ -196,6 +198,7 @@ class WebImportViewModel @Inject constructor(
         )
 
         viewModelScope.launch {
+            notificationPermissionCoordinator.onUserInitiatedBackgroundImport()
             backgroundImportManager.startImport(
                 novelTitle = title,
                 links = selectedLinks,

@@ -30,6 +30,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import com.novelreader.data.local.db.entity.NovelEntity
+import com.novelreader.ui.notifications.NotificationPermissionCoordinator
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
@@ -60,6 +61,7 @@ class LibraryViewModelScrollTest {
     private val coverManagement: CoverManagementUseCase = mockk(relaxed = true)
     private val importer: MvlempyrCharacterImporter = mockk(relaxed = true)
     private val updateCheckScheduler: UpdateCheckScheduler = mockk(relaxed = true)
+    private val notificationPermissionCoordinator: NotificationPermissionCoordinator = mockk(relaxed = true)
     private val webImportUseCase: WebImportUseCase = mockk(relaxed = true)
     private val failedChapterDao: FailedChapterDao = mockk(relaxed = true)
     private val folderDao: FolderDao = mockk(relaxed = true)
@@ -96,6 +98,7 @@ class LibraryViewModelScrollTest {
             characterPhotoDao = charPhotoDao,
             mvlempyrCharacterImporter = importer,
             updateCheckScheduler = updateCheckScheduler,
+            notificationPermissionCoordinator = notificationPermissionCoordinator,
             webImportUseCase = webImportUseCase,
             failedChapterDao = failedChapterDao,
             folderDao = folderDao,
@@ -181,6 +184,7 @@ class LibraryViewModelScrollTest {
             characterPhotoDao = charPhotoDao,
             mvlempyrCharacterImporter = importer,
             updateCheckScheduler = updateCheckScheduler,
+            notificationPermissionCoordinator = notificationPermissionCoordinator,
             webImportUseCase = webImportUseCase,
             failedChapterDao = failedChapterDao,
             folderDao = folderDao,
@@ -216,6 +220,7 @@ class LibraryViewModelScrollTest {
             characterPhotoDao = charPhotoDao,
             mvlempyrCharacterImporter = importer,
             updateCheckScheduler = updateCheckScheduler,
+            notificationPermissionCoordinator = notificationPermissionCoordinator,
             webImportUseCase = webImportUseCase,
             failedChapterDao = failedChapterDao,
             folderDao = folderDao,

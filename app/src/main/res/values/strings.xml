@@ -356,6 +356,15 @@
     <string name="update_notification_title">%s has new chapters!</string>
     <string name="update_notification_text">%1$d new chapter(s) available</string>
 
+    <!-- Notification permission rationale -->
+    <string name="notification_rationale_request_title">Turn on notifications?</string>
+    <string name="notification_rationale_request_body">Imports keep running in the background. A notification shows their progress and tells you when they finish.</string>
+    <string name="notification_rationale_settings_title">Notifications are off</string>
+    <string name="notification_rationale_settings_body">Imports still run, but you will not see their progress or completion. Turn them on in the system settings.</string>
+    <string name="notification_rationale_turn_on">Turn on</string>
+    <string name="notification_rationale_open_settings">Open settings</string>
+    <string name="notification_rationale_not_now">Not now</string>
+
     <!-- Auto-update toggle -->
     <string name="auto_update_enable">Enable update checks</string>
     <string name="auto_update_disable">Disable update checks</string>

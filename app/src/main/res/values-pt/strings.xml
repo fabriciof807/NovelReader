@@ -356,6 +356,15 @@
     <string name="update_notification_title">%s tem novos capítulos!</string>
     <string name="update_notification_text">%1$d novo(s) capítulo(s) disponível(is)</string>
 
+    <!-- Notification permission rationale -->
+    <string name="notification_rationale_request_title">Ativar notificações?</string>
+    <string name="notification_rationale_request_body">As importações continuam em segundo plano. A notificação mostra o progresso e avisa quando terminarem.</string>
+    <string name="notification_rationale_settings_title">Notificações desativadas</string>
+    <string name="notification_rationale_settings_body">As importações continuam, mas você não vê o progresso nem o aviso de conclusão. Ative nas configurações do sistema.</string>
+    <string name="notification_rationale_turn_on">Ativar</string>
+    <string name="notification_rationale_open_settings">Abrir configurações</string>
+    <string name="notification_rationale_not_now">Agora não</string>
+
     <!-- Auto-update toggle -->
     <string name="auto_update_enable">Ativar verificação de atualizações</string>
     <string name="auto_update_disable">Desativar verificação de atualizações</string>

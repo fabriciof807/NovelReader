@@ -30,6 +30,7 @@ class AppPreferences @Inject constructor(
         val WALLPAPER_BEHIND_BARS = booleanPreferencesKey("wallpaper_behind_bars")
         val LOCALE = stringPreferencesKey("locale")
         val DYNAMIC_COLOR_ENABLED = booleanPreferencesKey("dynamic_color_enabled")
+        val NOTIFICATION_PERMISSION_ASKED = booleanPreferencesKey("notification_permission_asked")
     }
 
     val appTheme: Flow<String> = context.appDataStore.data.map { prefs ->
@@ -123,5 +124,13 @@ class AppPreferences @Inject constructor(
 
     suspend fun updateDynamicColorEnabled(enabled: Boolean) {
         context.appDataStore.edit { it[Keys.DYNAMIC_COLOR_ENABLED] = enabled }
+    }
+
+    val notificationPermissionAsked: Flow<Boolean> = context.appDataStore.data.map { prefs ->
+        prefs[Keys.NOTIFICATION_PERMISSION_ASKED] ?: false
+    }
+
+    suspend fun updateNotificationPermissionAsked(asked: Boolean) {
+        context.appDataStore.edit { it[Keys.NOTIFICATION_PERMISSION_ASKED] = asked }
     }
 }

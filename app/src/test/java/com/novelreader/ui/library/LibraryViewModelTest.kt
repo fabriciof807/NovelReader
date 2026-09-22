@@ -32,6 +32,7 @@ import com.novelreader.domain.usecase.importnovel.ChapterInserter
 import com.novelreader.domain.usecase.importnovel.FileCharsetDetector
 import com.novelreader.ui.library.tabs.filterNovels
 import com.novelreader.ui.library.tabs.queuedNovelsNotShown
+import com.novelreader.ui.notifications.NotificationPermissionCoordinator
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -65,6 +66,7 @@ class LibraryViewModelTest {
     private val coverManagement: CoverManagementUseCase = mockk(relaxed = true)
     private val importer: MvlempyrCharacterImporter = mockk(relaxed = true)
     private val updateCheckScheduler: UpdateCheckScheduler = mockk(relaxed = true)
+    private val notificationPermissionCoordinator: NotificationPermissionCoordinator = mockk(relaxed = true)
     private val webImportUseCase: WebImportUseCase = mockk(relaxed = true)
     private val failedChapterDao: FailedChapterDao = mockk(relaxed = true)
     private val folderDao: FolderDao = mockk(relaxed = true)
@@ -102,6 +104,7 @@ class LibraryViewModelTest {
             characterPhotoDao = charPhotoDao,
             mvlempyrCharacterImporter = importer,
             updateCheckScheduler = updateCheckScheduler,
+            notificationPermissionCoordinator = notificationPermissionCoordinator,
             webImportUseCase = webImportUseCase,
             failedChapterDao = failedChapterDao,
             folderDao = folderDao,
@@ -282,6 +285,7 @@ class LibraryViewModelTest {
             characterPhotoDao = charPhotoDao,
             mvlempyrCharacterImporter = importer,
             updateCheckScheduler = updateCheckScheduler,
+            notificationPermissionCoordinator = notificationPermissionCoordinator,
             webImportUseCase = webImportUseCase,
             failedChapterDao = failedChapterDao,
             folderDao = folderDao,
@@ -320,6 +324,7 @@ class LibraryViewModelTest {
             characterPhotoDao = charPhotoDao,
             mvlempyrCharacterImporter = importer,
             updateCheckScheduler = updateCheckScheduler,
+            notificationPermissionCoordinator = notificationPermissionCoordinator,
             webImportUseCase = webImportUseCase,
             failedChapterDao = failedChapterDao,
             folderDao = folderDao,
@@ -434,6 +439,38 @@ class LibraryViewModelTest {
     }
 
     @Test
+    fun `retrying failed chapters asks for the notification rationale`() = runTest {
+        val novel = NovelEntity(id = 21, title = "Rationale Novel", sourceUrl = "https://example.com/r")
+        coEvery { novelDao.getNovelById(21) } returns novel
+        coEvery { failedChapterDao.getByNovel(21) } returns listOf(
+            FailedChapterEntity(
+                id = 1,
+                novelId = 21,
+                title = "Ch 1",
+                fileName = "ch1",
+                url = "https://example.com/ch1.html",
+                sourceType = "WEB",
+                chapterNumber = 1,
+                errorType = "network",
+                errorMessage = "timeout"
+            )
+        )
+
+        viewModel.retryAllFailedChapters(21)
+
+        coVerify { notificationPermissionCoordinator.onUserInitiatedBackgroundImport() }
+    }
+
+    @Test
+    fun `an import with nothing to retry does not ask for the notification rationale`() = runTest {
+        coEvery { failedChapterDao.getByNovel(22) } returns emptyList()
+
+        viewModel.retryAllFailedChapters(22)
+
+        coVerify(exactly = 0) { notificationPermissionCoordinator.onUserInitiatedBackgroundImport() }
+    }
+
+    @Test
     fun `cover URL with non-https does not close dialog`() = runTest {
         val novel = NovelEntity(id = 1, title = "Test")
         viewModel.requestCoverByUrl(novel)
@@ -469,6 +506,7 @@ class LibraryViewModelTest {
             characterPhotoDao = charPhotoDao,
             mvlempyrCharacterImporter = importer,
             updateCheckScheduler = updateCheckScheduler,
+            notificationPermissionCoordinator = notificationPermissionCoordinator,
             webImportUseCase = webImportUseCase,
             failedChapterDao = failedChapterDao,
             folderDao = folderDao,
@@ -499,6 +537,7 @@ class LibraryViewModelTest {
             characterPhotoDao = charPhotoDao,
             mvlempyrCharacterImporter = importer,
             updateCheckScheduler = updateCheckScheduler,
+            notificationPermissionCoordinator = notificationPermissionCoordinator,
             webImportUseCase = webImportUseCase,
             failedChapterDao = failedChapterDao,
             folderDao = folderDao,
@@ -542,6 +581,7 @@ class LibraryViewModelTest {
             characterPhotoDao = charPhotoDao,
             mvlempyrCharacterImporter = importer,
             updateCheckScheduler = updateCheckScheduler,
+            notificationPermissionCoordinator = notificationPermissionCoordinator,
             webImportUseCase = webImportUseCase,
             failedChapterDao = failedChapterDao,
             folderDao = folderDao,
@@ -585,6 +625,7 @@ class LibraryViewModelTest {
             characterPhotoDao = charPhotoDao,
             mvlempyrCharacterImporter = importer,
             updateCheckScheduler = updateCheckScheduler,
+            notificationPermissionCoordinator = notificationPermissionCoordinator,
             webImportUseCase = webImportUseCase,
             failedChapterDao = failedChapterDao,
             folderDao = folderDao,

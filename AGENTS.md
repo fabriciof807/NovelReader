@@ -204,6 +204,14 @@ The manager's idea of *which job is running* lives in memory only and dies with 
 - Triggered from a button in `ChaptersTab`'s failed-chapters section header
 - `ChapterInserter.insertEntries` deletes any matching `FailedChapterEntity` by `fileName` on successful insert (handles re-import via MHT/URL)
 
+### Notifications: when `POST_NOTIFICATIONS` is requested
+
+The app never asks for the permission on launch. `MainActivity.onCreate` used to request it on every open while it was not granted, which on Android 13+ burns the prompts the system allows and leaves the user with no explanation afterwards. It is now requested when it has a reason to exist: the user starting a **background import** that will post progress and a completion notification.
+
+`NotificationPermissionCoordinator` (`ui/notifications/`) owns the decision and `NotificationPromptPolicy.kind` is the pure table behind it: below SDK 33 or already granted → nothing; never asked → in-app rationale, then the system prompt; already asked → rationale whose confirm opens the system notification settings. `AppPreferences.notificationPermissionAsked` records the ask and is deliberately **not** in the v3 backup — it is device state, like a wallpaper file. "Not now" only suppresses the dialog for the session, so a later session may ask once more, always at an import.
+
+Only user-initiated imports trigger it: the three in `LibraryViewModel` (`checkForUpdates`, `resyncChapters`, `retryAllFailedChapters`) and `WebImportViewModel.startImport`. `ChapterUpdateCheckWorker` (automatic update check) and `ImportDataUseCase` (backup restore) also call `BackgroundImportManager.startImport` and must **not** ask; neither must `ImportViewModel` (local file import posts no notification). The dialog is hosted once, in `MainActivity`, so the library and the web-import screen cannot each raise their own, and the system prompt's result is ignored on purpose — the next import reads the live permission state, so a grant or a denial needs no callback.
+
 ### Deep Linking
 
 `MainActivity` reads `Intent` extras (`EXTRA_DEEP_LINK_ACTION`, `EXTRA_NOVEL_ID`) in `onCreate` and `onNewIntent`, emits `DeepLinkAction` to the bus. `NavGraph` collects from the bus and navigates accordingly (e.g., notification tap → open library with novel selected).
@@ -527,7 +535,7 @@ Two independent global slots (`WallpaperStorage.SLOT_HOME`, `SLOT_READER`), neve
 - **Instrumented tests**: Room in-memory DB, Compose Test Rule, Espresso
 - Parser tests use real HTML fixtures
 - ViewModel tests inject mocked DAOs/use cases
-- **Current count: 820 unit tests**
+- **Current count: 929 unit tests**
 - **Always run `./gradlew :app:compileDebugKotlin :app:testDebugUnitTest` before pushing**
 
 ## Recent Sessions

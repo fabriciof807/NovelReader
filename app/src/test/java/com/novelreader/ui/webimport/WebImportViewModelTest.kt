@@ -6,10 +6,14 @@ import com.google.common.truth.Truth.assertThat
 import com.novelreader.data.local.db.dao.NovelDao
 import com.novelreader.domain.usecase.BackgroundImportManager
 import com.novelreader.domain.usecase.BackgroundImportState
+import com.novelreader.domain.usecase.ChapterLink
+import com.novelreader.domain.usecase.FetchResult
 import com.novelreader.domain.usecase.WebImportUseCase
 import com.novelreader.domain.usecase.webimport.CloudflareChallengeRequiredException
 import com.novelreader.domain.usecase.webimport.CloudflareCookieStore
+import com.novelreader.ui.notifications.NotificationPermissionCoordinator
 import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
@@ -37,6 +41,7 @@ class WebImportViewModelTest {
     private val backgroundImportManager: BackgroundImportManager = mockk(relaxed = true)
     private val cookieStore: CloudflareCookieStore = mockk(relaxed = true)
     private val novelDao: NovelDao = mockk(relaxed = true)
+    private val notificationPermissionCoordinator: NotificationPermissionCoordinator = mockk(relaxed = true)
 
     private lateinit var viewModel: WebImportViewModel
 
@@ -49,13 +54,47 @@ class WebImportViewModelTest {
             webImportUseCase,
             backgroundImportManager,
             cookieStore,
-            novelDao
+            novelDao,
+            notificationPermissionCoordinator
         )
     }
 
     @After
     fun tearDown() {
         Dispatchers.resetMain()
+    }
+
+    @Test
+    fun `starting an import asks for the notification rationale`() = runTest {
+        val url = "https://freewebnovel.com/novel/one"
+        coEvery { webImportUseCase.fetchChapterList(url) } returns Result.success(
+            FetchResult(
+                chapters = listOf(
+                    ChapterLink(
+                        title = "Ch 1",
+                        url = "https://freewebnovel.com/novel/one/1",
+                        chapterNumber = 1
+                    )
+                ),
+                novelTitle = "One"
+            )
+        )
+
+        viewModel.updateUrl(url)
+        viewModel.fetchChapters()
+        advanceUntilIdle()
+        viewModel.startImport()
+        advanceUntilIdle()
+
+        coVerify { notificationPermissionCoordinator.onUserInitiatedBackgroundImport() }
+    }
+
+    @Test
+    fun `an import with no selected chapters does not ask for the notification rationale`() = runTest {
+        viewModel.startImport()
+        advanceUntilIdle()
+
+        coVerify(exactly = 0) { notificationPermissionCoordinator.onUserInitiatedBackgroundImport() }
     }
 
     @Test
