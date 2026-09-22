@@ -355,6 +355,8 @@
     <string name="update_notification_channel_desc">Notificações de novos capítulos</string>
     <string name="update_notification_title">%s tem novos capítulos!</string>
     <string name="update_notification_text">%1$d novo(s) capítulo(s) disponível(is)</string>
+    <string name="update_notification_summary_title">%1$d novels têm novos capítulos</string>
+    <string name="update_notification_summary_line">%1$s — %2$d novo(s) capítulo(s)</string>
 
     <!-- Notification permission rationale -->
     <string name="notification_rationale_request_title">Ativar notificações?</string>

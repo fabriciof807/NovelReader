@@ -38,6 +38,8 @@ class ChapterUpdateCheckWorker @AssistedInject constructor(
             val sources = novelSourceDao.getAllForAutoUpdate()
             if (sources.isEmpty()) return@withContext Result.success()
 
+            val updatedNovels = mutableListOf<NewChaptersUpdate>()
+
             for (source in sources) {
                 val novel = novelDao.getNovelById(source.novelId) ?: continue
                 if (!novel.autoUpdate || !source.autoUpdate) continue
@@ -64,6 +66,7 @@ class ChapterUpdateCheckWorker @AssistedInject constructor(
                                 novelTitle = novel.title,
                                 newChapterCount = newChapters.size
                             )
+                            updatedNovels += NewChaptersUpdate(novel.title, newChapters.size)
 
                             // Through the manager, not the scheduler: the manager owns the import
                             // state the library banner reads, so scheduling past it left the banner
@@ -90,6 +93,8 @@ class ChapterUpdateCheckWorker @AssistedInject constructor(
                     }
                 )
             }
+
+            notificationHelper.postNewChaptersGroupSummary(updatedNovels)
 
             Result.success()
         } catch (_: Exception) {

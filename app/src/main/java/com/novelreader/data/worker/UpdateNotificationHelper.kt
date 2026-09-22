@@ -14,6 +14,8 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
+data class NewChaptersUpdate(val novelTitle: String, val newChapterCount: Int)
+
 @Singleton
 class UpdateNotificationHelper @Inject constructor(
     @ApplicationContext private val context: Context,
@@ -22,6 +24,52 @@ class UpdateNotificationHelper @Inject constructor(
     companion object {
         const val CHANNEL_ID = "novel_updates_channel"
         const val NOTIFICATION_ID_BASE = 2000
+        const val GROUP_VALUE = "novel_updates"
+        const val SUMMARY_NOTIFICATION_ID = NOTIFICATION_ID_BASE - 1
+    }
+
+    fun postNewChaptersGroupSummary(updates: List<NewChaptersUpdate>) {
+        ensureChannel()
+        val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        if (updates.size < 2) {
+            manager.cancel(SUMMARY_NOTIFICATION_ID)
+            return
+        }
+
+        val title = context.getString(R.string.update_notification_summary_title, updates.size)
+        val style = NotificationCompat.InboxStyle().setBigContentTitle(title)
+        updates.forEach { update ->
+            style.addLine(
+                context.getString(
+                    R.string.update_notification_summary_line,
+                    update.novelTitle,
+                    update.newChapterCount
+                )
+            )
+        }
+
+        val intent = context.packageManager.getLaunchIntentForPackage(context.packageName)?.apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        }
+        val pendingIntent = PendingIntent.getActivity(
+            context,
+            SUMMARY_NOTIFICATION_ID,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val notification = NotificationCompat.Builder(context, CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_notification)
+            .setContentTitle(title)
+            .setStyle(style)
+            .setAutoCancel(true)
+            .setCategory(NotificationCompat.CATEGORY_STATUS)
+            .setContentIntent(pendingIntent)
+            .setGroup(GROUP_VALUE)
+            .setGroupSummary(true)
+            .build()
+
+        manager.notify(SUMMARY_NOTIFICATION_ID, notification)
     }
 
     fun ensureChannel() {
@@ -67,7 +115,7 @@ class UpdateNotificationHelper @Inject constructor(
             .setAutoCancel(true)
             .setCategory(NotificationCompat.CATEGORY_STATUS)
             .setContentIntent(pendingIntent)
-            .setGroup("novel_updates")
+            .setGroup(GROUP_VALUE)
             .build()
 
         val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager

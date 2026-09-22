@@ -197,6 +197,8 @@ The manager's idea of *which job is running* lives in memory only and dies with 
 
 The completion notification reports the **outcome**, never the presence of partial errors: a finished import is titled as a completion, with the error count in the body (`postCompletionNotification`). A hard failure (`Result.failure`) only notifies on the final batch (`ImportJobSpec.isFinalBatch`) — the observer keeps scheduling the remaining splits, so notifying per batch showed "Failed to import X" followed by "X import complete" (issue #25). The counts are still per batch: a 250-chapter import ends with the last batch's numbers.
 
+The new-chapters notifications get a **group summary** from `UpdateNotificationHelper.postNewChaptersGroupSummary`, called once by `ChapterUpdateCheckWorker` after its loop. The helper owns the policy: fewer than two novels posts no summary, and cancels one left over from an earlier run — the title count and the `InboxStyle` lines come from the run that posted it, so a summary that outlived the rows it counted would state a number that is no longer true. `postNewChaptersNotification` only posts the child; it does not touch the summary.
+
 ### Failed Chapter Recovery
 
 `ScanMissingChaptersUseCase` is the primary recovery path:
