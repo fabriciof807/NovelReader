@@ -16,6 +16,8 @@ data class ImportJobSpec(
     val targetNovelId: Long? = null,
     val isFavorite: Boolean? = null
 ) {
+    val isFinalBatch: Boolean = splitIndex == splitCount - 1
+
     companion object {
         const val BATCH_SIZE = 100
 

@@ -85,7 +85,9 @@ class ChapterImportWorker @AssistedInject constructor(
             notificationHelper.postCompletionNotification(spec, importedCount, total, errors.size)
             Result.success()
         } else {
-            notificationHelper.postFailureNotification(spec)
+            if (spec.isFinalBatch) {
+                notificationHelper.postFailureNotification(spec)
+            }
             val errorType = if (errors.any { it.message.contains("timeout", ignoreCase = true) || it.message.contains("network", ignoreCase = true) || it.message.contains("connect", ignoreCase = true) })
                 "network" else "parse"
             val outputData = ImportFailureOutput.build(errorType, errors.firstOrNull()?.message)

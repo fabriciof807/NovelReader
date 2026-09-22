@@ -195,6 +195,8 @@ One import is split into 100-chapter batches (`ImportJobSpec.BATCH_SIZE`), queue
 
 The manager's idea of *which job is running* lives in memory only and dies with the process, so `WorkCompletionObserver` announces the job that WorkManager is actually running — title and remaining splits read from the `SpecFileStore` spec it already writes for it — and the manager **adopts** it (`onJobAdopted`). Never discard a callback just because the job id is unknown: that is how the banner came to name whichever novel was queued last while a different one downloaded, with the counter frozen and Cancel acting on the queued novel instead of the running one (issue #19). For the same reason `startImport` claims the new novel as current only when it is about to run — no active work *and* an empty queue — and enqueues it otherwise.
 
+The completion notification reports the **outcome**, never the presence of partial errors: a finished import is titled as a completion, with the error count in the body (`postCompletionNotification`). A hard failure (`Result.failure`) only notifies on the final batch (`ImportJobSpec.isFinalBatch`) — the observer keeps scheduling the remaining splits, so notifying per batch showed "Failed to import X" followed by "X import complete" (issue #25). The counts are still per batch: a 250-chapter import ends with the last batch's numbers.
+
 ### Failed Chapter Recovery
 
 `ScanMissingChaptersUseCase` is the primary recovery path:

@@ -50,6 +50,22 @@ class ImportJobSpecTest {
     }
 
     @Test
+    fun `a single batch import is its own final batch`() {
+        val spec = ImportJobSpec.create("N", listOf(ChapterLink("c", "u", 1)), null).first()
+
+        assertThat(spec.isFinalBatch).isTrue()
+    }
+
+    @Test
+    fun `only the last split of a multi batch import is final`() {
+        val links = (1..201).map { ChapterLink("c$it", "https://x.com/$it", it) }
+
+        val specs = ImportJobSpec.create("N", links, null)
+
+        assertThat(specs.map { it.isFinalBatch }).containsExactly(false, false, true).inOrder()
+    }
+
+    @Test
     fun `create preserves order of links within a chunk`() {
         val urls = listOf("https://x.com/c", "https://x.com/a", "https://x.com/b")
         val links = urls.mapIndexed { i, u -> ChapterLink("t$i", u, i) }

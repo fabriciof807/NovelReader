@@ -1,5 +1,6 @@
 package com.novelreader.data.worker
 
+import android.app.Notification
 import android.app.NotificationManager
 import android.content.Context
 import android.content.Intent
@@ -67,6 +68,33 @@ class ImportNotificationHelperTest {
         val intent: Intent = shadow.savedIntent
 
         assertThat(intent.getStringExtra(MainActivity.EXTRA_DEEP_LINK_ACTION)).isNull()
+    }
+
+    @Test
+    fun `completion notification with errors still reads as a completion`() {
+        val spec = ImportJobSpec(
+            id = UUID.randomUUID(),
+            novelTitle = "Test Novel",
+            links = listOf("https://example.com/ch1"),
+            chapterNumbers = listOf(1),
+            coverUrl = null,
+            enqueuedAt = 1000L,
+            sourceUrl = "https://example.com",
+            domain = "example.com",
+            targetNovelId = 42L
+        )
+
+        helper.postCompletionNotification(spec, importedCount = 98, total = 100, errorCount = 2)
+
+        val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val posted = checkNotNull(
+            Shadows.shadowOf(manager)
+                .getNotification(ImportNotificationHelper.COMPLETION_NOTIFICATION_ID)
+        )
+        assertThat(posted.extras.getString(Notification.EXTRA_TITLE))
+            .isEqualTo("Test Novel import complete")
+        assertThat(posted.extras.getString(Notification.EXTRA_TEXT))
+            .isEqualTo("98 chapters, 2 error(s)")
     }
 
     @Test

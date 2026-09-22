@@ -100,11 +100,7 @@ class ImportNotificationHelper @Inject constructor(
         errorCount: Int
     ) {
         ensureChannel()
-        val title = if (errorCount == 0) {
-            context.getString(R.string.import_notification_complete, spec.novelTitle)
-        } else {
-            context.getString(R.string.import_notification_failed, spec.novelTitle)
-        }
+        val title = context.getString(R.string.import_notification_complete, spec.novelTitle)
         val text = if (errorCount == 0) {
             context.getString(R.string.import_notification_complete_text, importedCount)
         } else {
