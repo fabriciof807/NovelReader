@@ -7,11 +7,6 @@ import android.webkit.ValueCallback
 import android.webkit.WebView
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -23,16 +18,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBackIos
-import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
 import androidx.compose.material.icons.automirrored.filled.Sort
-import androidx.compose.material.icons.filled.Bookmark
-import androidx.compose.material.icons.filled.List
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -60,10 +48,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.takeOrElse
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -73,6 +64,8 @@ import com.novelreader.data.local.preferences.PreferenceAllowlists
 import com.novelreader.ui.customization.WallpaperBackground
 import com.novelreader.ui.customization.WallpaperCropOverlay
 import com.novelreader.ui.customization.barColorFor
+import com.novelreader.ui.theme.LocalAppVisuals
+import com.novelreader.ui.theme.applySystemBarAppearance
 import com.novelreader.ui.theme.parseAccentHex
 import com.novelreader.data.local.db.entity.BookmarkEntity
 import com.novelreader.data.local.db.entity.ChapterEntity
@@ -91,7 +84,7 @@ fun ReaderScreen(
 ) {
     val state by viewModel.state.collectAsState()
     var webView by remember { mutableStateOf<WebView?>(null) }
-    var isOptionsVisible by remember { mutableStateOf(true) }
+    var isOptionsVisible by remember { mutableStateOf(READER_OPTIONS_INITIALLY_VISIBLE) }
     var scrollRatio by remember { mutableStateOf(0f) }
     var lastInitialSearchQuery by remember { mutableStateOf(initialSearchQuery) }
     val pendingSearchQueryState = remember { mutableStateOf(initialSearchQuery) }
@@ -390,8 +383,42 @@ fun ReaderScreen(
         wallpaperActive = readerWallpaperActive,
         behindBars = wallpaperBehindBars
     )
+    val readerBackground = parseAccentHex(readerSurfaceOf(state.config).bg)
+        ?: MaterialTheme.colorScheme.surface
+    val readerBackgroundDark = readerBackgroundIsDark(readerBackground)
+    val appVisuals = LocalAppVisuals.current
+    val batteryState = rememberBatteryState()
+    val chrome = readerChrome(
+        optionsVisible = isOptionsVisible,
+        searchActive = state.isSearchActive,
+        batteryAlwaysOn = state.config.batteryAlwaysOn,
+        sleepRunning = sleepTimer != null
+    )
+    val labelLineHeight = with(LocalDensity.current) {
+        MaterialTheme.typography.labelSmall.lineHeight.takeOrElse { 16.sp }.toDp()
+    }
+    val statusBarRestoreDark = remember(view) {
+        if (view.isInEditMode) null else capturedBarAppearanceDark(view)
+    }
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    DisposableEffect(view) {
+        onDispose {
+            statusBarRestoreDark?.let { applySystemBarAppearance(view, it) }
+        }
+    }
+
+    LaunchedEffect(view, readerBackgroundDark, appVisuals.dark) {
+        if (view.isInEditMode) return@LaunchedEffect
+        applySystemBarAppearance(view, readerBackgroundDark)
+        delay(READER_SYSTEM_BARS_SETTLE_MILLIS)
+        applySystemBarAppearance(view, readerBackgroundDark)
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(if (readerWallpaperActive) Color.Transparent else readerBackground)
+    ) {
         WallpaperBackground(
             ref = state.config.wallpaper,
             blur = liveBlur,
@@ -401,136 +428,27 @@ fun ReaderScreen(
         )
 
         Scaffold(
-            containerColor = if (readerWallpaperActive) Color.Transparent
-            else MaterialTheme.colorScheme.surface,
-            snackbarHost = { SnackbarHost(snackbarHostState) },
-            topBar = {
-                ReaderTopBar(
-                    title = com.novelreader.data.parser.TitleExtractor.cleanChapterTitleForDisplay(
-                        state.chapter?.title ?: "",
-                        state.novel?.title
-                    ),
-                    isSearchActive = state.isSearchActive,
-                    searchQuery = state.searchQuery,
-                    onSearchQueryChange = { viewModel.onSearchQueryChange(it) },
-                    onBack = { saveScroll { onBack() } },
-                    onCloseSearch = { viewModel.deactivateSearch() },
-                    onActivateSearch = { viewModel.activateSearch() },
-                    containerColor = readerBarColor
+            containerColor = Color.Transparent,
+            contentWindowInsets = WindowInsets(0, 0, 0, 0),
+            snackbarHost = {
+                SnackbarHost(
+                    snackbarHostState,
+                    modifier = Modifier.navigationBarsPadding()
                 )
-            },
-            bottomBar = {
-                Column(modifier = Modifier.navigationBarsPadding()) {
-                    AnimatedVisibility(
-                        visible = isOptionsVisible,
-                        enter = fadeIn() + slideInVertically { it },
-                        exit = fadeOut() + slideOutVertically { it }
-                    ) {
-                        BottomAppBar(
-                            containerColor = readerBarColor,
-                            windowInsets = WindowInsets(0, 0, 0, 0)
-                        ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 8.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                IconButton(
-                                    onClick = {
-                                        saveScroll { viewModel.goToPrevChapter() }
-                                    },
-                                    enabled = state.prevChapterId != null
-                                ) {
-                                    Icon(
-                                        Icons.AutoMirrored.Filled.ArrowBackIos,
-                                        contentDescription = stringResource(R.string.previous)
-                                    )
-                                }
-
-                                Spacer(modifier = Modifier.weight(1f))
-
-                                IconButton(onClick = {
-                                    webView?.evaluateJavascript(
-                                        bookmarkCaptureRatioJs(),
-                                        ValueCallback { value ->
-                                            val ratio = value?.trim('"')?.toFloatOrNull() ?: 0f
-                                            viewModel.saveScrollPosition(ratio)
-                                            viewModel.showBookmarkDialog()
-                                        }
-                                    ) ?: viewModel.showBookmarkDialog()
-                                }) {
-                                    Box {
-                                        Icon(
-                                            Icons.Default.Bookmark,
-                                            contentDescription = stringResource(R.string.bookmarks),
-                                            tint = if (state.bookmarks.isNotEmpty())
-                                                MaterialTheme.colorScheme.secondary
-                                            else MaterialTheme.colorScheme.onSurface
-                                        )
-                                        if (state.bookmarks.isNotEmpty()) {
-                                            Box(
-                                                modifier = Modifier
-                                                    .size(16.dp)
-                                                    .align(Alignment.TopEnd)
-                                                    .background(
-                                                        MaterialTheme.colorScheme.secondary,
-                                                        shape = RoundedCornerShape(8.dp)
-                                                    ),
-                                                contentAlignment = Alignment.Center
-                                            ) {
-                                                Text(
-                                                    text = "${state.bookmarks.size}",
-                                                    style = MaterialTheme.typography.labelSmall,
-                                                    color = MaterialTheme.colorScheme.onSecondary
-                                                )
-                                            }
-                                        }
-                                    }
-                                }
-
-                                IconButton(onClick = { viewModel.showSettings() }) {
-                                    Icon(
-                                        Icons.Default.Settings,
-                                        contentDescription = stringResource(R.string.settings)
-                                    )
-                                }
-
-                                IconButton(onClick = { showChapterList = true }) {
-                                    Icon(
-                                        Icons.Default.List,
-                                        contentDescription = stringResource(R.string.chapter_list)
-                                    )
-                                }
-
-                                Spacer(modifier = Modifier.weight(1f))
-
-                                IconButton(
-                                    onClick = {
-                                        saveScroll { viewModel.goToNextChapter() }
-                                    },
-                                    enabled = state.nextChapterId != null
-                                ) {
-                                    Icon(
-                                        Icons.AutoMirrored.Filled.ArrowForwardIos,
-                                        contentDescription = stringResource(R.string.next)
-                                    )
-                                }
-                            }
-                        }
-                    }
-                    ReaderStatusBar(
-                        battery = rememberBatteryState(),
-                        sleepRemainingSeconds = sleepTimer?.remainingSeconds,
-                        containerColor = readerBarColor
-                    )
-                }
             }
-        ) { padding ->
+        ) { _ ->
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(padding)
+                    .statusBarsPadding()
+                    .navigationBarsPadding()
+                    .then(
+                        if (state.config.batteryAlwaysOn) {
+                            Modifier.padding(bottom = readerStatusReserve(labelLineHeight))
+                        } else {
+                            Modifier
+                        }
+                    )
             ) {
                 when {
                     state.isLoading -> {
@@ -642,6 +560,50 @@ fun ReaderScreen(
                 }
             }
         }
+        ReaderChromeOverlay(
+            chrome = chrome,
+            battery = batteryState,
+            sleepRemainingSeconds = sleepTimer?.remainingSeconds,
+            barColor = readerBarColor,
+            topBar = {
+                ReaderTopBar(
+                    title = com.novelreader.data.parser.TitleExtractor.cleanChapterTitleForDisplay(
+                        state.chapter?.title ?: "",
+                        state.novel?.title
+                    ),
+                    isSearchActive = state.isSearchActive,
+                    searchQuery = state.searchQuery,
+                    onSearchQueryChange = { viewModel.onSearchQueryChange(it) },
+                    onBack = { saveScroll { onBack() } },
+                    onCloseSearch = { viewModel.deactivateSearch() },
+                    onActivateSearch = { viewModel.activateSearch() },
+                    containerColor = readerBarColor
+                )
+            },
+            optionsBar = {
+                ReaderOptionsBar(
+                    barColor = readerBarColor,
+                    prevEnabled = state.prevChapterId != null,
+                    nextEnabled = state.nextChapterId != null,
+                    bookmarkCount = state.bookmarks.size,
+                    onPrev = { saveScroll { viewModel.goToPrevChapter() } },
+                    onBookmark = {
+                        webView?.evaluateJavascript(
+                            bookmarkCaptureRatioJs(),
+                            ValueCallback { value ->
+                                val ratio = value?.trim('"')?.toFloatOrNull() ?: 0f
+                                viewModel.saveScrollPosition(ratio)
+                                viewModel.showBookmarkDialog()
+                            }
+                        ) ?: viewModel.showBookmarkDialog()
+                    },
+                    onSettings = { viewModel.showSettings() },
+                    onChapterList = { showChapterList = true },
+                    onNext = { saveScroll { viewModel.goToNextChapter() } }
+                )
+            }
+        )
+
         pendingCrop?.let { cropUri ->
             WallpaperCropOverlay(
                 imageModel = cropUri,

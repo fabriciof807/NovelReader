@@ -3,7 +3,6 @@ package com.novelreader.ui.reader
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -28,46 +27,41 @@ fun ReaderStatusBar(
     battery: BatteryState,
     modifier: Modifier = Modifier,
     sleepRemainingSeconds: Int? = null,
-    containerColor: Color = MaterialTheme.colorScheme.surface
+    containerColor: Color = MaterialTheme.colorScheme.surface,
+    showBattery: Boolean = true
 ) {
-    // A translucent bar has a wallpaper behind it, and that backdrop is not something this composable
-    // can derive a contrast against, so its text keeps full strength. An opaque bar gets the palette's
-    // muted tone, walked towards the surface it actually sits on.
-    val tint = if (containerColor.alpha < 1f) {
-        MaterialTheme.colorScheme.onSurface
-    } else {
-        mutedForeground(MaterialTheme.colorScheme.onSurface, containerColor)
-    }
-    val batteryDescription = if (battery.charging) {
-        stringResource(R.string.reader_battery_charging_label, battery.percent)
-    } else {
-        stringResource(R.string.reader_battery_label, battery.percent)
-    }
+    val tint = readerStatusBarTint(containerColor, MaterialTheme.colorScheme.onSurface)
     Row(
         modifier = modifier
-            .fillMaxWidth()
             .background(containerColor)
             .padding(horizontal = 16.dp, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(
-            imageVector = if (battery.charging) {
-                Icons.Outlined.BatteryChargingFull
+        if (showBattery) {
+            val batteryDescription = if (battery.charging) {
+                stringResource(R.string.reader_battery_charging_label, battery.percent)
             } else {
-                Icons.Outlined.BatteryFull
-            },
-            contentDescription = batteryDescription,
-            tint = tint,
-            modifier = Modifier.size(16.dp)
-        )
-        Spacer(Modifier.width(4.dp))
-        Text(
-            text = "${battery.percent}%",
-            style = MaterialTheme.typography.labelSmall,
-            color = tint
-        )
+                stringResource(R.string.reader_battery_label, battery.percent)
+            }
+            Icon(
+                imageVector = if (battery.charging) {
+                    Icons.Outlined.BatteryChargingFull
+                } else {
+                    Icons.Outlined.BatteryFull
+                },
+                contentDescription = batteryDescription,
+                tint = tint,
+                modifier = Modifier.size(16.dp)
+            )
+            Spacer(Modifier.width(4.dp))
+            Text(
+                text = "${battery.percent}%",
+                style = MaterialTheme.typography.labelSmall,
+                color = tint
+            )
+        }
         if (sleepRemainingSeconds != null) {
-            Spacer(Modifier.width(12.dp))
+            if (showBattery) Spacer(Modifier.width(12.dp))
             Icon(
                 imageVector = Icons.Outlined.Timer,
                 contentDescription = stringResource(R.string.reader_sleep_timer),
@@ -89,3 +83,6 @@ fun ReaderStatusBar(
 
 /** Rounded up, so a timer with a second left reads "1 min" instead of "0 min". */
 internal fun sleepRemainingMinutes(seconds: Int): Int = (seconds + 59) / 60
+
+internal fun readerStatusBarTint(containerColor: Color, onSurface: Color): Color =
+    if (containerColor.alpha < 1f) onSurface else mutedForeground(onSurface, containerColor)
