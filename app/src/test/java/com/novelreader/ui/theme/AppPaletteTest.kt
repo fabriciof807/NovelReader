@@ -4,6 +4,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
 import com.google.common.truth.Truth.assertThat
 import com.novelreader.data.local.preferences.PreferenceAllowlists
+import com.novelreader.ui.components.appNavBarColors
 import com.novelreader.ui.customization.BAR_VEIL_ALPHA
 import com.novelreader.ui.customization.BUILTIN_WALLPAPERS
 import com.novelreader.ui.customization.libraryContainerColor
@@ -317,5 +318,28 @@ class AppPaletteTest {
         assertThat(isDynamicPaletteAvailable(30)).isFalse()
         assertThat(isDynamicPaletteAvailable(31)).isTrue()
         assertThat(isDynamicPaletteAvailable(36)).isTrue()
+    }
+
+    // The nav bar carries a label under every icon and a pill behind the selected one. Both sit on a
+    // container that the wallpaper switch turns into the opaque surface, so the pair has to hold for
+    // the container the switch produces and for every palette and variant.
+    @Test
+    fun `the nav bar label and indicator clear the minimum contrast on every palette and variant`() {
+        AppPalette.entries.forEach { palette ->
+            listOf(palette.light, palette.dark).forEach { scheme ->
+                listOf(true, false).forEach { wallpaperActive ->
+                    val colors = appNavBarColors(scheme, wallpaperActive)
+
+                    assertThat(colors.container.alpha).isEqualTo(1f)
+                    assertThat(colors.indicator.alpha).isEqualTo(1f)
+                    assertThat(contrastRatio(colors.label, colors.container))
+                        .isAtLeast(MinContrast)
+                    assertThat(contrastRatio(colors.unselectedLabel, colors.container))
+                        .isAtLeast(MinContrast)
+                    assertThat(contrastRatio(colors.indicatorContent, colors.indicator))
+                        .isAtLeast(MinContrast)
+                }
+            }
+        }
     }
 }
