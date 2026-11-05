@@ -1,8 +1,6 @@
 package com.novelreader.ui.library.tabs
 
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -20,7 +18,6 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Language
@@ -28,16 +25,12 @@ import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Sort
-import androidx.compose.material.icons.filled.SortByAlpha
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -50,12 +43,12 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.novelreader.R
+import com.novelreader.ui.components.NovelCover
 import com.novelreader.ui.customization.libraryContainerColor
 import com.novelreader.data.local.db.entity.NovelEntity
 import com.novelreader.domain.usecase.BackgroundImportState
@@ -63,10 +56,10 @@ import com.novelreader.ui.library.NovelFilter
 import com.novelreader.ui.library.ViewMode
 import com.novelreader.ui.library.components.ImportProgressBanner
 import com.novelreader.ui.library.components.LibraryEmptyState
-import com.novelreader.ui.library.components.NovelCard
 import com.novelreader.ui.library.components.NovelListItem
 import com.novelreader.ui.library.components.novelImportOverlay
 import com.novelreader.ui.library.components.queuedTitleKeys
+import com.novelreader.ui.theme.AppDimens
 
 private const val NOVEL_CONTENT_TYPE = "novel"
 
@@ -110,7 +103,6 @@ fun LibraryTab(
     searchQuery: String = "",
     filterChip: NovelFilter = NovelFilter.ALL,
     wallpaperActive: Boolean = false,
-    onFilterChipChange: (NovelFilter) -> Unit = {},
     onNovelClick: (NovelEntity) -> Unit,
     onLongClick: (NovelEntity) -> Unit,
     onToggleAutoUpdate: (NovelEntity) -> Unit,
@@ -121,7 +113,6 @@ fun LibraryTab(
     onToggleFavorite: (NovelEntity) -> Unit,
     onRequestChangeCover: (NovelEntity) -> Unit,
     onRequestCoverByUrl: (NovelEntity) -> Unit,
-    onContinueReading: (NovelEntity) -> Unit,
     onCancelImport: () -> Unit,
     onImportLocal: () -> Unit = {},
     onImportWeb: () -> Unit = {},
@@ -133,7 +124,6 @@ fun LibraryTab(
     val queuedKeys = remember(backgroundImportState.queuedNovelTitles) {
         queuedTitleKeys(backgroundImportState.queuedNovelTitles)
     }
-    val chipColors = filterChipColors(wallpaperActive)
 
     val queuedNotShown = remember(backgroundImportState.queuedNovelTitles, novels) {
         queuedNovelsNotShown(backgroundImportState.queuedNovelTitles, novels)
@@ -151,38 +141,6 @@ fun LibraryTab(
             state = backgroundImportState,
             onCancel = onCancelImport
         )
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .horizontalScroll(rememberScrollState())
-                .padding(horizontal = 12.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            FilterChip(
-                selected = filterChip == NovelFilter.ALL,
-                onClick = { onFilterChipChange(NovelFilter.ALL) },
-                colors = chipColors,
-                label = { Text(stringResource(R.string.filter_all)) }
-            )
-            FilterChip(
-                selected = filterChip == NovelFilter.READING,
-                onClick = { onFilterChipChange(NovelFilter.READING) },
-                colors = chipColors,
-                label = { Text(stringResource(R.string.filter_reading)) }
-            )
-            FilterChip(
-                selected = filterChip == NovelFilter.COMPLETED,
-                onClick = { onFilterChipChange(NovelFilter.COMPLETED) },
-                colors = chipColors,
-                label = { Text(stringResource(R.string.filter_completed)) }
-            )
-            FilterChip(
-                selected = filterChip == NovelFilter.FAVORITES,
-                onClick = { onFilterChipChange(NovelFilter.FAVORITES) },
-                colors = chipColors,
-                label = { Text(stringResource(R.string.filter_favorite_novels)) }
-            )
-        }
         if (queuedNotShown.isNotEmpty()) {
             Column(
                 modifier = Modifier
@@ -210,22 +168,21 @@ fun LibraryTab(
         } else if (viewMode == ViewMode.GRID) {
             LazyVerticalGrid(
                 state = gridState,
-                columns = GridCells.Adaptive(160.dp),
-                contentPadding = PaddingValues(12.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
+                columns = GridCells.Fixed(3),
+                contentPadding = PaddingValues(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(AppDimens.GridSpacing),
+                verticalArrangement = Arrangement.spacedBy(AppDimens.GridSpacing),
                 modifier = Modifier.weight(1f).fillMaxWidth()
             ) {
                 items(chipFiltered, contentType = { NOVEL_CONTENT_TYPE }) { novel ->
-                    NovelCard(
+                    NovelCover(
                         novel = novel,
                         readProgress = readProgress[novel.id] ?: 0f,
                         newChapterCount = newChapterCounts[novel.id] ?: 0,
                         importOverlay = novelImportOverlay(novel.title, backgroundImportState, queuedKeys),
                         onClick = { onNovelClick(novel) },
                         onLongClick = { menuNovelId = novel.id },
-                        onShowMenu = { menuNovelId = novel.id },
-                        onContinueClick = { onContinueReading(novel) }
+                        wallpaperActive = wallpaperActive
                     )
                     NovelMenu(
                         novel = novel,
@@ -258,7 +215,8 @@ fun LibraryTab(
                         importOverlay = novelImportOverlay(novel.title, backgroundImportState, queuedKeys),
                         onClick = { onNovelClick(novel) },
                         onLongClick = { menuNovelId = novel.id },
-                        onShowMenu = { menuNovelId = novel.id }
+                        onShowMenu = { menuNovelId = novel.id },
+                        wallpaperActive = wallpaperActive
                     )
                     NovelMenu(
                         novel = novel,
@@ -366,16 +324,6 @@ private fun NovelMenu(
         )
     }
 }
-
-@Composable
-private fun filterChipColors(wallpaperActive: Boolean) =
-    FilterChipDefaults.filterChipColors(
-        containerColor = libraryContainerColor(
-            default = Color.Transparent,
-            surface = MaterialTheme.colorScheme.surface,
-            wallpaperActive = wallpaperActive
-        )
-    )
 
 @Composable
 private fun QueuedNovelRow(title: String, wallpaperActive: Boolean) {

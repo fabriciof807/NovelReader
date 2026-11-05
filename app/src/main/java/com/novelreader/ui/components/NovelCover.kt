@@ -83,11 +83,6 @@ fun NovelCover(
         label = "novelCoverPress"
     )
     val titleBlockHeight = twoLineHeight(titleStyle, density.fontScale)
-    val placeholderColor = libraryContainerColor(
-        default = scheme.surfaceVariant,
-        surface = scheme.surface,
-        wallpaperActive = wallpaperActive
-    )
 
     Column(
         modifier = modifier
@@ -108,45 +103,14 @@ fun NovelCover(
                 }
             )
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .aspectRatio(CoverAspectRatio)
-                .background(placeholderColor),
-            contentAlignment = Alignment.Center
-        ) {
-            if (novel.coverPath != null) {
-                AsyncImage(
-                    model = novel.coverPath,
-                    contentDescription = null,
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop
-                )
-            } else {
-                Text(
-                    text = novel.title.take(2).uppercase(),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = scheme.primary
-                )
-            }
-
-            CoverImportOverlay(importOverlay)
-            NewChaptersBadge(hasUpdates = novel.hasUpdates, count = newChapterCount)
-
-            if (readProgress > 0f) {
-                LinearProgressIndicator(
-                    progress = { readProgress },
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .fillMaxWidth()
-                        .height(2.dp)
-                        .testTag(NOVEL_COVER_PROGRESS_TAG),
-                    color = scheme.primary,
-                    trackColor = scheme.surfaceVariant
-                )
-            }
-        }
+        NovelCoverImage(
+            novel = novel,
+            readProgress = readProgress,
+            newChapterCount = newChapterCount,
+            importOverlay = importOverlay,
+            wallpaperActive = wallpaperActive,
+            modifier = Modifier.fillMaxWidth()
+        )
 
         Box(
             modifier = Modifier
@@ -173,6 +137,62 @@ fun NovelCover(
 private fun twoLineHeight(style: TextStyle, fontScale: Float) = with(style) {
     val lineHeight = if (this.lineHeight.isSp) this.lineHeight.value else fontSize.value * 1.4f
     (lineHeight * fontScale * TitleMaxLines).dp
+}
+
+@Composable
+fun NovelCoverImage(
+    novel: NovelEntity,
+    readProgress: Float,
+    newChapterCount: Int,
+    importOverlay: NovelImportOverlay,
+    wallpaperActive: Boolean = false,
+    modifier: Modifier = Modifier
+) {
+    val scheme = MaterialTheme.colorScheme
+    val placeholderColor = libraryContainerColor(
+        default = scheme.surfaceVariant,
+        surface = scheme.surface,
+        wallpaperActive = wallpaperActive
+    )
+
+    Box(
+        modifier = modifier
+            .aspectRatio(CoverAspectRatio)
+            .background(placeholderColor),
+        contentAlignment = Alignment.Center
+    ) {
+        if (novel.coverPath != null) {
+            AsyncImage(
+                model = novel.coverPath,
+                contentDescription = null,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop
+            )
+        } else {
+            Text(
+                text = novel.title.take(2).uppercase(),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = scheme.primary
+            )
+        }
+
+        CoverImportOverlay(importOverlay)
+        NewChaptersBadge(hasUpdates = novel.hasUpdates, count = newChapterCount)
+
+        if (readProgress > 0f) {
+            LinearProgressIndicator(
+                progress = { readProgress },
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .height(2.dp)
+                    .testTag(NOVEL_COVER_PROGRESS_TAG),
+                color = scheme.primary,
+                trackColor = scheme.surfaceVariant
+            )
+        }
+    }
 }
 
 @Composable

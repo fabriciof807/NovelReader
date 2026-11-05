@@ -85,7 +85,6 @@ class LibraryTabScrollTest {
                     onToggleFavorite = {},
                     onRequestChangeCover = {},
                     onRequestCoverByUrl = {},
-                    onContinueReading = {},
                     onCancelImport = {}
                 )
             }
@@ -174,7 +173,6 @@ class LibraryTabScrollTest {
                     onToggleFavorite = {},
                     onRequestChangeCover = {},
                     onRequestCoverByUrl = {},
-                    onContinueReading = {},
                     onCancelImport = {}
                 )
             }
@@ -214,7 +212,6 @@ class LibraryTabScrollTest {
                             onToggleFavorite = {},
                             onRequestChangeCover = {},
                             onRequestCoverByUrl = {},
-                            onContinueReading = {},
                             onCancelImport = {}
                         )
                     }

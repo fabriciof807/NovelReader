@@ -21,6 +21,9 @@
     <string name="filter_reading">Lendo</string>
     <string name="filter_completed">Concluídos</string>
     <string name="filter_favorite_novels">Favoritas</string>
+    <string name="filter_all_short">Todos</string>
+    <string name="filter_reading_short">Lendo</string>
+    <string name="filter_completed_short">Fim</string>
     <string name="no_chapters">Nenhum capítulo encontrado</string>
     <string name="change_cover">Alterar capa</string>
     <string name="cover_by_url">Capa via URL</string>

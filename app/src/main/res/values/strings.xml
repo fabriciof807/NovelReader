@@ -21,6 +21,9 @@
     <string name="filter_reading">Reading</string>
     <string name="filter_completed">Completed</string>
     <string name="filter_favorite_novels">Favorites</string>
+    <string name="filter_all_short">All</string>
+    <string name="filter_reading_short">Reading</string>
+    <string name="filter_completed_short">Done</string>
     <string name="no_chapters">No chapters found</string>
     <string name="change_cover">Change cover</string>
     <string name="cover_by_url">Cover via URL</string>

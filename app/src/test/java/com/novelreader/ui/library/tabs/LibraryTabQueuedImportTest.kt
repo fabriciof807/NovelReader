@@ -92,7 +92,6 @@ class LibraryTabQueuedImportTest {
                     onToggleFavorite = {},
                     onRequestChangeCover = {},
                     onRequestCoverByUrl = {},
-                    onContinueReading = {},
                     onCancelImport = {}
                 )
             }

@@ -7,24 +7,13 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.Sort
-import androidx.compose.material.icons.automirrored.filled.ViewList
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.DateRange
-import androidx.compose.material.icons.filled.GridView
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.SortByAlpha
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -65,6 +54,7 @@ import com.novelreader.ui.library.components.CoverUrlDialog
 import com.novelreader.ui.library.components.DeleteNovelDialog
 import com.novelreader.ui.library.components.LibraryFab
 import com.novelreader.ui.library.components.LibraryStatsLine
+import com.novelreader.ui.library.components.LibraryTopBar
 import com.novelreader.ui.library.components.WhatsNewBottomSheet
 import com.novelreader.ui.library.tabs.ChaptersTab
 import com.novelreader.ui.library.tabs.CollectionsTab
@@ -130,7 +120,6 @@ fun LibraryScreen(
         viewModel.deselectNovel()
     }
 
-    var showSortMenu by remember { mutableStateOf(false) }
     // Saveable: the library is disposed while the reader is on screen, so plain `remember` sent the
     // user back with the search box closed and the query gone.
     val browse = rememberSaveable(saver = LibraryBrowseState.Saver) { LibraryBrowseState() }
@@ -221,116 +210,62 @@ fun LibraryScreen(
                 containerColor = if (wallpaperActive) Color.Transparent
                 else MaterialTheme.colorScheme.background,
                 topBar = {
-                Column {
-                    TopAppBar(
-                        title = {
-                            if (browse.isSearchActive && selectedTab == 0) {
-                                OutlinedTextField(
-                                    value = browse.searchQuery,
-                                    onValueChange = { browse.searchQuery = it },
-                                    placeholder = { Text(stringResource(R.string.search_hint)) },
-                                    singleLine = true,
-                                    modifier = Modifier.fillMaxWidth(),
-                                    textStyle = MaterialTheme.typography.bodyMedium
+                    if (selectedTab == 0 && selectedNovel == null) {
+                        LibraryTopBar(
+                            browse = browse,
+                            viewMode = viewMode,
+                            onSortSelected = { viewModel.setSortOrder(it) },
+                            onViewModeChange = { viewModel.setViewMode(it) },
+                            wallpaperActive = wallpaperActive,
+                            containerColor = barColor
+                        )
+                    } else {
+                        Column {
+                            TopAppBar(
+                                title = {
+                                    Text(
+                                        libraryTopBarTitle(
+                                            selectedTab = selectedTab,
+                                            novelTitle = selectedNovel?.title,
+                                            library = stringResource(R.string.library),
+                                            collections = stringResource(R.string.collections)
+                                        ),
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                },
+                                navigationIcon = {
+                                    if (selectedTab == 1 || selectedTab == 2) {
+                                        IconButton(onClick = { viewModel.deselectNovel() }) {
+                                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
+                                        }
+                                    }
+                                },
+                                colors = TopAppBarDefaults.topAppBarColors(
+                                    containerColor = barColor,
+                                    titleContentColor = MaterialTheme.colorScheme.onSurface
                                 )
-                            } else {
-                                Text(
-                                    libraryTopBarTitle(
-                                        selectedTab = selectedTab,
-                                        novelTitle = selectedNovel?.title,
-                                        library = stringResource(R.string.library),
-                                        collections = stringResource(R.string.collections)
-                                    ),
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                            }
-                        },
-                        navigationIcon = {
-                            if (selectedTab == 1 || selectedTab == 2) {
-                                IconButton(onClick = { viewModel.deselectNovel() }) {
-                                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
-                                }
-                            } else if (browse.isSearchActive) {
-                                IconButton(onClick = { browse.isSearchActive = false; browse.searchQuery = "" }) {
-                                    Icon(Icons.Default.Close, contentDescription = stringResource(R.string.close))
-                                }
-                            }
-                        },
-                        colors = TopAppBarDefaults.topAppBarColors(
-                            containerColor = barColor,
-                            titleContentColor = MaterialTheme.colorScheme.onSurface
-                        ),
-                        actions = {
-                            if (selectedTab == 0) {
-                                if (browse.isSearchActive) {
-                                    IconButton(onClick = { browse.isSearchActive = false; browse.searchQuery = "" }) {
-                                        Icon(Icons.Default.Close, contentDescription = stringResource(R.string.close))
-                                    }
-                                } else {
-                                    IconButton(onClick = { browse.isSearchActive = true }) {
-                                        Icon(Icons.Default.Search, contentDescription = stringResource(R.string.search))
-                                    }
-                                }
-                                Box {
-                                    IconButton(onClick = { showSortMenu = true }) {
-                                        Icon(Icons.AutoMirrored.Filled.Sort, contentDescription = stringResource(R.string.sort))
-                                    }
-                                    DropdownMenu(
-                                        expanded = showSortMenu,
-                                        onDismissRequest = { showSortMenu = false }
-                                    ) {
-                                        DropdownMenuItem(
-                                            text = { Text(stringResource(R.string.sort_title)) },
-                                            onClick = { viewModel.setSortOrder(SortOrder.TITLE); showSortMenu = false },
-                                            leadingIcon = { Icon(Icons.Filled.SortByAlpha, contentDescription = null) }
-                                        )
-                                        DropdownMenuItem(
-                                            text = { Text(stringResource(R.string.sort_date)) },
-                                            onClick = { viewModel.setSortOrder(SortOrder.CREATED_AT); showSortMenu = false },
-                                            leadingIcon = { Icon(Icons.Default.DateRange, contentDescription = null) }
-                                        )
-                                        DropdownMenuItem(
-                                            text = { Text(stringResource(R.string.sort_last_read)) },
-                                            onClick = { viewModel.setSortOrder(SortOrder.LAST_READ); showSortMenu = false },
-                                            leadingIcon = { Icon(Icons.AutoMirrored.Filled.Sort, contentDescription = null) }
-                                        )
-                                    }
-                                }
-                            }
-                            if (selectedTab == 0) {
-                                IconButton(onClick = {
-                                    viewModel.setViewMode(if (viewMode == ViewMode.GRID) ViewMode.LIST else ViewMode.GRID)
-                                }) {
-                                    Icon(
-                                        if (viewMode == ViewMode.GRID) Icons.AutoMirrored.Filled.ViewList else Icons.Default.GridView,
-                                        contentDescription = if (viewMode == ViewMode.GRID)
-                                            stringResource(R.string.view_mode_list)
-                                        else stringResource(R.string.view_mode_grid)
+                            )
+                            if (selectedNovel != null) {
+                                TabRow(
+                                    selectedTabIndex = (selectedTab - 1).coerceIn(0, 1),
+                                    containerColor = barColor
+                                ) {
+                                    Tab(
+                                        selected = selectedTab == 1,
+                                        onClick = { viewModel.selectTab(1) },
+                                        text = { Text(stringResource(R.string.chapters)) }
+                                    )
+                                    Tab(
+                                        selected = selectedTab == 2,
+                                        onClick = { viewModel.selectTab(2) },
+                                        text = { Text(stringResource(R.string.characters)) }
                                     )
                                 }
                             }
                         }
-                    )
-                    if (selectedNovel != null) {
-                        TabRow(
-                            selectedTabIndex = (selectedTab - 1).coerceIn(0, 1),
-                            containerColor = barColor
-                        ) {
-                            Tab(
-                                selected = selectedTab == 1,
-                                onClick = { viewModel.selectTab(1) },
-                                text = { Text(stringResource(R.string.chapters)) }
-                            )
-                            Tab(
-                                selected = selectedTab == 2,
-                                onClick = { viewModel.selectTab(2) },
-                                text = { Text(stringResource(R.string.characters)) }
-                            )
-                        }
                     }
-                }
-            },
+                },
             floatingActionButton = {
                 if (selectedTab == 0) {
                     LibraryFab(onClick = onImportClick)
@@ -363,7 +298,6 @@ fun LibraryScreen(
                         searchQuery = browse.searchQuery,
                         filterChip = browse.filterChip,
                         wallpaperActive = wallpaperActive,
-                        onFilterChipChange = { browse.filterChip = it },
                         onNovelClick = { novel ->
                             if (novel.lastChapterId != null) {
                                 onChapterClick(novel.id, novel.lastChapterId)
@@ -382,9 +316,6 @@ fun LibraryScreen(
                         },
                         onRequestChangeCover = { viewModel.requestChangeCoverById(it.id) },
                         onRequestCoverByUrl = { viewModel.requestCoverByUrlById(it.id) },
-                        onContinueReading = { novel ->
-                            novel.lastChapterId?.let { onChapterClick(novel.id, it) }
-                        },
                         onCancelImport = { viewModel.cancelBackgroundImport() },
                         onImportLocal = { onImportClick() },
                         onImportWeb = { onImportClick() }
