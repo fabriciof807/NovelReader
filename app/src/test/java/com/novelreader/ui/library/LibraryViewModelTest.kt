@@ -32,6 +32,7 @@ import com.novelreader.domain.usecase.importnovel.ChapterInserter
 import com.novelreader.domain.usecase.importnovel.FileCharsetDetector
 import com.novelreader.ui.library.tabs.filterNovels
 import com.novelreader.ui.library.tabs.queuedNovelsNotShown
+import com.novelreader.ui.navigation.LIBRARY_TAB_REQUEST_KEY
 import com.novelreader.ui.notifications.NotificationPermissionCoordinator
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -91,32 +92,36 @@ class LibraryViewModelTest {
         every { prefs.chapterSortOrder } returns flowOf("ASCENDING")
         every { prefs.viewMode } returns flowOf("GRID")
         every { bgManager.state } returns MutableStateFlow(BackgroundImportState())
-        viewModel = LibraryViewModel(
-            context = context,
-            savedStateHandle = savedState,
-            novelDao = novelDao,
-            chapterDao = chapterDao,
-            bookmarkDao = bookmarkDao,
-            backgroundImportManager = bgManager,
-            libraryPreferences = prefs,
-            characterManagementUseCase = charManagement,
-            coverManagementUseCase = coverManagement,
-            characterPhotoDao = charPhotoDao,
-            mvlempyrCharacterImporter = importer,
-            updateCheckScheduler = updateCheckScheduler,
-            notificationPermissionCoordinator = notificationPermissionCoordinator,
-            webImportUseCase = webImportUseCase,
-            failedChapterDao = failedChapterDao,
-            folderDao = folderDao,
-            retryChapterUseCase = retryChapterUseCase,
-            scanMissingChaptersUseCase = scanMissingChaptersUseCase,
-            chapterInserter = chapterInserter,
-            parserRegistry = parserRegistry,
-            mhtParser = mhtParser,
-            fileCharsetDetector = fileCharsetDetector,
-            io = kotlinx.coroutines.Dispatchers.Unconfined
-        )
+        viewModel = createViewModel()
     }
+
+    private fun createViewModel(
+        handle: SavedStateHandle = savedState
+    ): LibraryViewModel = LibraryViewModel(
+        context = context,
+        savedStateHandle = handle,
+        novelDao = novelDao,
+        chapterDao = chapterDao,
+        bookmarkDao = bookmarkDao,
+        backgroundImportManager = bgManager,
+        libraryPreferences = prefs,
+        characterManagementUseCase = charManagement,
+        coverManagementUseCase = coverManagement,
+        characterPhotoDao = charPhotoDao,
+        mvlempyrCharacterImporter = importer,
+        updateCheckScheduler = updateCheckScheduler,
+        notificationPermissionCoordinator = notificationPermissionCoordinator,
+        webImportUseCase = webImportUseCase,
+        failedChapterDao = failedChapterDao,
+        folderDao = folderDao,
+        retryChapterUseCase = retryChapterUseCase,
+        scanMissingChaptersUseCase = scanMissingChaptersUseCase,
+        chapterInserter = chapterInserter,
+        parserRegistry = parserRegistry,
+        mhtParser = mhtParser,
+        fileCharsetDetector = fileCharsetDetector,
+        io = kotlinx.coroutines.Dispatchers.Unconfined
+    )
 
     @After
     fun tearDown() {
@@ -127,6 +132,65 @@ class LibraryViewModelTest {
     fun `selectTab changes selectedTab state`() {
         viewModel.selectTab(2)
         assertThat(viewModel.selectedTab.value).isEqualTo(2)
+    }
+
+    @Test
+    fun `a tab request of 1 selects the collections tab and clears the request`() {
+        val handle = SavedStateHandle()
+        handle[LIBRARY_TAB_REQUEST_KEY] = 1
+
+        val restored = createViewModel(handle)
+
+        assertThat(restored.selectedTab.value).isEqualTo(1)
+        assertThat(handle.get<Int?>(LIBRARY_TAB_REQUEST_KEY)).isNull()
+    }
+
+    @Test
+    fun `a tab request of 0 clears the selected novel and selects the library tab`() = runTest {
+        val novel = NovelEntity(id = 5, title = "Selected")
+        every { chapterDao.observeChaptersByNovel(5) } returns flowOf(emptyList())
+        coEvery { charManagement.getCharacters(5) } returns emptyList()
+        coEvery { charPhotoDao.getByCharacterIds(any()) } returns emptyList()
+
+        viewModel.selectNovel(novel)
+        assertThat(viewModel.selectedTab.value).isEqualTo(1)
+
+        savedState[LIBRARY_TAB_REQUEST_KEY] = 0
+
+        assertThat(viewModel.selectedNovel.value).isNull()
+        assertThat(viewModel.selectedTab.value).isEqualTo(0)
+        assertThat(savedState.get<Int?>(LIBRARY_TAB_REQUEST_KEY)).isNull()
+    }
+
+    @Test
+    fun `a tab request outside 0 to 1 is ignored`() = runTest {
+        val novel = NovelEntity(id = 5, title = "Selected")
+        every { chapterDao.observeChaptersByNovel(5) } returns flowOf(emptyList())
+        coEvery { charManagement.getCharacters(5) } returns emptyList()
+        coEvery { charPhotoDao.getByCharacterIds(any()) } returns emptyList()
+
+        viewModel.selectNovel(novel)
+
+        savedState[LIBRARY_TAB_REQUEST_KEY] = 7
+
+        assertThat(viewModel.selectedNovel.value).isEqualTo(novel)
+        assertThat(viewModel.selectedTab.value).isEqualTo(1)
+    }
+
+    @Test
+    fun `a deep-link selected novel is still selected when no request is present`() {
+        val novel = NovelEntity(id = 7, title = "DeepLink")
+        coEvery { novelDao.getNovelById(7L) } returns novel
+        every { chapterDao.observeChaptersByNovel(7) } returns flowOf(emptyList())
+        coEvery { charManagement.getCharacters(7) } returns emptyList()
+        coEvery { charPhotoDao.getByCharacterIds(any()) } returns emptyList()
+        val handle = SavedStateHandle()
+        handle[LibraryViewModel.ARG_SELECTED_NOVEL_ID] = 7L
+
+        val restored = createViewModel(handle)
+
+        assertThat(restored.selectedNovel.value).isEqualTo(novel)
+        assertThat(restored.selectedTab.value).isEqualTo(1)
     }
 
     @Test

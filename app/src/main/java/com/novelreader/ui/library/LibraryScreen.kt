@@ -13,12 +13,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.automirrored.filled.ViewList
-import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.SortByAlpha
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -47,11 +45,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.novelreader.R
 import com.novelreader.data.local.preferences.PreferenceAllowlists
+import com.novelreader.ui.components.APP_NAV_BAR_TAG
+import com.novelreader.ui.components.AppDestination
+import com.novelreader.ui.components.AppNavBar
 import com.novelreader.ui.customization.HomeWallpaperViewModel
 import com.novelreader.ui.customization.NavigationBarVeil
 import com.novelreader.ui.customization.barColorFor
@@ -62,19 +64,20 @@ import com.novelreader.ui.library.components.CollectionNameDialog
 import com.novelreader.ui.library.components.CoverUrlDialog
 import com.novelreader.ui.library.components.DeleteNovelDialog
 import com.novelreader.ui.library.components.LibraryFab
-import com.novelreader.ui.library.components.LibraryStatsBar
+import com.novelreader.ui.library.components.LibraryStatsLine
 import com.novelreader.ui.library.components.WhatsNewBottomSheet
 import com.novelreader.ui.library.tabs.ChaptersTab
 import com.novelreader.ui.library.tabs.CollectionsTab
 import com.novelreader.ui.library.tabs.LibraryTab
 import com.novelreader.ui.library.tabs.PersonagensTab
+import com.novelreader.ui.navigation.Routes
+import com.novelreader.ui.navigation.destinationFor
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LibraryScreen(
     onImportClick: () -> Unit,
-    onFavoritesClick: () -> Unit,
-    onSettingsClick: () -> Unit,
+    onNavigate: (AppDestination) -> Unit,
     onChapterClick: (Long, Long) -> Unit,
     viewModel: LibraryViewModel = hiltViewModel()
 ) {
@@ -208,7 +211,7 @@ fun LibraryScreen(
                 wallpaperActive = wallpaperActive,
                 behindBars = homeWallpaperBehindBars
             )
-            if (wallpaperActive) {
+            if (wallpaperActive && selectedNovel != null) {
                 NavigationBarVeil(
                     color = barColor,
                     modifier = Modifier.align(Alignment.BottomCenter)
@@ -307,24 +310,13 @@ fun LibraryScreen(
                                     )
                                 }
                             }
-                            IconButton(onClick = onFavoritesClick) {
-                                Icon(Icons.Default.Bookmark, contentDescription = stringResource(R.string.favorites))
-                            }
-                            IconButton(onClick = onSettingsClick) {
-                                Icon(Icons.Default.Settings, contentDescription = stringResource(R.string.settings))
-                            }
                         }
                     )
-                    TabRow(
-                        selectedTabIndex = selectedTab,
-                        containerColor = barColor
-                    ) {
-                        Tab(
-                            selected = selectedTab == 0,
-                            onClick = { viewModel.deselectNovel() },
-                            text = { Text(stringResource(R.string.library)) }
-                        )
-                        if (selectedNovel != null) {
+                    if (selectedNovel != null) {
+                        TabRow(
+                            selectedTabIndex = (selectedTab - 1).coerceIn(0, 1),
+                            containerColor = barColor
+                        ) {
                             Tab(
                                 selected = selectedTab == 1,
                                 onClick = { viewModel.selectTab(1) },
@@ -334,12 +326,6 @@ fun LibraryScreen(
                                 selected = selectedTab == 2,
                                 onClick = { viewModel.selectTab(2) },
                                 text = { Text(stringResource(R.string.characters)) }
-                            )
-                        } else {
-                            Tab(
-                                selected = selectedTab == 1,
-                                onClick = { viewModel.selectTab(1) },
-                                text = { Text(stringResource(R.string.collections)) }
                             )
                         }
                     }
@@ -353,9 +339,16 @@ fun LibraryScreen(
                 }
             },
             bottomBar = {
-                if (selectedTab == 0 && stats.totalNovels > 0) {
-                    LibraryStatsBar(stats, wallpaperActive = wallpaperActive)
-                }
+                LibraryBottomBar(
+                    selectedTab = selectedTab,
+                    hasSelectedNovel = selectedNovel != null,
+                    stats = stats,
+                    wallpaperActive = wallpaperActive,
+                    onNavigate = { destination ->
+                        val tab = libraryDestinationTab(destination)
+                        if (tab == null) onNavigate(destination) else viewModel.selectTab(tab)
+                    }
+                )
             },
             snackbarHost = { SnackbarHost(snackbarHostState) },
         ) { padding ->
@@ -510,4 +503,34 @@ internal fun libraryTopBarTitle(
     selectedTab == 0 -> library
     novelTitle != null -> novelTitle
     else -> collections
+}
+
+internal fun libraryDestinationTab(destination: AppDestination): Int? = when (destination) {
+    AppDestination.LIBRARY -> 0
+    AppDestination.COLLECTIONS -> 1
+    AppDestination.FAVORITES, AppDestination.SETTINGS -> null
+}
+
+@Composable
+internal fun LibraryBottomBar(
+    selectedTab: Int,
+    hasSelectedNovel: Boolean,
+    stats: LibraryStats,
+    wallpaperActive: Boolean,
+    onNavigate: (AppDestination) -> Unit
+) {
+    Column {
+        if (selectedTab == 0 && stats.totalNovels > 0) {
+            LibraryStatsLine(stats = stats, wallpaperActive = wallpaperActive)
+        }
+        if (!hasSelectedNovel) {
+            AppNavBar(
+                selected = destinationFor(Routes.LIBRARY, selectedTab, hasSelectedNovel)
+                    ?: AppDestination.LIBRARY,
+                onSelect = onNavigate,
+                wallpaperActive = wallpaperActive,
+                modifier = Modifier.testTag(APP_NAV_BAR_TAG)
+            )
+        }
+    }
 }

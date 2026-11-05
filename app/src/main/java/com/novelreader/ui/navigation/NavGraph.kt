@@ -3,10 +3,14 @@ package com.novelreader.ui.navigation
 import android.net.Uri
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 
+import androidx.navigation.NavBackStackEntry
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -15,12 +19,14 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.navArgument
 import com.novelreader.ui.about.AboutScreen
+import com.novelreader.ui.components.AppDestination
 import com.novelreader.ui.favorites.FavoritesScreen
 import com.novelreader.ui.import_novel.ImportScreen
 import com.novelreader.ui.library.LibraryScreen
 import com.novelreader.ui.library.LibraryViewModel
 import com.novelreader.ui.reader.ReaderScreen
 import com.novelreader.ui.settings.SettingsScreen
+import com.novelreader.ui.theme.AppMotion
 
 object Routes {
     const val LIBRARY = "library"
@@ -46,6 +52,40 @@ object Routes {
     fun libraryWithFailedChapters(novelId: Long): String {
         return "library?${LibraryViewModel.ARG_SELECTED_NOVEL_ID}=$novelId&${LibraryViewModel.ARG_SHOW_FAILED}=true"
     }
+}
+
+private val topLevelRoutePrefixes = listOf(Routes.LIBRARY, Routes.FAVORITES, Routes.SETTINGS)
+
+fun topLevelRoute(destination: AppDestination): String = when (destination) {
+    AppDestination.LIBRARY, AppDestination.COLLECTIONS -> Routes.LIBRARY
+    AppDestination.FAVORITES -> Routes.FAVORITES
+    AppDestination.SETTINGS -> Routes.SETTINGS
+}
+
+const val LIBRARY_TAB_REQUEST_KEY = "libraryTabRequest"
+
+fun libraryTabRequest(destination: AppDestination): Int? = when (destination) {
+    AppDestination.LIBRARY -> 0
+    AppDestination.COLLECTIONS -> 1
+    AppDestination.FAVORITES, AppDestination.SETTINGS -> null
+}
+
+fun isTopLevelRoute(route: String?): Boolean =
+    route != null && topLevelRoutePrefixes.any { route.startsWith(it) }
+
+fun destinationFor(
+    route: String?,
+    selectedTab: Int,
+    hasSelectedNovel: Boolean
+): AppDestination? = when {
+    route == null -> null
+    route.startsWith(Routes.LIBRARY) ->
+        if (hasSelectedNovel) null
+        else if (selectedTab == 1) AppDestination.COLLECTIONS
+        else AppDestination.LIBRARY
+    route.startsWith(Routes.FAVORITES) -> AppDestination.FAVORITES
+    route.startsWith(Routes.SETTINGS) -> AppDestination.SETTINGS
+    else -> null
 }
 
 @Composable
@@ -99,12 +139,7 @@ fun NovelReaderNavGraph(
                 onImportClick = {
                     navController.navigate(Routes.IMPORT)
                 },
-                onFavoritesClick = {
-                    navController.navigate(Routes.FAVORITES)
-                },
-                onSettingsClick = {
-                    navController.navigate(Routes.SETTINGS)
-                },
+                onNavigate = { destination -> navController.navigateToTopLevel(destination) },
                 onChapterClick = { novelId, chapterId ->
                     navController.navigate(Routes.reader(novelId, chapterId))
                 }
@@ -147,14 +182,16 @@ fun NovelReaderNavGraph(
                 onChapterClick = { novelId, chapterId ->
                     navController.navigate(Routes.reader(novelId, chapterId))
                 },
-                onBack = { navController.popBackStack() }
+                onBack = { navController.popBackStack() },
+                onNavigate = { destination -> navController.navigateToTopLevel(destination) }
             )
         }
 
         animatedComposable(Routes.SETTINGS) {
             SettingsScreen(
                 onBack = { navController.popBackStack() },
-                onAboutClick = { navController.navigate(Routes.ABOUT) }
+                onAboutClick = { navController.navigate(Routes.ABOUT) },
+                onNavigate = { destination -> navController.navigateToTopLevel(destination) }
             )
         }
 
@@ -164,6 +201,24 @@ fun NovelReaderNavGraph(
     }
 }
 
+private fun NavHostController.navigateToTopLevel(destination: AppDestination) {
+    val requestedTab = libraryTabRequest(destination)
+    if (requestedTab != null) {
+        runCatching {
+            getBackStackEntry(graph.findStartDestination().id)
+                .savedStateHandle[LIBRARY_TAB_REQUEST_KEY] = requestedTab
+        }
+    }
+    navigate(topLevelRoute(destination)) {
+        popUpTo(graph.findStartDestination().id) { saveState = true }
+        launchSingleTop = true
+        restoreState = true
+    }
+}
+
+private fun AnimatedContentTransitionScope<NavBackStackEntry>.isTopLevelTransition(): Boolean =
+    isTopLevelRoute(initialState.destination.route) && isTopLevelRoute(targetState.destination.route)
+
 private fun NavGraphBuilder.animatedComposable(
     route: String,
     arguments: List<androidx.navigation.NamedNavArgument> = emptyList(),
@@ -172,9 +227,21 @@ private fun NavGraphBuilder.animatedComposable(
     composable(
         route = route,
         arguments = arguments,
-        enterTransition = { slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Start, tween(220)) },
-        exitTransition = { slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Start, tween(220)) },
-        popEnterTransition = { slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.End, tween(220)) },
-        popExitTransition = { slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.End, tween(220)) }
+        enterTransition = {
+            if (isTopLevelTransition()) fadeIn(tween(AppMotion.FadeMillis))
+            else slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Start, tween(220))
+        },
+        exitTransition = {
+            if (isTopLevelTransition()) fadeOut(tween(AppMotion.FadeMillis))
+            else slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Start, tween(220))
+        },
+        popEnterTransition = {
+            if (isTopLevelTransition()) fadeIn(tween(AppMotion.FadeMillis))
+            else slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.End, tween(220))
+        },
+        popExitTransition = {
+            if (isTopLevelTransition()) fadeOut(tween(AppMotion.FadeMillis))
+            else slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.End, tween(220))
+        }
     ) { entry -> content(entry) }
 }

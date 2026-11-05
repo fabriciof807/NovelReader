@@ -42,6 +42,8 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.novelreader.R
 import com.novelreader.data.parser.TitleExtractor
+import com.novelreader.ui.components.AppDestination
+import com.novelreader.ui.components.AppNavBar
 import com.novelreader.util.formatRelativeTime
 import java.text.DateFormat
 import java.util.Date
@@ -52,6 +54,7 @@ import java.util.Locale
 fun FavoritesScreen(
     onChapterClick: (Long, Long) -> Unit,
     onBack: () -> Unit,
+    onNavigate: (AppDestination) -> Unit,
     viewModel: FavoritesViewModel = hiltViewModel()
 ) {
     val items by viewModel.displayItems.collectAsState()
@@ -88,6 +91,9 @@ fun FavoritesScreen(
                     }
                 }
             )
+        },
+        bottomBar = {
+            AppNavBar(selected = AppDestination.FAVORITES, onSelect = onNavigate)
         }
     ) { padding ->
         Column(

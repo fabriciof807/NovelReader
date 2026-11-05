@@ -40,6 +40,7 @@ import com.novelreader.domain.usecase.RetryChapterUseCase
 import com.novelreader.domain.usecase.WebImportUseCase
 import kotlinx.coroutines.CoroutineDispatcher
 import com.novelreader.ui.library.mvi.LibraryState
+import com.novelreader.ui.navigation.LIBRARY_TAB_REQUEST_KEY
 import com.novelreader.ui.notifications.NotificationPermissionCoordinator
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -358,6 +359,14 @@ class LibraryViewModel @Inject constructor(
                 }
                 savedStateHandle.remove<Long>(ARG_SELECTED_NOVEL_ID)
                 savedStateHandle.remove<Boolean>(ARG_SHOW_FAILED)
+            }
+        }
+        viewModelScope.launch {
+            savedStateHandle.getStateFlow<Int?>(LIBRARY_TAB_REQUEST_KEY, null).collect { request ->
+                if (request == null || request !in 0..1) return@collect
+                if (_selectedNovel.value != null) deselectNovel()
+                selectTab(request)
+                savedStateHandle[LIBRARY_TAB_REQUEST_KEY] = null
             }
         }
     }

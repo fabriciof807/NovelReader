@@ -81,6 +81,8 @@ import com.novelreader.domain.usecase.ImportPreview
 import com.novelreader.domain.usecase.ImportPreviewEntry
 import com.novelreader.domain.usecase.ImportResult
 import com.novelreader.data.storage.WallpaperStorage
+import com.novelreader.ui.components.AppDestination
+import com.novelreader.ui.components.AppNavBar
 import com.novelreader.ui.customization.AccentColorPicker
 import com.novelreader.ui.customization.BlurSlider
 import com.novelreader.ui.customization.HomeWallpaperViewModel
@@ -106,6 +108,7 @@ import kotlinx.coroutines.launch
 fun SettingsScreen(
     onBack: () -> Unit,
     onAboutClick: () -> Unit = {},
+    onNavigate: (AppDestination) -> Unit,
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
     val appTheme by viewModel.appTheme.collectAsState()
@@ -494,6 +497,9 @@ fun SettingsScreen(
                     }
                 }
             )
+        },
+        bottomBar = {
+            AppNavBar(selected = AppDestination.SETTINGS, onSelect = onNavigate)
         }
     ) { padding ->
         Column(
