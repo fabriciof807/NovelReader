@@ -448,6 +448,10 @@ class ReaderViewModel @Inject constructor(
         viewModelScope.launch { readerPreferences.updateTapZones(value) }
     }
 
+    fun updateBatteryAlwaysOn(value: Boolean) {
+        viewModelScope.launch { readerPreferences.updateBatteryAlwaysOn(value) }
+    }
+
     /**
      * What a tap should do. Lives here, not in the screen, because the JS bridge is built inside an
      * `AndroidView` factory that runs once: a lambda there captures the composition it was built with

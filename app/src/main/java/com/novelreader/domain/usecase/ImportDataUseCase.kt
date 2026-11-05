@@ -323,6 +323,8 @@ class ImportDataUseCase @Inject constructor(
             r.optString("swipeDirection").takeIf { it.isNotBlank() }?.let { readerPreferences.updateSwipeDirection(it) }
             if (r.has("brightness")) readerPreferences.updateBrightness(r.optInt("brightness"))
             if (r.has("tapZones")) readerPreferences.updateTapZones(r.optBoolean("tapZones"))
+            val batteryAlwaysOn = r.opt("batteryAlwaysOn")
+            if (batteryAlwaysOn is Boolean) readerPreferences.updateBatteryAlwaysOn(batteryAlwaysOn)
             if (r.has("accentColor")) readerPreferences.updateAccentColor(r.optString("accentColor"))
             r.optString("wallpaper").takeIf { it.isNotBlank() }?.let { ref ->
                 readerPreferences.updateWallpaper(restorableWallpaperRef(ref))

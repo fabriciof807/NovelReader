@@ -113,7 +113,7 @@ class ExportDataUseCaseTest {
                 accentColor = "#8d6e63", wallpaper = "file:reader_1.jpg",
                 wallpaperBlur = 24, veil = 70,
                 autoScrollSpeed = 1.5f, keepScreenOn = false, swipeDirection = "horizontal",
-                brightness = 35, tapZones = true
+                brightness = 35, tapZones = true, batteryAlwaysOn = true
             )
         )
         every { libraryPreferences.sortOrder } returns flowOf("TITLE")
@@ -194,8 +194,31 @@ class ExportDataUseCaseTest {
             assertThat(reader.getInt("veil")).isEqualTo(70)
             assertThat(reader.getInt("brightness")).isEqualTo(35)
             assertThat(reader.getBoolean("tapZones")).isTrue()
+            assertThat(reader.getBoolean("batteryAlwaysOn")).isTrue()
         }
         assertThat(settings.getJSONObject("library").getString("sortOrder")).isEqualTo("TITLE")
+    }
+
+    @Test
+    fun `reader settings include batteryAlwaysOn`() = runTest {
+        val reader = JSONObject(useCase.execute())
+            .getJSONObject("settings")
+            .getJSONObject("reader")
+
+        assertThat(reader.getBoolean("batteryAlwaysOn")).isTrue()
+    }
+
+    @Test
+    fun `reader settings carry batteryAlwaysOn off by default`() = runTest {
+        every { readerPreferences.config } returns flowOf(
+            com.novelreader.data.local.preferences.ReaderConfig()
+        )
+
+        val reader = JSONObject(useCase.execute())
+            .getJSONObject("settings")
+            .getJSONObject("reader")
+
+        assertThat(reader.getBoolean("batteryAlwaysOn")).isFalse()
     }
 
     @Test

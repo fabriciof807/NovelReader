@@ -101,6 +101,7 @@ fun SettingsSheet(
     sleepTimerMinutes: Int? = null,
     onSleepTimerChange: (Int?) -> Unit = {},
     onTapZonesChange: (Boolean) -> Unit = {},
+    onBatteryAlwaysOnChange: (Boolean) -> Unit = {},
     onSwipeDirectionChange: (String) -> Unit = {},
     onDismiss: () -> Unit
 ) {
@@ -397,6 +398,12 @@ fun SettingsSheet(
                 description = stringResource(R.string.reader_tap_zones_desc),
                 checked = config.tapZones,
                 onCheckedChange = onTapZonesChange
+            )
+            ToggleRow(
+                title = stringResource(R.string.reader_battery_always_on),
+                description = stringResource(R.string.reader_battery_always_on_desc),
+                checked = config.batteryAlwaysOn,
+                onCheckedChange = onBatteryAlwaysOnChange
             )
 
             Spacer(modifier = Modifier.height(16.dp))

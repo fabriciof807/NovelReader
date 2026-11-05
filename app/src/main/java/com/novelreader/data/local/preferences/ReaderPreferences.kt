@@ -30,7 +30,8 @@ data class ReaderConfig(
     val keepScreenOn: Boolean = true,
     val swipeDirection: String = "vertical",
     val brightness: Int = PreferenceAllowlists.BRIGHTNESS_SYSTEM,
-    val tapZones: Boolean = false
+    val tapZones: Boolean = false,
+    val batteryAlwaysOn: Boolean = false
 )
 
 @Singleton
@@ -51,6 +52,7 @@ class ReaderPreferences @Inject constructor(
         val SWIPE_DIRECTION = stringPreferencesKey("swipe_direction")
         val BRIGHTNESS = intPreferencesKey("reader_brightness")
         val TAP_ZONES = booleanPreferencesKey("reader_tap_zones")
+        val BATTERY_ALWAYS_ON = booleanPreferencesKey("reader_battery_always_on")
     }
 
     val config: Flow<ReaderConfig> = context.dataStore.data.map { prefs ->
@@ -67,7 +69,8 @@ class ReaderPreferences @Inject constructor(
             keepScreenOn = prefs[Keys.KEEP_SCREEN_ON] ?: true,
             swipeDirection = PreferenceAllowlists.sanitizeSwipeDirection(prefs[Keys.SWIPE_DIRECTION]),
             brightness = PreferenceAllowlists.sanitizeBrightness(prefs[Keys.BRIGHTNESS]),
-            tapZones = prefs[Keys.TAP_ZONES] ?: false
+            tapZones = prefs[Keys.TAP_ZONES] ?: false,
+            batteryAlwaysOn = prefs[Keys.BATTERY_ALWAYS_ON] ?: false
         )
     }
 
@@ -134,5 +137,9 @@ class ReaderPreferences @Inject constructor(
 
     suspend fun updateTapZones(value: Boolean) {
         context.dataStore.edit { it[Keys.TAP_ZONES] = value }
+    }
+
+    suspend fun updateBatteryAlwaysOn(value: Boolean) {
+        context.dataStore.edit { it[Keys.BATTERY_ALWAYS_ON] = value }
     }
 }

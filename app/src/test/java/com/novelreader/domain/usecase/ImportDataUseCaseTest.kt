@@ -95,6 +95,8 @@ class ImportDataUseCaseTest {
                 updateAutoScrollSpeed(0f)
                 updateKeepScreenOn(true)
                 updateSwipeDirection("vertical")
+                updateTapZones(false)
+                updateBatteryAlwaysOn(false)
             }
             AppPreferences(appContext).apply {
                 updateAppTheme("system")
@@ -454,6 +456,84 @@ class ImportDataUseCaseTest {
         )
 
         assertThat(readerPrefs.config.first().tapZones).isTrue()
+    }
+
+    @Test
+    fun `restore applies batteryAlwaysOn true`() = runTest {
+        val readerPrefs = ReaderPreferences(appContext)
+
+        execute(
+            """
+            {
+              "novels": [],
+              "settings": {"reader": {"batteryAlwaysOn": true}}
+            }
+            """.trimIndent()
+        )
+
+        assertThat(readerPrefs.config.first().batteryAlwaysOn).isTrue()
+    }
+
+    @Test
+    fun `a backup without the key does not touch batteryAlwaysOn`() = runTest {
+        val readerPrefs = ReaderPreferences(appContext)
+        readerPrefs.updateBatteryAlwaysOn(true)
+
+        execute(
+            """
+            {
+              "novels": [],
+              "settings": {"reader": {"fontFamily": "monospace"}}
+            }
+            """.trimIndent()
+        )
+
+        assertThat(readerPrefs.config.first().batteryAlwaysOn).isTrue()
+    }
+
+    @Test
+    fun `a non-boolean batteryAlwaysOn value is ignored`() = runTest {
+        val readerPrefs = ReaderPreferences(appContext)
+        readerPrefs.updateBatteryAlwaysOn(true)
+
+        execute(
+            """
+            {
+              "novels": [],
+              "settings": {"reader": {"batteryAlwaysOn": "yes"}}
+            }
+            """.trimIndent()
+        )
+
+        assertThat(readerPrefs.config.first().batteryAlwaysOn).isTrue()
+
+        execute(
+            """
+            {
+              "novels": [],
+              "settings": {"reader": {"batteryAlwaysOn": 1}}
+            }
+            """.trimIndent()
+        )
+
+        assertThat(readerPrefs.config.first().batteryAlwaysOn).isTrue()
+    }
+
+    @Test
+    fun `a null batteryAlwaysOn value is ignored`() = runTest {
+        val readerPrefs = ReaderPreferences(appContext)
+        readerPrefs.updateBatteryAlwaysOn(true)
+
+        execute(
+            """
+            {
+              "novels": [],
+              "settings": {"reader": {"batteryAlwaysOn": null}}
+            }
+            """.trimIndent()
+        )
+
+        assertThat(readerPrefs.config.first().batteryAlwaysOn).isTrue()
     }
 
     @Test

@@ -191,6 +191,8 @@
     <string name="reader_sleep_timer_minutes">%1$d min</string>
     <string name="reader_tap_zones">Zonas de toque</string>
     <string name="reader_tap_zones_desc">Toque nas laterais para trocar de capítulo</string>
+    <string name="reader_battery_always_on">Indicador de bateria</string>
+    <string name="reader_battery_always_on_desc">Mostrar sempre a bateria. Desligada, ela aparece junto dos controles.</string>
     <string name="reader_battery_label">Bateria: %1$d%%</string>
     <string name="reader_battery_charging_label">Bateria: %1$d%% (carregando)</string>
     <string name="reader_chapter_read_label">Lido: %1$d%%</string>

@@ -49,7 +49,8 @@ class ReaderSettingsSheetTest {
         onBrightnessPreview: (Int) -> Unit = {},
         sleepTimerMinutes: Int? = null,
         onSleepTimerChange: (Int?) -> Unit = {},
-        onTapZonesChange: (Boolean) -> Unit = {}
+        onTapZonesChange: (Boolean) -> Unit = {},
+        onBatteryAlwaysOnChange: (Boolean) -> Unit = {}
     ) {
         composeTestRule.setContent {
             NovelReaderTheme {
@@ -72,6 +73,7 @@ class ReaderSettingsSheetTest {
                     sleepTimerMinutes = sleepTimerMinutes,
                     onSleepTimerChange = onSleepTimerChange,
                     onTapZonesChange = onTapZonesChange,
+                    onBatteryAlwaysOnChange = onBatteryAlwaysOnChange,
                     onDismiss = {}
                 )
             }
@@ -455,6 +457,35 @@ class ReaderSettingsSheetTest {
         setSheet(onTapZonesChange = { enabled = it })
 
         composeTestRule.onNodeWithText("Zonas de toque")
+            .performScrollTo()
+            .performSemanticsAction(SemanticsActions.OnClick)
+
+        assertThat(enabled).isTrue()
+    }
+
+    @Test
+    fun `the battery toggle shows its title and reflects config batteryAlwaysOn`() {
+        setSheet(config = ReaderConfig(theme = "indigo", batteryAlwaysOn = true))
+
+        composeTestRule.onNodeWithText("Indicador de bateria").performScrollTo().assertIsOn()
+        composeTestRule.onNodeWithText(
+            "Mostrar sempre a bateria. Desligada, ela aparece junto dos controles."
+        ).assertExists()
+    }
+
+    @Test
+    fun `the battery toggle is off by default`() {
+        setSheet()
+
+        composeTestRule.onNodeWithText("Indicador de bateria").performScrollTo().assertIsOff()
+    }
+
+    @Test
+    fun `toggling the battery toggle calls onBatteryAlwaysOnChange with the new value`() {
+        var enabled: Boolean? = null
+        setSheet(onBatteryAlwaysOnChange = { enabled = it })
+
+        composeTestRule.onNodeWithText("Indicador de bateria")
             .performScrollTo()
             .performSemanticsAction(SemanticsActions.OnClick)
 

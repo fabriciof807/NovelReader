@@ -631,6 +631,13 @@ class ReaderViewModelTest {
     }
 
     @Test
+    fun `updateBatteryAlwaysOn writes through to preferences`() = runTest {
+        viewModel = createViewModel()
+        viewModel.updateBatteryAlwaysOn(true)
+        coVerify { readerPrefs.updateBatteryAlwaysOn(true) }
+    }
+
+    @Test
     fun `a tap follows the stored tap zones setting`() = runTest {
         every { readerPrefs.config } returns flowOf(com.novelreader.data.local.preferences.ReaderConfig(tapZones = false))
         viewModel = createViewModel()

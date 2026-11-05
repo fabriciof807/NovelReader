@@ -313,6 +313,7 @@ fun ReaderScreen(
             },
             onSwipeDirectionChange = { viewModel.updateSwipeDirection(it) },
             onTapZonesChange = { viewModel.updateTapZones(it) },
+            onBatteryAlwaysOnChange = { viewModel.updateBatteryAlwaysOn(it) },
             onDismiss = { viewModel.hideSettings() }
         )
     }

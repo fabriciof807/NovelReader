@@ -113,4 +113,21 @@ class ReaderPreferencesTest {
         prefs.updateTapZones(false)
         assertThat(prefs.config.first().tapZones).isFalse()
     }
+
+    @Test
+    fun `batteryAlwaysOn defaults to false`() = runTest {
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        val prefs = ReaderPreferences(context)
+        assertThat(prefs.config.first().batteryAlwaysOn).isFalse()
+    }
+
+    @Test
+    fun `updateBatteryAlwaysOn persists and is read back`() = runTest {
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        val prefs = ReaderPreferences(context)
+        prefs.updateBatteryAlwaysOn(true)
+        assertThat(prefs.config.first().batteryAlwaysOn).isTrue()
+        prefs.updateBatteryAlwaysOn(false)
+        assertThat(prefs.config.first().batteryAlwaysOn).isFalse()
+    }
 }
