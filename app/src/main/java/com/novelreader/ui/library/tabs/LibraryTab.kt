@@ -65,6 +65,10 @@ import com.novelreader.ui.library.components.ImportProgressBanner
 import com.novelreader.ui.library.components.LibraryEmptyState
 import com.novelreader.ui.library.components.NovelCard
 import com.novelreader.ui.library.components.NovelListItem
+import com.novelreader.ui.library.components.novelImportOverlay
+import com.novelreader.ui.library.components.queuedTitleKeys
+
+private const val NOVEL_CONTENT_TYPE = "novel"
 
 internal fun filterNovels(
     novels: List<NovelEntity>,
@@ -123,7 +127,13 @@ fun LibraryTab(
     onImportWeb: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    val chipFiltered = filterNovels(novels, searchQuery, filterChip, readProgress)
+    val chipFiltered = remember(novels, searchQuery, filterChip, readProgress) {
+        filterNovels(novels, searchQuery, filterChip, readProgress)
+    }
+    val queuedKeys = remember(backgroundImportState.queuedNovelTitles) {
+        queuedTitleKeys(backgroundImportState.queuedNovelTitles)
+    }
+    val chipColors = filterChipColors(wallpaperActive)
 
     val queuedNotShown = remember(backgroundImportState.queuedNovelTitles, novels) {
         queuedNovelsNotShown(backgroundImportState.queuedNovelTitles, novels)
@@ -151,25 +161,25 @@ fun LibraryTab(
             FilterChip(
                 selected = filterChip == NovelFilter.ALL,
                 onClick = { onFilterChipChange(NovelFilter.ALL) },
-                colors = filterChipColors(wallpaperActive),
+                colors = chipColors,
                 label = { Text(stringResource(R.string.filter_all)) }
             )
             FilterChip(
                 selected = filterChip == NovelFilter.READING,
                 onClick = { onFilterChipChange(NovelFilter.READING) },
-                colors = filterChipColors(wallpaperActive),
+                colors = chipColors,
                 label = { Text(stringResource(R.string.filter_reading)) }
             )
             FilterChip(
                 selected = filterChip == NovelFilter.COMPLETED,
                 onClick = { onFilterChipChange(NovelFilter.COMPLETED) },
-                colors = filterChipColors(wallpaperActive),
+                colors = chipColors,
                 label = { Text(stringResource(R.string.filter_completed)) }
             )
             FilterChip(
                 selected = filterChip == NovelFilter.FAVORITES,
                 onClick = { onFilterChipChange(NovelFilter.FAVORITES) },
-                colors = filterChipColors(wallpaperActive),
+                colors = chipColors,
                 label = { Text(stringResource(R.string.filter_favorite_novels)) }
             )
         }
@@ -206,12 +216,12 @@ fun LibraryTab(
                 verticalArrangement = Arrangement.spacedBy(12.dp),
                 modifier = Modifier.weight(1f).fillMaxWidth()
             ) {
-                items(chipFiltered) { novel ->
+                items(chipFiltered, contentType = { NOVEL_CONTENT_TYPE }) { novel ->
                     NovelCard(
                         novel = novel,
                         readProgress = readProgress[novel.id] ?: 0f,
                         newChapterCount = newChapterCounts[novel.id] ?: 0,
-                        bgState = backgroundImportState,
+                        importOverlay = novelImportOverlay(novel.title, backgroundImportState, queuedKeys),
                         onClick = { onNovelClick(novel) },
                         onLongClick = { menuNovelId = novel.id },
                         onShowMenu = { menuNovelId = novel.id },
@@ -219,7 +229,7 @@ fun LibraryTab(
                     )
                     NovelMenu(
                         novel = novel,
-                        expanded = menuNovelId == novel.id,
+                        expanded = { menuNovelId == novel.id },
                         onDismiss = { menuNovelId = null },
                         onChangeCover = { menuNovelId = null; onRequestChangeCover(novel) },
                         onCoverByUrl = { menuNovelId = null; onRequestCoverByUrl(novel) },
@@ -240,19 +250,19 @@ fun LibraryTab(
                 verticalArrangement = Arrangement.spacedBy(4.dp),
                 modifier = Modifier.weight(1f).fillMaxWidth()
             ) {
-                items(chipFiltered) { novel ->
+                items(chipFiltered, contentType = { NOVEL_CONTENT_TYPE }) { novel ->
                     NovelListItem(
                         novel = novel,
                         readProgress = readProgress[novel.id] ?: 0f,
                         newChapterCount = newChapterCounts[novel.id] ?: 0,
-                        bgState = backgroundImportState,
+                        importOverlay = novelImportOverlay(novel.title, backgroundImportState, queuedKeys),
                         onClick = { onNovelClick(novel) },
                         onLongClick = { menuNovelId = novel.id },
                         onShowMenu = { menuNovelId = novel.id }
                     )
                     NovelMenu(
                         novel = novel,
-                        expanded = menuNovelId == novel.id,
+                        expanded = { menuNovelId == novel.id },
                         onDismiss = { menuNovelId = null },
                         onChangeCover = { menuNovelId = null; onRequestChangeCover(novel) },
                         onCoverByUrl = { menuNovelId = null; onRequestCoverByUrl(novel) },
@@ -273,7 +283,7 @@ fun LibraryTab(
 @Composable
 private fun NovelMenu(
     novel: NovelEntity,
-    expanded: Boolean,
+    expanded: () -> Boolean,
     onDismiss: () -> Unit,
     onChangeCover: () -> Unit,
     onCoverByUrl: () -> Unit,
@@ -286,7 +296,7 @@ private fun NovelMenu(
     onDelete: () -> Unit
 ) {
     DropdownMenu(
-        expanded = expanded,
+        expanded = expanded(),
         onDismissRequest = onDismiss
     ) {
         DropdownMenuItem(

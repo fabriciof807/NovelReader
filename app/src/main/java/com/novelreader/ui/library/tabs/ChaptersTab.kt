@@ -35,6 +35,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
@@ -103,12 +104,13 @@ fun ChaptersTab(
             firstVisibleItemScrollOffset = initialScroll?.firstVisibleItemScrollOffset ?: 0
         )
     }
+    val currentOnScroll by rememberUpdatedState(onScroll)
     LaunchedEffect(listState) {
         snapshotFlow {
             listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset
         }
             .debounce(300)
-            .collect { (idx, off) -> onScroll(idx, off) }
+            .collect { (idx, off) -> currentOnScroll(idx, off) }
     }
     LaunchedEffect(pendingScrollToFailedNovelId, chapters.size, failedChapters.size) {
         val target = pendingScrollToFailedNovelId
@@ -185,7 +187,7 @@ fun ChaptersTab(
                     }
                 }
             }
-            items(chapters, key = { it.id }) { chapter ->
+            items(chapters, key = { it.id }, contentType = { "chapter" }) { chapter ->
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -276,7 +278,7 @@ fun ChaptersTab(
                     }
                 }
             }
-            items(failedChapters, key = { it.id }) { failed ->
+            items(failedChapters, key = { it.id }, contentType = { "failed" }) { failed ->
                 FailedChapterRow(
                     failed = failed,
                     onRetry = { onRetryFailed(failed) },

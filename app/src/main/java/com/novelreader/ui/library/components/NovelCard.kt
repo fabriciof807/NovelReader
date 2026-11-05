@@ -43,7 +43,6 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.novelreader.R
 import com.novelreader.data.local.db.entity.NovelEntity
-import com.novelreader.domain.usecase.BackgroundImportState
 import com.novelreader.util.formatRelativeTime
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -52,7 +51,7 @@ fun NovelCard(
     novel: NovelEntity,
     readProgress: Float = 0f,
     newChapterCount: Int = 0,
-    bgState: BackgroundImportState,
+    importOverlay: NovelImportOverlay = NovelImportOverlay.None,
     onClick: () -> Unit,
     onLongClick: () -> Unit,
     onShowMenu: () -> Unit = {},
@@ -98,7 +97,7 @@ fun NovelCard(
                         )
                     }
                 }
-                if (bgState.queuedNovelTitles.any { it.equals(novel.title, ignoreCase = true) }) {
+                if (importOverlay is NovelImportOverlay.Queued) {
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
@@ -112,7 +111,7 @@ fun NovelCard(
                         )
                     }
                 }
-                if (bgState.running && bgState.novelTitle == novel.title) {
+                if (importOverlay is NovelImportOverlay.Importing) {
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
@@ -131,14 +130,14 @@ fun NovelCard(
                             Spacer(modifier = Modifier.height(4.dp))
                             LinearProgressIndicator(
                                 progress = {
-                                    if (bgState.totalToImport > 0) bgState.importedCount.toFloat() / bgState.totalToImport
+                                    if (importOverlay.total > 0) importOverlay.imported.toFloat() / importOverlay.total
                                     else 0f
                                 },
                                 modifier = Modifier.fillMaxWidth()
                             )
                             Spacer(modifier = Modifier.height(2.dp))
                             Text(
-                                text = "${bgState.importedCount} / ${bgState.totalToImport}",
+                                text = "${importOverlay.imported} / ${importOverlay.total}",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = Color.White
                             )
