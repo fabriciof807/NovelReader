@@ -1,12 +1,6 @@
 package com.novelreader.ui.components
 
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
-import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
@@ -23,13 +17,10 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
@@ -48,18 +39,16 @@ import com.novelreader.R
 import com.novelreader.data.local.db.entity.NovelEntity
 import com.novelreader.ui.customization.libraryContainerColor
 import com.novelreader.ui.library.components.NovelImportOverlay
-import com.novelreader.ui.theme.AppMotion
 import com.novelreader.ui.theme.AppShapes
+import com.novelreader.ui.theme.pressable
 
 const val NOVEL_COVER_TITLE_TAG = "novelCoverTitle"
 const val NOVEL_COVER_PROGRESS_TAG = "novelCoverProgress"
 
 private const val CoverAspectRatio = 3f / 4f
-private const val PressedScale = 0.97f
 private const val TitleMaxLines = 2
 internal const val OverlayScrimAlpha = 0.6f
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun NovelCover(
     novel: NovelEntity,
@@ -75,13 +64,6 @@ fun NovelCover(
     val titleStyle = MaterialTheme.typography.bodySmall
     val density = LocalDensity.current
     val haptic = LocalHapticFeedback.current
-    val interactionSource = remember { MutableInteractionSource() }
-    val pressed by interactionSource.collectIsPressedAsState()
-    val scale by animateFloatAsState(
-        targetValue = if (pressed) PressedScale else 1f,
-        animationSpec = AppMotion.press(),
-        label = "novelCoverPress"
-    )
     val titleBlockHeight = twoLineHeight(titleStyle, density.fontScale)
 
     Column(
@@ -89,13 +71,7 @@ fun NovelCover(
             .fillMaxWidth()
             .clip(AppShapes.Card)
             .background(scheme.surface)
-            .graphicsLayer {
-                scaleX = scale
-                scaleY = scale
-            }
-            .combinedClickable(
-                interactionSource = interactionSource,
-                indication = LocalIndication.current,
+            .pressable(
                 onClick = onClick,
                 onLongClick = {
                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)

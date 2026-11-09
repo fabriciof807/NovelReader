@@ -3,6 +3,7 @@ package com.novelreader.ui.reader
 import android.app.Activity
 import android.view.View
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.FiniteAnimationSpec
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -39,11 +40,13 @@ import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowInsetsControllerCompat
 import com.novelreader.R
 import com.novelreader.ui.theme.AppDimens
 import com.novelreader.ui.theme.AppMotion
+import com.novelreader.ui.theme.rememberReducedMotion
 
 data class ReaderChromeState(
     val topBar: Boolean,
@@ -98,14 +101,18 @@ fun ReaderChromeOverlay(
     optionsBar: @Composable () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val reducedMotion = rememberReducedMotion()
+    val fadeSpec = tween<Float>(AppMotion.fadeMillis(reducedMotion))
+    val slideSpec = readerBarSlideSpec(reducedMotion)
+    val topOffset = if (reducedMotion) NoSlideOffset else TopBarSlideOffset
+    val bottomOffset = if (reducedMotion) NoSlideOffset else OptionsBarSlideOffset
+
     Box(modifier = modifier.fillMaxSize()) {
         AnimatedVisibility(
             visible = chrome.topBar,
             modifier = Modifier.align(Alignment.TopCenter),
-            enter = fadeIn(tween(AppMotion.FadeMillis)) +
-                slideInVertically(tween(AppMotion.FadeMillis)) { -it / 4 },
-            exit = fadeOut(tween(AppMotion.FadeMillis)) +
-                slideOutVertically(tween(AppMotion.FadeMillis)) { -it / 4 }
+            enter = fadeIn(fadeSpec) + slideInVertically(slideSpec, initialOffsetY = topOffset),
+            exit = fadeOut(fadeSpec) + slideOutVertically(slideSpec, targetOffsetY = topOffset)
         ) {
             topBar()
         }
@@ -118,10 +125,10 @@ fun ReaderChromeOverlay(
         ) {
             AnimatedVisibility(
                 visible = chrome.optionsBar,
-                enter = fadeIn(tween(AppMotion.FadeMillis)) +
-                    slideInVertically(tween(AppMotion.FadeMillis)) { it / 2 },
-                exit = fadeOut(tween(AppMotion.FadeMillis)) +
-                    slideOutVertically(tween(AppMotion.FadeMillis)) { it / 2 }
+                enter = fadeIn(fadeSpec) +
+                    slideInVertically(slideSpec, initialOffsetY = bottomOffset),
+                exit = fadeOut(fadeSpec) +
+                    slideOutVertically(slideSpec, targetOffsetY = bottomOffset)
             ) {
                 optionsBar()
             }
@@ -146,6 +153,13 @@ fun ReaderChromeOverlay(
         }
     }
 }
+
+private val TopBarSlideOffset: (Int) -> Int = { height -> -height / 4 }
+private val OptionsBarSlideOffset: (Int) -> Int = { height -> height / 2 }
+private val NoSlideOffset: (Int) -> Int = { 0 }
+
+private fun readerBarSlideSpec(reduced: Boolean): FiniteAnimationSpec<IntOffset> =
+    if (reduced) tween(AppMotion.slideMillis(reduced)) else AppMotion.settle(hasMomentum = false)
 
 @Composable
 private fun ReaderSleepPill(

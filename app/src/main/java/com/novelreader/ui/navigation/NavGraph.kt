@@ -27,6 +27,7 @@ import com.novelreader.ui.library.LibraryViewModel
 import com.novelreader.ui.reader.ReaderScreen
 import com.novelreader.ui.settings.SettingsScreen
 import com.novelreader.ui.theme.AppMotion
+import com.novelreader.ui.theme.rememberReducedMotion
 
 object Routes {
     const val LIBRARY = "library"
@@ -95,6 +96,7 @@ fun NovelReaderNavGraph(
 ) {
     val currentBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = currentBackStackEntry?.destination?.route
+    val reducedMotion = rememberReducedMotion()
 
     LaunchedEffect(Unit) {
         deepLinkBus.events.collect { action ->
@@ -133,7 +135,8 @@ fun NovelReaderNavGraph(
                     type = NavType.BoolType
                     defaultValue = false
                 }
-            )
+            ),
+            reducedMotion = reducedMotion
         ) {
             LibraryScreen(
                 onImportClick = {
@@ -146,7 +149,7 @@ fun NovelReaderNavGraph(
             )
         }
 
-        animatedComposable(Routes.IMPORT) {
+        animatedComposable(Routes.IMPORT, reducedMotion = reducedMotion) {
             ImportScreen(
                 onBack = { navController.popBackStack() },
                 onImportComplete = {
@@ -160,7 +163,8 @@ fun NovelReaderNavGraph(
                 navArgument("novelId") { type = NavType.LongType },
                 navArgument("chapterId") { type = NavType.LongType },
                 navArgument("searchQuery") { type = NavType.StringType; defaultValue = "" }
-            )
+            ),
+            reducedMotion = reducedMotion
         ) { backStackEntry ->
             val novelId = backStackEntry.arguments?.getLong("novelId", -1L)?.takeIf { it != -1L } ?: return@animatedComposable
             val chapterId = backStackEntry.arguments?.getLong("chapterId", -1L)?.takeIf { it != -1L } ?: return@animatedComposable
@@ -177,7 +181,7 @@ fun NovelReaderNavGraph(
             )
         }
 
-        animatedComposable(Routes.FAVORITES) {
+        animatedComposable(Routes.FAVORITES, reducedMotion = reducedMotion) {
             FavoritesScreen(
                 onChapterClick = { novelId, chapterId ->
                     navController.navigate(Routes.reader(novelId, chapterId))
@@ -187,7 +191,7 @@ fun NovelReaderNavGraph(
             )
         }
 
-        animatedComposable(Routes.SETTINGS) {
+        animatedComposable(Routes.SETTINGS, reducedMotion = reducedMotion) {
             SettingsScreen(
                 onBack = { navController.popBackStack() },
                 onAboutClick = { navController.navigate(Routes.ABOUT) },
@@ -195,7 +199,7 @@ fun NovelReaderNavGraph(
             )
         }
 
-        animatedComposable(Routes.ABOUT) {
+        animatedComposable(Routes.ABOUT, reducedMotion = reducedMotion) {
             AboutScreen(onBack = { navController.popBackStack() })
         }
     }
@@ -222,26 +226,30 @@ private fun AnimatedContentTransitionScope<NavBackStackEntry>.isTopLevelTransiti
 private fun NavGraphBuilder.animatedComposable(
     route: String,
     arguments: List<androidx.navigation.NamedNavArgument> = emptyList(),
+    reducedMotion: Boolean = false,
     content: @Composable (androidx.navigation.NavBackStackEntry) -> Unit
 ) {
+    val fadeMillis = AppMotion.fadeMillis(reducedMotion)
+    val slideMillis = AppMotion.slideMillis(reducedMotion)
+
     composable(
         route = route,
         arguments = arguments,
         enterTransition = {
-            if (isTopLevelTransition()) fadeIn(tween(AppMotion.FadeMillis))
-            else slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Start, tween(220))
+            if (isTopLevelTransition()) fadeIn(tween(fadeMillis))
+            else slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Start, tween(slideMillis))
         },
         exitTransition = {
-            if (isTopLevelTransition()) fadeOut(tween(AppMotion.FadeMillis))
-            else slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Start, tween(220))
+            if (isTopLevelTransition()) fadeOut(tween(fadeMillis))
+            else slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Start, tween(slideMillis))
         },
         popEnterTransition = {
-            if (isTopLevelTransition()) fadeIn(tween(AppMotion.FadeMillis))
-            else slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.End, tween(220))
+            if (isTopLevelTransition()) fadeIn(tween(fadeMillis))
+            else slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.End, tween(slideMillis))
         },
         popExitTransition = {
-            if (isTopLevelTransition()) fadeOut(tween(AppMotion.FadeMillis))
-            else slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.End, tween(220))
+            if (isTopLevelTransition()) fadeOut(tween(fadeMillis))
+            else slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.End, tween(slideMillis))
         }
     ) { entry -> content(entry) }
 }

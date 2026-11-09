@@ -1,6 +1,8 @@
 package com.novelreader.ui.components
 
+import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -27,6 +29,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -45,6 +48,8 @@ import com.novelreader.ui.theme.AppShapes
 import com.novelreader.ui.theme.MinContrast
 import com.novelreader.ui.theme.contrastRatio
 import com.novelreader.ui.theme.mutedForeground
+import com.novelreader.ui.theme.pressedScale
+import com.novelreader.ui.theme.rememberReducedMotion
 
 enum class AppDestination {
     LIBRARY,
@@ -105,6 +110,7 @@ fun AppNavBar(
     val colors = appNavBarColors(MaterialTheme.colorScheme, wallpaperActive)
     val labelStyle = MaterialTheme.typography.labelSmall
     val barHeight = appNavBarHeight(labelStyle.fontSize.value, LocalDensity.current.fontScale)
+    val reducedMotion = rememberReducedMotion()
 
     Surface(
         modifier = modifier.fillMaxWidth(),
@@ -127,6 +133,7 @@ fun AppNavBar(
                     destination = destination,
                     selected = destination == selected,
                     colors = colors,
+                    reducedMotion = reducedMotion,
                     onClick = { onSelect(destination) }
                 )
             }
@@ -139,12 +146,22 @@ private fun RowScope.AppNavBarItem(
     destination: AppDestination,
     selected: Boolean,
     colors: AppNavBarColors,
+    reducedMotion: Boolean,
     onClick: () -> Unit
 ) {
+    val interactionSource = remember { MutableInteractionSource() }
+
     Column(
         modifier = Modifier
             .weight(1f)
-            .selectable(selected = selected, onClick = onClick, role = Role.Tab)
+            .pressedScale(interactionSource, reducedMotion)
+            .selectable(
+                selected = selected,
+                interactionSource = interactionSource,
+                indication = LocalIndication.current,
+                role = Role.Tab,
+                onClick = onClick
+            )
             .testTag(appNavBarItemTag(destination))
             .padding(horizontal = 2.dp, vertical = ItemVerticalPadding),
         horizontalAlignment = Alignment.CenterHorizontally,
