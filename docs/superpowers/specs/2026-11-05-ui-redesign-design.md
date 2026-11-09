@@ -77,7 +77,7 @@ O texto continua sem atenuação (o contraste depende da imagem), como o `AGENTS
 ### 6.4 Opção "Indicador de bateria"
 
 - Nos ajustes do leitor, com `OptionLabel`. **Desligado (padrão):** a bateria some com o resto e só aparece ao tocar no centro. **Ligado:** fica sempre visível, discreta, mesmo no modo imersivo.
-- O percentual de leitura segue a mesma opção.
+- O percentual de leitura não existe hoje no leitor (a faixa de status mostra só bateria e timer); fica fora desta entrega.
 - O contador do timer de sono, enquanto roda, fica sempre visível (evita saída automática por surpresa).
 - Chave nova em `reader_prefs`, saneada em `PreferenceAllowlists` (valor inválido vira "desligado"). Entra no backup v3.
 

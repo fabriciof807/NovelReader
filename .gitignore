@@ -55,3 +55,6 @@ firebase-credentials.json
 service-account*.json
 *-credentials.json
 *-service-account.json
+
+.superpowers/
+.work/

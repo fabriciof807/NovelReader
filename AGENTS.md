@@ -245,23 +245,38 @@ search box (`LibraryBrowseStateTest` covers the round trip).
 
 ### Library bottom bar
 
-`LibraryStatsBar` (novels/chapters/bookmarks counters) is the `Scaffold`'s
-`bottomBar`, not a sibling inside the tab content: that is what keeps the "+" FAB
-above it, since the Scaffold offsets its FAB by the bottom bar height. Keep it in
-the `bottomBar` slot (or the FAB covers the counters again — `LibraryStatsBarTest`
-asserts the two do not overlap) and keep the FAB in `LibraryFab`, whose
-`LibraryFabClearance` (12dp) adds breathing room on top of the Scaffold's own
-16dp lift: without it the button reads as flush against the counters. The test
-asserts the gap against the bar's top edge, not against a counter label (the bar
-has 10dp of vertical padding, so measuring the label overstates the clearance by
-~30dp). The bar applies the navigation bar inset to its **content**
-(`windowInsetsPadding` inside the `Surface`, never on it), so the counters colour
-covers the Android navigation bar strip below — on the `Surface` the inset only
-shrinks the painted area and the strip kept the wallpaper veil, so the screen
-ended in a different surface than the counters above it, and the wallpaper stayed
-visible behind the gesture bar. `LibraryScreen` keeps drawing
-`NavigationBarVeil` for the screens without a counters bar (the chapter and
-character tabs, an empty library).
+The `Scaffold`'s `bottomBar` is `LibraryBottomBar`: a `Column` with the one-line
+`LibraryStatsLine` (novels/chapters/bookmarks counters, only on the novels tab with
+at least one novel) above the `AppNavBar` (four destinations: Library, Collections,
+Favorites, Settings; hidden while a novel's detail is open). Library and Collections
+are tabs of `LibraryScreen`, Favorites and Settings are their own routes that put the
+same `AppNavBar` in their `bottomBar`; `Routes`, deep links and `DeepLinkBus` did not
+change. Top-level moves fade (`AppMotion.FadeMillis`), deeper ones slide.
+
+Keep both in the `bottomBar` slot: that is what keeps the "+" FAB above them, since the
+Scaffold offsets its FAB by the bottom bar height (`LibraryStatsLineTest` asserts the
+two do not overlap). The FAB stays in `LibraryFab`, whose `LibraryFabClearance` (12dp)
+adds breathing room on top of the Scaffold's own 16dp lift, measured against the bar's
+top edge, not against a label. The bars apply the navigation bar inset to their
+**content** (`windowInsetsPadding` inside the `Surface`, never on it), so their colour
+covers the Android navigation bar strip; on the `Surface` the inset only shrinks the
+painted area and the strip kept the wallpaper veil. `LibraryScreen` keeps drawing
+`NavigationBarVeil` for the novel detail, where the nav bar is hidden and a wallpaper
+is active. The nav bar is 46dp by decision (2dp under the 48dp touch target, to be judged
+on a device) and grows with the font scale (`appNavBarHeight`).
+
+### Motion
+
+`AppMotion` (`ui/theme/AppTokens.kt`) is the single source: `press()` (critically
+damped spring), `settle(hasMomentum)` (0.8 damping only when the gesture carries
+momentum), `fadeMillis(reduced)` / `slideMillis(reduced)`. `rememberReducedMotion()`
+reads `Settings.Global.ANIMATOR_DURATION_SCALE` (re-read on `ON_RESUME`) and "remove
+animations" turns every duration into zero and the press scale into a `snap()`.
+`Modifier.pressable` / `pressedScale` scale to 0.97 inside `graphicsLayer { }`, so the
+animated value is read in the draw phase, never in composition. The `NavGraph` reads
+`reducedMotion` outside the transition lambdas (they are not composable) and passes it
+to `animatedComposable`. Each `NovelCover` creates one lifecycle observer through
+`pressable`; if the grid ever stutters with many novels, read it once in `LibraryTab`.
 
 ### Wallpaper crop
 
@@ -316,7 +331,7 @@ and `containerContent` keeps the label readable (falls back to black/white when 
 custom accent is too light). `AppPaletteTest` asserts both.
 
 The same rule applies to text drawn over a wallpaper: the library's text-bearing
-containers (novel cards, the unselected filter chips, `LibraryStatsBar`, the queued
+containers (novel cards, the unselected filter chips, `LibraryStatsLine`, the queued
 rows) go through `libraryContainerColor`, which swaps their translucent/transparent
 fill for the opaque `surface` while a wallpaper is active. Measured on a light
 built-in wallpaper ("Amanhecer") the transparent chips sat at 2.19:1 and the
@@ -387,6 +402,20 @@ saved themes (`SavedThemeCodec`, JSON in `app_prefs.saved_themes`) and
 switching a theme cannot change the user's background. The reset keeps the saved
 themes and deletes the wallpaper files. Both surfaces (Settings and the reader
 sheet) render the same `SavedThemesSection`.
+
+### Reader chrome (immersive)
+
+The reader opens with **only the text** (`READER_OPTIONS_INITIALLY_VISIBLE = false`).
+A single tap in the centre shows the thin top bar (back, chapter title, search) and the
+floating options bar together; they hide by themselves after 4s. This replaces the
+always-visible top bar of v2.9.2 (`docs/DECISIONS.md`). `readerChrome(...)` in
+`ReaderChrome.kt` is the pure visibility rule: an active search keeps the top bar, a
+running sleep timer keeps its pill, and the optional battery indicator
+(`reader_battery_always_on`, off by default, in the v3 backup) keeps the status strip.
+The text reserves `readerStatusReserve(labelLineHeight)` at the bottom only when that
+strip is always on, so it follows the font scale. The status bar icon tone belongs to
+the reader while it is on screen (`applySystemBarAppearance`, re-applied after the
+transition because the library's `WallpaperVariantTheme` disposes late).
 
 ### Reader gestures (tap, swipe, selection)
 
@@ -539,7 +568,7 @@ Two independent global slots (`WallpaperStorage.SLOT_HOME`, `SLOT_READER`), neve
 - **Instrumented tests**: Room in-memory DB, Compose Test Rule, Espresso
 - Parser tests use real HTML fixtures
 - ViewModel tests inject mocked DAOs/use cases
-- **Current count: 929 unit tests**
+- **Current count: 1027 unit tests**
 - **Always run `./gradlew :app:compileDebugKotlin :app:testDebugUnitTest` before pushing**
 
 ## Recent Sessions
