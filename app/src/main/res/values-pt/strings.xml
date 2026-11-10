@@ -346,6 +346,8 @@
     <!-- Import background work -->
     <string name="import_notification_channel_name">Importação de novels</string>
     <string name="import_notification_channel_desc">Notificações de imports em segundo plano</string>
+    <string name="import_notification_error_channel_name">Falhas de importação</string>
+    <string name="import_notification_error_channel_desc">Notificações de falhas de importação</string>
     <string name="import_notification_title">Importando %s</string>
     <string name="import_notification_text">Capítulo %1$d de %2$d</string>
     <string name="import_notification_pending">Na fila: %d</string>

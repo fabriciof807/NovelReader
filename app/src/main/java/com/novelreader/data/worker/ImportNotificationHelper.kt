@@ -24,6 +24,7 @@ class ImportNotificationHelper @Inject constructor(
 ) {
     companion object {
         const val CHANNEL_ID = "novel_import_channel"
+        const val ERROR_CHANNEL_ID = "novel_import_error_channel"
         const val NOTIFICATION_ID_BASE = 1000
         const val COMPLETION_NOTIFICATION_ID = 9999
     }
@@ -39,6 +40,23 @@ class ImportNotificationHelper @Inject constructor(
                 ).apply {
                     description = context.getString(R.string.import_notification_channel_desc)
                     setShowBadge(false)
+                }
+                manager.createNotificationChannel(channel)
+            }
+        }
+    }
+
+    fun ensureErrorChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val manager = context.getSystemService(NotificationManager::class.java)
+            if (manager.getNotificationChannel(ERROR_CHANNEL_ID) == null) {
+                val channel = NotificationChannel(
+                    ERROR_CHANNEL_ID,
+                    context.getString(R.string.import_notification_error_channel_name),
+                    NotificationManager.IMPORTANCE_DEFAULT
+                ).apply {
+                    description = context.getString(R.string.import_notification_error_channel_desc)
+                    setShowBadge(true)
                 }
                 manager.createNotificationChannel(channel)
             }
@@ -123,10 +141,10 @@ class ImportNotificationHelper @Inject constructor(
     }
 
     fun postFailureNotification(spec: ImportJobSpec) {
-        ensureChannel()
+        ensureErrorChannel()
         val title = context.getString(R.string.import_notification_failed, spec.novelTitle)
 
-        val notification = NotificationCompat.Builder(context, CHANNEL_ID)
+        val notification = NotificationCompat.Builder(context, ERROR_CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle(title)
             .setOngoing(false)

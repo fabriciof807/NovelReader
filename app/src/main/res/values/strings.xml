@@ -346,6 +346,8 @@
     <!-- Import background work -->
     <string name="import_notification_channel_name">Novel imports</string>
     <string name="import_notification_channel_desc">Background import notifications</string>
+    <string name="import_notification_error_channel_name">Import failures</string>
+    <string name="import_notification_error_channel_desc">Notifications for import failures</string>
     <string name="import_notification_title">Importing %s</string>
     <string name="import_notification_text">Chapter %1$d of %2$d</string>
     <string name="import_notification_pending">Queued: %d</string>

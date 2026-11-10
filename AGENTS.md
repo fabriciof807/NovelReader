@@ -216,6 +216,8 @@ The app never asks for the permission on launch. `MainActivity.onCreate` used to
 
 Only user-initiated imports trigger it: the three in `LibraryViewModel` (`checkForUpdates`, `resyncChapters`, `retryAllFailedChapters`) and `WebImportViewModel.startImport`. `ChapterUpdateCheckWorker` (automatic update check) and `ImportDataUseCase` (backup restore) also call `BackgroundImportManager.startImport` and must **not** ask; neither must `ImportViewModel` (local file import posts no notification). The dialog is hosted once, in `MainActivity`, so the library and the web-import screen cannot each raise their own, and the system prompt's result is ignored on purpose — the next import reads the live permission state, so a grant or a denial needs no callback.
 
+Two channels, both created lazily by `ImportNotificationHelper`: `novel_import_channel` (`IMPORTANCE_LOW`, no badge) carries progress and the completion, and `novel_import_error_channel` (`IMPORTANCE_DEFAULT`, badge on) carries only a hard failure. The split is one-way — a channel's importance cannot be raised after creation — so a failure could never have been made audible on the progress channel (`docs/DECISIONS.md`, 2026-11-09). Completion with partial errors is still a completion on the old channel (issue #25).
+
 ### Deep Linking
 
 `MainActivity` reads `Intent` extras (`EXTRA_DEEP_LINK_ACTION`, `EXTRA_NOVEL_ID`) in `onCreate` and `onNewIntent`, emits `DeepLinkAction` to the bus. `NavGraph` collects from the bus and navigates accordingly (e.g., notification tap → open library with novel selected).
@@ -568,7 +570,7 @@ Two independent global slots (`WallpaperStorage.SLOT_HOME`, `SLOT_READER`), neve
 - **Instrumented tests**: Room in-memory DB, Compose Test Rule, Espresso
 - Parser tests use real HTML fixtures
 - ViewModel tests inject mocked DAOs/use cases
-- **Current count: 1027 unit tests**
+- **Current count: 1035 unit tests**
 - **Always run `./gradlew :app:compileDebugKotlin :app:testDebugUnitTest` before pushing**
 
 ## Recent Sessions
