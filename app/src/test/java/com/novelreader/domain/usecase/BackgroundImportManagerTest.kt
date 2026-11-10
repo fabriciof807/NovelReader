@@ -107,6 +107,7 @@ class BackgroundImportManagerTest {
         // Progress for the adopted job now moves its own counter instead of being discarded.
         callbacks.captured.onProgress(runningId, processed = 40, total = 100, currentChapter = 40)
         assertThat(manager.state.value.importedCount).isEqualTo(40)
+        assertThat(manager.state.value.totalToImport).isEqualTo(200)
 
         // Two splits: the first terminal leaves it running, the second hands the queue over.
         callbacks.captured.onJobTerminal(runningId, success = true)
@@ -115,6 +116,22 @@ class BackgroundImportManagerTest {
         assertThat(manager.state.value.id).isEqualTo(queued.id)
         assertThat(manager.state.value.novelTitle).isEqualTo("Queued Novel")
         assertThat(manager.state.value.running).isTrue()
+    }
+
+    @Test
+    fun `an adopted later batch counts the chapters of the earlier ones against the whole novel`() = runTest {
+        every { importPrefs.pendingQueue } returns flowOf(emptyList())
+        val runningId = UUID.randomUUID()
+        val callbacks = slot<ObserverCallbacks>()
+        verify { completionObserver.callbacks = capture(callbacks) }
+
+        callbacks.captured.onJobAdopted(
+            RunningImportJob(runningId, "Cultivation", batchLinks = 100, remainingSplits = 3, completedBefore = 400)
+        )
+        callbacks.captured.onProgress(runningId, processed = 74, total = 100, currentChapter = 475)
+
+        assertThat(manager.state.value.importedCount).isEqualTo(474)
+        assertThat(manager.state.value.totalToImport).isEqualTo(700)
     }
 
     @Test

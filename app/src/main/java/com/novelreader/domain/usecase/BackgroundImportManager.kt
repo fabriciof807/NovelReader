@@ -129,13 +129,19 @@ class BackgroundImportManager @Inject constructor(
                     "onJobAdopted id=${job.id} title=${job.novelTitle} remainingSplits=${job.remainingSplits}"
                 )
                 handoffPending = false
-                importedCountBase = 0
+                val queuedSameJob = importPrefs.pendingQueue.first()
+                    .filter { it.id == job.id }
+                    .sumOf { it.links.size }
+                val estimatedLater = (job.remainingSplits - 1).coerceAtLeast(0) * ImportJobSpec.BATCH_SIZE
+                importedCountBase = job.completedBefore
                 pendingSplitCount = job.remainingSplits
                 _state.value = BackgroundImportState(
                     id = job.id,
                     running = true,
                     novelTitle = job.novelTitle,
-                    totalToImport = job.batchLinks
+                    importedCount = job.completedBefore,
+                    totalToImport = job.completedBefore + job.batchLinks +
+                        maxOf(queuedSameJob, estimatedLater)
                 )
                 refreshQueuedTitles()
             }

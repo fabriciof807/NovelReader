@@ -4,6 +4,7 @@ import android.util.Log
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import com.novelreader.data.local.preferences.ImportPreferences
+import com.novelreader.domain.usecase.ImportJobSpec
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -24,7 +25,8 @@ data class RunningImportJob(
     val id: UUID,
     val novelTitle: String,
     val batchLinks: Int,
-    val remainingSplits: Int
+    val remainingSplits: Int,
+    val completedBefore: Int = 0
 )
 
 interface ObserverCallbacks {
@@ -86,7 +88,8 @@ class WorkCompletionObserver @Inject constructor(
                                                     novelTitle = spec.novelTitle,
                                                     batchLinks = spec.links.size,
                                                     remainingSplits = (spec.splitCount - spec.splitIndex)
-                                                        .coerceAtLeast(1)
+                                                        .coerceAtLeast(1),
+                                                    completedBefore = spec.splitIndex * ImportJobSpec.BATCH_SIZE
                                                 )
                                             )
                                         }
