@@ -1,5 +1,12 @@
 # Decisions
 
+## 2026-11-10 — The destination owns the system bar tone; the tab request goes to the current entry
+
+- **Decision:** each screen applies its own status-bar icon tone on `ON_RESUME` (`SystemBarAppearance`), instead of the reader capturing the tone it found and restoring it on dispose; `WallpaperVariantTheme` restores only while its entry is resumed. With the reader's top bar visible the tone follows the bar composited over the reader background (`statusBarBehindIsDark`). A Settings -> Library/Collections move writes the tab request to the entry that is current after `navigate`, and the library route applies it (`LibraryTabRequests`).
+- **Reason:** a tone captured per reader instance was wrong after reader -> search result -> back -> back, and a tone chosen from the reader background alone left dark icons on a dark translucent bar over a light reader. The back stack entry's `savedStateHandle` is not the handle the Hilt ViewModel is built with, so the old write never arrived and a `runCatching` hid it.
+- **Trade-off:** compositing only over the reader background ignores the wallpaper behind a translucent bar, so a weak veil over an opposite-tone wallpaper can misjudge the tone near the 0.5 luminance threshold. The observer registered by `NovelReaderTheme` still re-applies the app tone on every Activity resume and only loses to the NavHost entries because of registration order (no test covers an Activity resume). Known and accepted for v2.13.0.
+- **Known polish, not fixed:** at 360dp the library's one-line top bar truncates "Library" to "Li…" (the title disappears at font scale 2.0), and the bottom bar labels truncate at font scale 2.0.
+
 ## 2026-11-09 — Import failures get their own notification channel
 
 - **Decision:** a hard import failure (`postFailureNotification`, i.e. `Result.failure` on the final batch) posts on the new `novel_import_error_channel` at `IMPORTANCE_DEFAULT` with the badge on, keeping `CATEGORY_ERROR` and its `ACTION_OPEN_FAILED_CHAPTERS` deep link. Progress and completion — including completion with partial errors — stay on `novel_import_channel` (`IMPORTANCE_LOW`, no badge).

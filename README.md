@@ -83,6 +83,12 @@ Taken on an emulator, with a populated test library.
 
 ## Latest release
 
+### v2.13.0
+
+- A new look for the library and the reader: a bottom navigation bar, a one-line top bar, a three-column grid and a compact list, press feedback on covers and tabs, and an immersive reader that opens with only the text (tap the centre for the bars).
+- An optional always-on battery indicator in the reader, and the reader's bars keep their system icons readable over any wallpaper and in both themes.
+- Import notifications: a download that fails gets its own audible channel, the banner counts against the whole novel instead of the current batch of 100, a finished import is never titled as a failure, and the notification permission is asked for when you start an import instead of on launch.
+
 ### v2.12.0
 
 - Four new reader settings: typeface (including monospaced and cursive), brightness, a sleep timer, and optional tap zones for changing chapter from the sides of the screen.

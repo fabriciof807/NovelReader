@@ -83,6 +83,12 @@ Tiradas num emulador, com uma biblioteca de teste. A interface nelas está em in
 
 ## Última versão
 
+### v2.13.0
+
+- Um visual novo para a biblioteca e o leitor: barra de navegação inferior, barra superior de uma linha, grade de três colunas e lista compacta, retorno ao toque nas capas e abas, e um leitor imersivo que abre só com o texto (toque no centro para as barras).
+- Indicador de bateria opcional e sempre visível no leitor, e as barras do leitor mantêm os ícones do sistema legíveis sobre qualquer papel de parede e nos dois temas.
+- Notificações de importação: um download que falha ganha um canal próprio com som, o banner conta contra a novel inteira e não contra o lote de 100, uma importação concluída nunca aparece com título de falha, e a permissão de notificações é pedida quando você inicia uma importação, não ao abrir o app.
+
 ### v2.12.0
 
 - Quatro novos ajustes do leitor: tipografia (incluindo monoespaçada e cursiva), brilho, temporizador de sono e zonas de toque opcionais para trocar de capítulo pelas laterais da tela.

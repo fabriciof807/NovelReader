@@ -2,7 +2,7 @@
 
 ## Overview
 
-NovelReader (v2.12.0) is an offline-first Android novel reader. It imports HTML/MHT files from local storage or fetches chapters from web novel sites. All data stays on the device.
+NovelReader (v2.13.0) is an offline-first Android novel reader. It imports HTML/MHT files from local storage or fetches chapters from web novel sites. All data stays on the device.
 
 The app is end-user focused: 100% offline, no analytics, no account, no cloud.
 
@@ -254,6 +254,14 @@ Favorites, Settings; hidden while a novel's detail is open). Library and Collect
 are tabs of `LibraryScreen`, Favorites and Settings are their own routes that put the
 same `AppNavBar` in their `bottomBar`; `Routes`, deep links and `DeepLinkBus` did not
 change. Top-level moves fade (`AppMotion.FadeMillis`), deeper ones slide.
+
+A tab request from another screen (Settings -> Library or Collections) is written to
+the **current** back stack entry's `savedStateHandle` after `navigate`, and the library route
+applies it through `LibraryTabRequests` -> `LibraryViewModel.applyTabRequest`. Do not write it
+to `getBackStackEntry(...).savedStateHandle` and expect the ViewModel to see it: the entry's
+handle and the `SavedStateHandle` the Hilt ViewModel is built with are different instances, and
+the `runCatching` that used to wrap the write hid it for a release (`TopLevelNavigationHostTest`
+pins the four paths with a real `NavHost`).
 
 Keep both in the `bottomBar` slot: that is what keeps the "+" FAB above them, since the
 Scaffold offsets its FAB by the bottom bar height (`LibraryStatsLineTest` asserts the
@@ -570,7 +578,7 @@ Two independent global slots (`WallpaperStorage.SLOT_HOME`, `SLOT_READER`), neve
 - **Instrumented tests**: Room in-memory DB, Compose Test Rule, Espresso
 - Parser tests use real HTML fixtures
 - ViewModel tests inject mocked DAOs/use cases
-- **Current count: 1035 unit tests**
+- **Current count: 1045 unit tests**
 - **Always run `./gradlew :app:compileDebugKotlin :app:testDebugUnitTest` before pushing**
 
 ## Recent Sessions
@@ -581,7 +589,16 @@ Design specs and implementation plans from past AI sessions are preserved in git
 
 ## Current Version
 
-v2.12.0 (versionCode 33). See [README.md](README.md) (English) and [README_PT.md](README_PT.md) (Portuguese) for the user-facing documentation. Full release history in `git log`.
+v2.13.0 (versionCode 34). See [README.md](README.md) (English) and [README_PT.md](README_PT.md) (Portuguese) for the user-facing documentation. Full release history in `git log`.
+
+### v2.13.0 highlights
+
+- Feat: the library and reader redesign — design tokens, a bottom `AppNavBar`, a one-line top bar with a 3-column grid and compact list, press feedback and `AppMotion`, an immersive reader (only the text until a tap), and an optional always-on battery indicator. Spec and plan in git history (`docs/superpowers/`).
+- Feat: a hard import failure posts on its own `IMPORTANCE_DEFAULT` channel (#24); the adopted import counts against the whole novel (#19); a completed import is never titled as a failure (#25); `POST_NOTIFICATIONS` is asked for at the first import.
+- Fix: the reader's search results start below the overlay top bar instead of behind it.
+- Fix: the status-bar icon tone belongs to the **destination** — each screen re-applies its own on resume and the wallpaper variant wrapper restores only while its entry is resumed; with the top bar visible the icons follow the bar composited over the reader background, not the reader background alone.
+- Fix: Collections -> Settings -> Library opened Collections — the tab request was written to a `SavedStateHandle` the `LibraryViewModel` never reads (see "Library bottom bar").
+- 1045 unit tests passing (was 887 at v2.12.0).
 
 ### v2.12.0 highlights
 
