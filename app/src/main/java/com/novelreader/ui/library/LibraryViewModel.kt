@@ -363,15 +363,20 @@ class LibraryViewModel @Inject constructor(
         }
         viewModelScope.launch {
             savedStateHandle.getStateFlow<Int?>(LIBRARY_TAB_REQUEST_KEY, null).collect { request ->
-                if (request == null || request !in 0..1) return@collect
-                if (_selectedNovel.value != null) deselectNovel()
-                selectTab(request)
+                if (request == null) return@collect
+                applyTabRequest(request)
                 savedStateHandle[LIBRARY_TAB_REQUEST_KEY] = null
             }
         }
     }
 
     fun selectTab(index: Int) { _selectedTab.value = index }
+
+    fun applyTabRequest(request: Int) {
+        if (request !in 0..1) return
+        if (_selectedNovel.value != null) deselectNovel()
+        selectTab(request)
+    }
 
     fun selectNovel(novel: NovelEntity) {
         _selectedNovel.value = novel

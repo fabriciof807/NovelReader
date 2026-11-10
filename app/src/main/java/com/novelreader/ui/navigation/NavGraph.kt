@@ -11,6 +11,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavGraphBuilder
@@ -140,8 +141,11 @@ fun NovelReaderNavGraph(
             ),
             reducedMotion = reducedMotion,
             appliesAppBars = false
-        ) {
+        ) { backStackEntry ->
+            val libraryViewModel: LibraryViewModel = hiltViewModel()
+            LibraryTabRequests(backStackEntry, libraryViewModel)
             LibraryScreen(
+                viewModel = libraryViewModel,
                 onImportClick = {
                     navController.navigate(Routes.IMPORT)
                 },
@@ -209,18 +213,28 @@ fun NovelReaderNavGraph(
     }
 }
 
-private fun NavHostController.navigateToTopLevel(destination: AppDestination) {
-    val requestedTab = libraryTabRequest(destination)
-    if (requestedTab != null) {
-        runCatching {
-            getBackStackEntry(graph.findStartDestination().id)
-                .savedStateHandle[LIBRARY_TAB_REQUEST_KEY] = requestedTab
+@Composable
+internal fun LibraryTabRequests(entry: NavBackStackEntry, viewModel: LibraryViewModel) {
+    LaunchedEffect(entry, viewModel) {
+        val handle = entry.savedStateHandle
+        handle.getStateFlow<Int?>(LIBRARY_TAB_REQUEST_KEY, null).collect { request ->
+            if (request == null) return@collect
+            viewModel.applyTabRequest(request)
+            handle[LIBRARY_TAB_REQUEST_KEY] = null
         }
     }
+}
+
+internal fun NavHostController.navigateToTopLevel(destination: AppDestination) {
     navigate(topLevelRoute(destination)) {
         popUpTo(graph.findStartDestination().id) { saveState = true }
         launchSingleTop = true
         restoreState = true
+    }
+    val requestedTab = libraryTabRequest(destination) ?: return
+    val entry = currentBackStackEntry ?: return
+    if (entry.destination.route == Routes.LIBRARY_WITH_SELECTION) {
+        entry.savedStateHandle[LIBRARY_TAB_REQUEST_KEY] = requestedTab
     }
 }
 
