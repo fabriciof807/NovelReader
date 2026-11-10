@@ -24,6 +24,15 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.novelreader.R
 
+val READER_TOP_BAR_HEIGHT = 52.dp
+val READER_SEARCH_BAR_HEIGHT = 56.dp
+
+fun readerTopBarHeight(searchActive: Boolean) =
+    if (searchActive) READER_SEARCH_BAR_HEIGHT else READER_TOP_BAR_HEIGHT
+
+fun searchPanelTopPadding(searchActive: Boolean) =
+    if (searchActive) READER_SEARCH_BAR_HEIGHT else 0.dp
+
 @Composable
 fun ReaderTopBar(
     title: String,
@@ -41,7 +50,7 @@ fun ReaderTopBar(
             .fillMaxWidth()
             .background(containerColor)
             .statusBarsPadding()
-            .height(if (isSearchActive) 56.dp else 52.dp),
+            .height(readerTopBarHeight(isSearchActive)),
         verticalAlignment = Alignment.CenterVertically
     ) {
         if (isSearchActive) {

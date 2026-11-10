@@ -1,7 +1,5 @@
 package com.novelreader.ui.reader
 
-import android.app.Activity
-import android.view.View
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FiniteAnimationSpec
 import androidx.compose.animation.core.tween
@@ -36,13 +34,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
-import androidx.core.view.WindowInsetsControllerCompat
 import com.novelreader.R
 import com.novelreader.ui.theme.AppDimens
 import com.novelreader.ui.theme.AppMotion
@@ -69,25 +67,20 @@ fun readerChrome(
 
 fun readerBackgroundIsDark(background: Color): Boolean = background.luminance() < 0.5f
 
+fun statusBarBehindIsDark(
+    topBarVisible: Boolean,
+    barColor: Color,
+    readerBackground: Color
+): Boolean =
+    readerBackgroundIsDark(if (topBarVisible) barColor.compositeOver(readerBackground) else readerBackground)
+
 internal fun readerStatusReserve(
     labelLineHeight: Dp,
     iconSize: Dp = 16.dp,
     verticalPadding: Dp = 4.dp
 ): Dp = maxOf(iconSize, labelLineHeight) + verticalPadding * 2
 
-internal fun restoreBarAppearanceDark(capturedLightStatusBars: Boolean): Boolean =
-    !capturedLightStatusBars
-
-internal fun capturedBarAppearanceDark(view: View): Boolean? {
-    val window = (view.context as? Activity)?.window ?: return null
-    val lightStatusBars = WindowInsetsControllerCompat(window, view)
-        .isAppearanceLightStatusBars
-    return restoreBarAppearanceDark(lightStatusBars)
-}
-
 const val READER_OPTIONS_INITIALLY_VISIBLE = false
-
-const val READER_SYSTEM_BARS_SETTLE_MILLIS = 400L
 
 const val READER_SLEEP_PILL_TAG = "reader_sleep_pill"
 

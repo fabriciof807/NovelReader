@@ -21,6 +21,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -35,12 +36,14 @@ fun SearchResultsPanel(
     query: String,
     results: List<ChapterEntity>,
     onResultClick: (ChapterEntity, String) -> Unit,
-    onClose: () -> Unit
+    onClose: () -> Unit,
+    topPadding: Dp = 0.dp
 ) {
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.surface)
+            .padding(top = topPadding)
     ) {
         if (results.isEmpty() && query.length >= 3) {
             Box(

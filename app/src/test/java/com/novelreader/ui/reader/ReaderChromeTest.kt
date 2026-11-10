@@ -2,7 +2,9 @@ package com.novelreader.ui.reader
 
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
 import com.google.common.truth.Truth.assertThat
+import com.novelreader.ui.theme.shouldRestoreBarsOnDispose
 import org.junit.Test
 
 class ReaderChromeTest {
@@ -108,9 +110,38 @@ class ReaderChromeTest {
     }
 
     @Test
-    fun `the captured status bar appearance is restored exactly`() {
-        assertThat(restoreBarAppearanceDark(capturedLightStatusBars = true)).isFalse()
-        assertThat(restoreBarAppearanceDark(capturedLightStatusBars = false)).isTrue()
+    fun `status bar icons follow what is behind the status bar`() {
+        val darkBar = Color(0xFF1B1B20)
+        val lightBar = Color(0xFFFAFAFA)
+        val lightReader = Color(0xFFFAFAFA)
+        val darkReader = Color(0xFF111111)
+        assertThat(statusBarBehindIsDark(true, darkBar, lightReader)).isTrue()
+        assertThat(statusBarBehindIsDark(true, lightBar, darkReader)).isFalse()
+        assertThat(statusBarBehindIsDark(false, darkBar, lightReader)).isFalse()
+        assertThat(statusBarBehindIsDark(false, lightBar, darkReader)).isTrue()
+    }
+
+    @Test
+    fun `a translucent bar is judged by its colour over the reader background`() {
+        val lightReader = Color(0xFFFAFAFA)
+        val darkReader = Color(0xFF111111)
+        assertThat(statusBarBehindIsDark(true, Color(0xFF1B1B20).copy(alpha = 0.8f), lightReader)).isTrue()
+        assertThat(statusBarBehindIsDark(true, Color(0xFFFAFAFA).copy(alpha = 0.8f), darkReader)).isFalse()
+    }
+
+    @Test
+    fun `a screen only puts the bars back on dispose while it is the foreground one`() {
+        assertThat(shouldRestoreBarsOnDispose(Lifecycle.State.RESUMED)).isTrue()
+        assertThat(shouldRestoreBarsOnDispose(Lifecycle.State.STARTED)).isFalse()
+        assertThat(shouldRestoreBarsOnDispose(Lifecycle.State.CREATED)).isFalse()
+        assertThat(shouldRestoreBarsOnDispose(Lifecycle.State.DESTROYED)).isFalse()
+    }
+
+    @Test
+    fun `the search results panel is pushed down by the search bar only while searching`() {
+        assertThat(searchPanelTopPadding(searchActive = true)).isEqualTo(READER_SEARCH_BAR_HEIGHT)
+        assertThat(searchPanelTopPadding(searchActive = false)).isEqualTo(0.dp)
+        assertThat(readerTopBarHeight(searchActive = false)).isEqualTo(READER_TOP_BAR_HEIGHT)
     }
 
     @Test

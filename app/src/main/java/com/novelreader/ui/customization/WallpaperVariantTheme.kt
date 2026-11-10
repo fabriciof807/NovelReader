@@ -11,6 +11,7 @@ import com.novelreader.ui.theme.SystemBarAppearance
 import com.novelreader.ui.theme.Typography
 import com.novelreader.ui.theme.appColorScheme
 import com.novelreader.ui.theme.applySystemBarAppearance
+import com.novelreader.ui.theme.shouldRestoreBarsOnDispose
 
 /**
  * Renders the subtree with the palette variant that matches the wallpaper's tone, so text-bearing
@@ -27,13 +28,16 @@ fun WallpaperVariantTheme(isLightWallpaper: Boolean?, content: @Composable () ->
     val overrideDark = isLightWallpaper?.not()?.takeIf { it != visuals.dark }
     val dark = overrideDark ?: visuals.dark
     val view = LocalView.current
+    val lifecycle = androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
 
     SystemBarAppearance(dark)
     // The library leaves composition when the reader opens and NovelReaderTheme does not recompose on
     // navigation, so the app's own bar appearance has to be put back from here.
     DisposableEffect(overrideDark, visuals.dark) {
         onDispose {
-            if (overrideDark != null) applySystemBarAppearance(view, visuals.dark)
+            if (overrideDark != null && shouldRestoreBarsOnDispose(lifecycle.currentState)) {
+                applySystemBarAppearance(view, visuals.dark)
+            }
         }
     }
 

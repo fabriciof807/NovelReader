@@ -64,8 +64,7 @@ import com.novelreader.data.local.preferences.PreferenceAllowlists
 import com.novelreader.ui.customization.WallpaperBackground
 import com.novelreader.ui.customization.WallpaperCropOverlay
 import com.novelreader.ui.customization.barColorFor
-import com.novelreader.ui.theme.LocalAppVisuals
-import com.novelreader.ui.theme.applySystemBarAppearance
+import com.novelreader.ui.theme.SystemBarAppearance
 import com.novelreader.ui.theme.parseAccentHex
 import com.novelreader.data.local.db.entity.BookmarkEntity
 import com.novelreader.data.local.db.entity.ChapterEntity
@@ -385,8 +384,6 @@ fun ReaderScreen(
     )
     val readerBackground = parseAccentHex(readerSurfaceOf(state.config).bg)
         ?: MaterialTheme.colorScheme.surface
-    val readerBackgroundDark = readerBackgroundIsDark(readerBackground)
-    val appVisuals = LocalAppVisuals.current
     val batteryState = rememberBatteryState()
     val chrome = readerChrome(
         optionsVisible = isOptionsVisible,
@@ -397,22 +394,7 @@ fun ReaderScreen(
     val labelLineHeight = with(LocalDensity.current) {
         MaterialTheme.typography.labelSmall.lineHeight.takeOrElse { 16.sp }.toDp()
     }
-    val statusBarRestoreDark = remember(view) {
-        if (view.isInEditMode) null else capturedBarAppearanceDark(view)
-    }
-
-    DisposableEffect(view) {
-        onDispose {
-            statusBarRestoreDark?.let { applySystemBarAppearance(view, it) }
-        }
-    }
-
-    LaunchedEffect(view, readerBackgroundDark, appVisuals.dark) {
-        if (view.isInEditMode) return@LaunchedEffect
-        applySystemBarAppearance(view, readerBackgroundDark)
-        delay(READER_SYSTEM_BARS_SETTLE_MILLIS)
-        applySystemBarAppearance(view, readerBackgroundDark)
-    }
+    SystemBarAppearance(statusBarBehindIsDark(chrome.topBar, readerBarColor, readerBackground))
 
     Box(
         modifier = Modifier
@@ -553,7 +535,8 @@ fun ReaderScreen(
                                 viewModel.deactivateSearch()
                                 onChapterChange(chapter.id, query)
                             },
-                            onClose = { viewModel.deactivateSearch() }
+                            onClose = { viewModel.deactivateSearch() },
+                            topPadding = searchPanelTopPadding(state.isSearchActive)
                         )
                     }
                     }

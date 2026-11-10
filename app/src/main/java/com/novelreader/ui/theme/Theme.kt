@@ -8,11 +8,16 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowInsetsControllerCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.novelreader.data.local.preferences.PreferenceAllowlists
 
 fun isDynamicPaletteAvailable(sdkInt: Int = android.os.Build.VERSION.SDK_INT): Boolean =
@@ -67,8 +72,19 @@ fun applySystemBarAppearance(view: android.view.View, dark: Boolean) {
 fun SystemBarAppearance(dark: Boolean) {
     val view = LocalView.current
     if (view.isInEditMode) return
+    val current = rememberUpdatedState(dark)
     SideEffect { applySystemBarAppearance(view, dark) }
+    val owner = LocalLifecycleOwner.current
+    DisposableEffect(owner, view) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) applySystemBarAppearance(view, current.value)
+        }
+        owner.lifecycle.addObserver(observer)
+        onDispose { owner.lifecycle.removeObserver(observer) }
+    }
 }
+
+fun shouldRestoreBarsOnDispose(state: Lifecycle.State): Boolean = state == Lifecycle.State.RESUMED
 
 @Composable
 fun NovelReaderTheme(

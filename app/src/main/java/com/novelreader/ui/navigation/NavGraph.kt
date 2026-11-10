@@ -1,5 +1,7 @@
 package com.novelreader.ui.navigation
 
+import com.novelreader.ui.theme.LocalAppVisuals
+import com.novelreader.ui.theme.SystemBarAppearance
 import android.net.Uri
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.core.tween
@@ -136,7 +138,8 @@ fun NovelReaderNavGraph(
                     defaultValue = false
                 }
             ),
-            reducedMotion = reducedMotion
+            reducedMotion = reducedMotion,
+            appliesAppBars = false
         ) {
             LibraryScreen(
                 onImportClick = {
@@ -164,7 +167,8 @@ fun NovelReaderNavGraph(
                 navArgument("chapterId") { type = NavType.LongType },
                 navArgument("searchQuery") { type = NavType.StringType; defaultValue = "" }
             ),
-            reducedMotion = reducedMotion
+            reducedMotion = reducedMotion,
+            appliesAppBars = false
         ) { backStackEntry ->
             val novelId = backStackEntry.arguments?.getLong("novelId", -1L)?.takeIf { it != -1L } ?: return@animatedComposable
             val chapterId = backStackEntry.arguments?.getLong("chapterId", -1L)?.takeIf { it != -1L } ?: return@animatedComposable
@@ -227,6 +231,7 @@ private fun NavGraphBuilder.animatedComposable(
     route: String,
     arguments: List<androidx.navigation.NamedNavArgument> = emptyList(),
     reducedMotion: Boolean = false,
+    appliesAppBars: Boolean = true,
     content: @Composable (androidx.navigation.NavBackStackEntry) -> Unit
 ) {
     val fadeMillis = AppMotion.fadeMillis(reducedMotion)
@@ -251,5 +256,8 @@ private fun NavGraphBuilder.animatedComposable(
             if (isTopLevelTransition()) fadeOut(tween(fadeMillis))
             else slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.End, tween(slideMillis))
         }
-    ) { entry -> content(entry) }
+    ) { entry ->
+        if (appliesAppBars) SystemBarAppearance(LocalAppVisuals.current.dark)
+        content(entry)
+    }
 }
